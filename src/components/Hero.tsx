@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -52,13 +51,14 @@ const Hero = () => {
             scale with premium agency services, coaching, and AI automation tools.
           </motion.p>
           
-          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto">
+          <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.9, duration: 0.5 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              className="w-full"
             >
               <Button className="w-full bg-plc-purple hover:bg-plc-purple/90 text-white button-shadow">
                 Book Your Strategy Call
