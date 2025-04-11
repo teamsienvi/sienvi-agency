@@ -1,4 +1,3 @@
-
 import { Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
 
 const Footer = () => {
@@ -50,8 +49,8 @@ const Footer = () => {
           
           <div>
             <h3 className="text-lg font-bold mb-4">Contact Us</h3>
-            <a href="mailto:info@parklinesconcepts.online" className="text-gray-400 hover:text-white transition-colors text-sm block mb-2">
-              info@parklinesconcepts.online
+            <a href="mailto:info@parklinesconcepts.autos" className="text-gray-400 hover:text-white transition-colors text-sm block mb-2">
+              info@parklinesconcepts.autos
             </a>
           </div>
         </div>

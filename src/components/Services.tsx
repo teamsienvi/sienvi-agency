@@ -1,4 +1,3 @@
-
 import { ChartBarIcon, RocketIcon, MessageSquareIcon, ShoppingCartIcon, ListTodoIcon, GlobeIcon, BarChartIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -152,7 +151,8 @@ const Services = () => {
         "Sleek, modern, and conversion-focused websites",
         "Mobile-first, responsive designs",
         "Integrated booking and payment solutions",
-        "Seamless user experiences tailored to your brand identity"
+        "Seamless user experiences tailored to your brand identity",
+        "Strategic sales funnel development to maximize conversions"
       ],
       price: "$888"
     },
