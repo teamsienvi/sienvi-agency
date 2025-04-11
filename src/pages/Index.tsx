@@ -8,10 +8,17 @@ import Process from "@/components/Process";
 import Pricing from "@/components/Pricing";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import { motion } from "framer-motion";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-white">
+    <motion.div 
+      className="min-h-screen bg-white"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       <Navbar />
       <Hero />
       <ServicePreview />
@@ -21,7 +28,7 @@ const Index = () => {
       <Pricing />
       <Contact />
       <Footer />
-    </div>
+    </motion.div>
   );
 };
 
