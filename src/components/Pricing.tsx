@@ -204,7 +204,7 @@ const Pricing = () => {
           <h3 className="text-2xl md:text-3xl font-bold mb-4">Ready to Transform Your Business?</h3>
           <p className="mb-8 max-w-2xl mx-auto">
             Take that first step towards reaching your full potential. Schedule a strategy call 
-            today and discover how Park Lines Concepts can help you achieve your goals.
+            today and discover how Sienvi can help you achieve your goals.
           </p>
           <motion.div
             whileHover={{ scale: 1.05 }}
