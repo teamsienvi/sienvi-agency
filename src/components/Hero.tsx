@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -47,7 +48,7 @@ const Hero = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            Park Lines Concepts helps entrepreneurs, course creators, and small businesses 
+            Sienvi helps entrepreneurs, course creators, and small businesses 
             scale with premium agency services, coaching, and AI automation tools.
           </motion.p>
           
