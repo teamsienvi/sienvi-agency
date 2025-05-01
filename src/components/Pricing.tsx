@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import PricingCard from "./pricing/PricingCard";
@@ -9,7 +8,8 @@ const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 
 const Pricing = () => {
   const handleBookCall = () => {
-    window.open(CALENDAR_BOOKING_URL, '_blank');
+    // Use window.location.href instead of window.open
+    window.location.href = CALENDAR_BOOKING_URL;
   };
 
   return (

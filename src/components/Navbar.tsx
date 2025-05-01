@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Menu, X } from 'lucide-react';
@@ -14,7 +13,8 @@ const Navbar = () => {
   };
 
   const handleBookCall = () => {
-    window.open(CALENDAR_BOOKING_URL, '_blank');
+    // Use window.location.href instead of window.open for consistent behavior
+    window.location.href = CALENDAR_BOOKING_URL;
   };
 
   return (

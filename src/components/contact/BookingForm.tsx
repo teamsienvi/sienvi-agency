@@ -45,8 +45,8 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
       message: ""
     });
     
-    // Directly open the booking calendar in a new tab
-    window.open(calendarUrl, '_blank');
+    // Use window.location.href to ensure consistent navigation behavior
+    window.location.href = calendarUrl;
   };
 
   return (
