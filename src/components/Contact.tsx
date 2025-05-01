@@ -9,8 +9,8 @@ import { motion } from "framer-motion";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 
-// Replace this URL with your actual Google Calendar appointment URL once you've set it up
-const CALENDAR_BOOKING_URL = "https://calendar.google.com/calendar/u/0/appointment-scheduler?cid=sienvifba@gmail.com";
+// Updated Google Calendar appointment URL
+const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 
 const Contact = () => {
   const { toast } = useToast();

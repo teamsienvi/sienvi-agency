@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import PricingCard from "./pricing/PricingCard";
 import { pricingTiers } from "./pricing/pricingData";
 
-// Replace with your actual Google Calendar appointment URL once you've set it up
-const CALENDAR_BOOKING_URL = "https://calendar.google.com/calendar/u/0/appointment-scheduler?cid=sienvifba@gmail.com";
+// Updated Google Calendar appointment URL
+const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 
 const Pricing = () => {
   const handleBookCall = () => {
