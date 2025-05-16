@@ -64,14 +64,20 @@ export type Database = {
         Row: {
           blog_content: string
           blog_topic: string
+          Category: string | null
+          Status: string
         }
         Insert: {
-          blog_content: string
+          blog_content?: string
           blog_topic: string
+          Category?: string | null
+          Status?: string
         }
         Update: {
           blog_content?: string
           blog_topic?: string
+          Category?: string | null
+          Status?: string
         }
         Relationships: []
       }
@@ -221,6 +227,107 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          prompt_text: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          prompt_text?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          prompt_text?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submissions: {
+        Row: {
+          approved: boolean | null
+          id: string
+          image_url: string | null
+          points_awarded: number | null
+          prompt_id: string | null
+          submitted_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          approved?: boolean | null
+          id?: string
+          image_url?: string | null
+          points_awarded?: number | null
+          prompt_id?: string | null
+          submitted_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          approved?: boolean | null
+          id?: string
+          image_url?: string | null
+          points_awarded?: number | null
+          prompt_id?: string | null
+          submitted_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          id: string
+          joined_at: string | null
+          points: number | null
+          telegram_id: number | null
+          username: string | null
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          points?: number | null
+          telegram_id?: number | null
+          username?: string | null
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          points?: number | null
+          telegram_id?: number | null
+          username?: string | null
         }
         Relationships: []
       }
