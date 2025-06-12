@@ -1,5 +1,5 @@
 
-import { ChartBarIcon, RocketIcon, MessageSquareIcon, ShoppingCartIcon, GlobeIcon, BarChartIcon } from "lucide-react";
+import { ChartBarIcon, RocketIcon, MessageSquareIcon, ShoppingCartIcon, GlobeIcon, BarChartIcon, PenToolIcon, CalendarIcon, UsersIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
@@ -9,6 +9,9 @@ const MessageSquareIcon2 = (props: any) => React.createElement(MessageSquareIcon
 const ShoppingCartIcon2 = (props: any) => React.createElement(ShoppingCartIcon, props);
 const GlobeIcon2 = (props: any) => React.createElement(GlobeIcon, props);
 const BarChartIcon2 = (props: any) => React.createElement(BarChartIcon, props);
+const PenToolIcon2 = (props: any) => React.createElement(PenToolIcon, props);
+const CalendarIcon2 = (props: any) => React.createElement(CalendarIcon, props);
+const UsersIcon2 = (props: any) => React.createElement(UsersIcon, props);
 
 export const services = [
   {
@@ -36,14 +39,38 @@ export const services = [
     price: "$888"
   },
   {
-    icon: MessageSquareIcon2,
-    title: "Social Content & Posting",
-    subtitle: "For eCommerce brands Media Management",
+    icon: PenToolIcon2,
+    title: "Social Content Creation",
+    subtitle: "AI-powered content generation for your brand",
     features: [
       "AI-assisted content creation (text, images, video)",
+      "Brand-consistent messaging and visual assets",
+      "Content optimization for different platforms",
+      "Batch content generation for campaigns"
+    ],
+    price: "$888"
+  },
+  {
+    icon: CalendarIcon2,
+    title: "Social Posting Automation",
+    subtitle: "Automated scheduling and publishing across platforms",
+    features: [
       "Auto-scheduling and cross-posting to all major platforms",
-      "Performance tracking and engagement analysis",
-      "AI-driven recommendations for best posting times and content strategy"
+      "Optimal timing analysis for maximum reach",
+      "Content calendar management and planning",
+      "Performance tracking and posting analytics"
+    ],
+    price: "$888"
+  },
+  {
+    icon: UsersIcon2,
+    title: "Social Engagement Management",
+    subtitle: "AI-driven community management and interaction",
+    features: [
+      "Automated response management for comments and messages",
+      "AI-powered engagement strategies and community building",
+      "Real-time monitoring and sentiment analysis",
+      "Influencer outreach and relationship management"
     ],
     price: "$888"
   },
