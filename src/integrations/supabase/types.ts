@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      Ai_Whop_Chatbot: {
+        Row: {
+          bot_enabled: boolean | null
+          company_id: string | null
+          created_at: string
+          id: number
+          name: string | null
+        }
+        Insert: {
+          bot_enabled?: boolean | null
+          company_id?: string | null
+          created_at?: string
+          id?: number
+          name?: string | null
+        }
+        Update: {
+          bot_enabled?: boolean | null
+          company_id?: string | null
+          created_at?: string
+          id?: number
+          name?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           event_type: string
@@ -108,6 +132,24 @@ export type Database = {
         }
         Relationships: []
       }
+      Company: {
+        Row: {
+          config: Json
+          id: string
+          name: string
+        }
+        Insert: {
+          config: Json
+          id: string
+          name: string
+        }
+        Update: {
+          config?: Json
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           created_at: string
@@ -134,6 +176,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ExperienceMapping: {
+        Row: {
+          companyId: string
+          createdAt: string
+          experienceId: string
+          id: string
+          updatedAt: string
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          experienceId: string
+          id: string
+          updatedAt: string
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          experienceId?: string
+          id?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ExperienceMapping_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "Company"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {

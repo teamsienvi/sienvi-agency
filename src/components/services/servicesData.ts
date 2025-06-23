@@ -1,31 +1,16 @@
 
-import { ChartBarIcon, RocketIcon, MessageSquareIcon, ShoppingCartIcon, GlobeIcon, BarChartIcon, PenToolIcon, CalendarIcon, UsersIcon } from "lucide-react";
+import { RocketIcon, ShoppingCartIcon, GlobeIcon, PenToolIcon, CalendarIcon, UsersIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
-const ChartBarIcon2 = (props: any) => React.createElement(ChartBarIcon, props);
 const RocketIcon2 = (props: any) => React.createElement(RocketIcon, props);
-const MessageSquareIcon2 = (props: any) => React.createElement(MessageSquareIcon, props);
 const ShoppingCartIcon2 = (props: any) => React.createElement(ShoppingCartIcon, props);
 const GlobeIcon2 = (props: any) => React.createElement(GlobeIcon, props);
-const BarChartIcon2 = (props: any) => React.createElement(BarChartIcon, props);
 const PenToolIcon2 = (props: any) => React.createElement(PenToolIcon, props);
 const CalendarIcon2 = (props: any) => React.createElement(CalendarIcon, props);
 const UsersIcon2 = (props: any) => React.createElement(UsersIcon, props);
 
 export const services = [
-  {
-    icon: ChartBarIcon2,
-    title: "Data Analysis & Insights",
-    subtitle: "For eCommerce sellers leveraging multiple platforms",
-    features: [
-      "Centralized dashboards for key performance metrics",
-      "Multi-platform sales tracking and reporting",
-      "Custom alerts for inventory levels, sales fluctuations, and ad performance",
-      "AI-driven insights on sales, inventory, and customer trends"
-    ],
-    price: "$888"
-  },
   {
     icon: RocketIcon2,
     title: "Business Automation Suite",
@@ -96,18 +81,6 @@ export const services = [
       "Integrated booking and payment solutions",
       "Seamless user experiences tailored to your brand identity",
       "Strategic sales funnel development to maximize conversions"
-    ],
-    price: "$888"
-  },
-  {
-    icon: BarChartIcon2,
-    title: "Data Analysis & Bookkeeping",
-    subtitle: "Financial insights for strategic business decisions",
-    features: [
-      "Expert handling of business financials",
-      "Comprehensive analytics for decision-making",
-      "Clear, accurate, and actionable insights",
-      "Strategic guidance for business growth"
     ],
     price: "$888"
   }
