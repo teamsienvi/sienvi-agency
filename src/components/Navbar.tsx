@@ -21,7 +21,14 @@ const Navbar = () => {
     <nav className="py-4 bg-white sticky top-0 z-50 shadow-sm">
       <div className="container-custom flex justify-between items-center">
         <div className="flex items-center">
-          <a href="/" className="text-lg font-bold">Sienvi</a>
+          <a href="/" className="flex items-center space-x-2">
+            <img 
+              src="/lovable-uploads/03b8970e-3952-4a77-bcec-09f958f4fe03.png" 
+              alt="Sienvi Logo" 
+              className="h-8 w-auto"
+            />
+            <span className="text-lg font-bold">Sienvi</span>
+          </a>
         </div>
 
         {/* Desktop navigation */}

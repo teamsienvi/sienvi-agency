@@ -4,6 +4,14 @@ const Footer = () => {
   return (
     <footer className="bg-plc-dark text-white">
       <div className="container-custom py-12">
+        <div className="flex justify-center mb-8">
+          <img 
+            src="/lovable-uploads/03b8970e-3952-4a77-bcec-09f958f4fe03.png" 
+            alt="Sienvi Logo" 
+            className="h-12 w-auto"
+          />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <h3 className="text-lg font-bold mb-4">Sienvi</h3>
