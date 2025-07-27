@@ -6,9 +6,9 @@ const Footer = () => {
       <div className="container-custom py-12">
         <div className="flex justify-center mb-8">
           <img 
-            src="/lovable-uploads/03b8970e-3952-4a77-bcec-09f958f4fe03.png" 
+            src="/lovable-uploads/9db0c2f7-eb51-4b0e-9a7f-6826c267607d.png" 
             alt="Sienvi Logo" 
-            className="h-12 w-auto"
+            className="h-[100pt] w-auto"
           />
         </div>
         

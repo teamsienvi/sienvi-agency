@@ -27,7 +27,7 @@ const Hero = () => {
             <img 
               src="/lovable-uploads/9db0c2f7-eb51-4b0e-9a7f-6826c267607d.png" 
               alt="Sienvi Logo"
-              className="h-[100pt] w-auto mx-auto"
+              className="h-[200pt] w-auto mx-auto"
             />
           </motion.div>
           
