@@ -14,12 +14,30 @@ const Hero = () => {
     <section className="bg-plc-dark text-white py-24 md:py-32 overflow-hidden">
       <div className="container-custom">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              duration: 0.5,
+              type: "spring",
+              stiffness: 100
+            }}
+          >
+            <img 
+              src="/lovable-uploads/03b8970e-3952-4a77-bcec-09f958f4fe03.png" 
+              alt="Sienvi Logo"
+              className="h-[100pt] w-auto mx-auto"
+            />
+          </motion.div>
+          
           <motion.div 
             className="inline-block bg-white/10 backdrop-blur-sm rounded-full px-4 py-1 mb-8"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ 
               duration: 0.6,
+              delay: 0.1,
               type: "spring",
               stiffness: 100
             }}
