@@ -70,12 +70,12 @@ export const standalonePricing = [
   },
   {
     title: "Custom GPT Product",
-    price: "$888 x 3 months",
+    price: "$888/mo",
     note: "Great for client upsells"
   },
   {
     title: "Custom LMS Package",
-    price: "$2,500 setup + $499/mo support",
+    price: "$888/mo",
     note: "Full learning platform"
   },
   {
