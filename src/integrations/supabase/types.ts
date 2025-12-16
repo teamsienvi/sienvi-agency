@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       Ai_Whop_Chatbot: {
@@ -33,27 +38,216 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_clicks: {
+        Row: {
+          created_at: string | null
+          element_class: string | null
+          element_id: string | null
+          element_tag: string | null
+          element_text: string | null
+          id: string
+          path: string
+          session_id: string
+          visitor_id: string
+          x_coord: number | null
+          x_percent: number | null
+          y_coord: number | null
+          y_percent: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          element_class?: string | null
+          element_id?: string | null
+          element_tag?: string | null
+          element_text?: string | null
+          id?: string
+          path: string
+          session_id: string
+          visitor_id: string
+          x_coord?: number | null
+          x_percent?: number | null
+          y_coord?: number | null
+          y_percent?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          element_class?: string | null
+          element_id?: string | null
+          element_tag?: string | null
+          element_text?: string | null
+          id?: string
+          path?: string
+          session_id?: string
+          visitor_id?: string
+          x_coord?: number | null
+          x_percent?: number | null
+          y_coord?: number | null
+          y_percent?: number | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           event_type: string
           id: string
           metadata: Json | null
+          page_path: string | null
           path: string
+          referrer: string | null
+          session_id: string | null
           timestamp: string
+          user_agent: string | null
         }
         Insert: {
           event_type: string
           id?: string
           metadata?: Json | null
+          page_path?: string | null
           path: string
+          referrer?: string | null
+          session_id?: string | null
           timestamp?: string
+          user_agent?: string | null
         }
         Update: {
           event_type?: string
           id?: string
           metadata?: Json | null
+          page_path?: string | null
           path?: string
+          referrer?: string | null
+          session_id?: string | null
           timestamp?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      analytics_page_views: {
+        Row: {
+          created_at: string | null
+          id: string
+          load_time_ms: number | null
+          path: string
+          scroll_depth: number | null
+          session_id: string
+          time_on_page_ms: number | null
+          title: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          load_time_ms?: number | null
+          path: string
+          scroll_depth?: number | null
+          session_id: string
+          time_on_page_ms?: number | null
+          title?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          load_time_ms?: number | null
+          path?: string
+          scroll_depth?: number | null
+          session_id?: string
+          time_on_page_ms?: number | null
+          title?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
+      analytics_sessions: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          device_type: string | null
+          ended_at: string | null
+          id: string
+          is_bounce: boolean | null
+          os: string | null
+          referrer: string | null
+          screen_height: number | null
+          screen_width: number | null
+          session_id: string
+          started_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visitor_id: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          ended_at?: string | null
+          id?: string
+          is_bounce?: boolean | null
+          os?: string | null
+          referrer?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          session_id: string
+          started_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          ended_at?: string | null
+          id?: string
+          is_bounce?: boolean | null
+          os?: string | null
+          referrer?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          session_id?: string
+          started_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
+      analytics_user_flows: {
+        Row: {
+          created_at: string | null
+          from_path: string | null
+          id: string
+          session_id: string
+          to_path: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_path?: string | null
+          id?: string
+          session_id: string
+          to_path: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          from_path?: string | null
+          id?: string
+          session_id?: string
+          to_path?: string
+          visitor_id?: string
         }
         Relationships: []
       }
@@ -65,6 +259,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          user_id: string | null
         }
         Insert: {
           answers: Json
@@ -73,6 +268,7 @@ export type Database = {
           email: string
           id?: string
           name: string
+          user_id?: string | null
         }
         Update: {
           answers?: Json
@@ -81,6 +277,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -89,18 +286,24 @@ export type Database = {
           blog_content: string
           blog_topic: string
           Category: string | null
+          created_at: string | null
+          image_url: string | null
           Status: string
         }
         Insert: {
           blog_content?: string
           blog_topic: string
           Category?: string | null
+          created_at?: string | null
+          image_url?: string | null
           Status?: string
         }
         Update: {
           blog_content?: string
           blog_topic?: string
           Category?: string | null
+          created_at?: string | null
+          image_url?: string | null
           Status?: string
         }
         Relationships: []
@@ -177,6 +380,65 @@ export type Database = {
         }
         Relationships: []
       }
+      courses: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          course_id: string
+          enrolled_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          enrolled_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          enrolled_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ExperienceMapping: {
         Row: {
           companyId: string
@@ -205,6 +467,140 @@ export type Database = {
             columns: ["companyId"]
             isOneToOne: false
             referencedRelation: "Company"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      FFFColorSheet: {
+        Row: {
+          created_at: string
+          id: number
+          prompts: string | null
+          submissions: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          prompts?: string | null
+          submissions?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          prompts?: string | null
+          submissions?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "FFFColorSheet_submissions_fkey"
+            columns: ["submissions"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          lesson_id: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lesson_id: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          id: string
+          module_id: string
+          order_index: number
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          module_id: string
+          order_index?: number
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          module_id?: string
+          order_index?: number
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          order_index: number
+          title: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          title: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
         ]
@@ -381,6 +777,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           id: string
@@ -410,9 +827,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      verify_coach_credentials: {
+        Args: { p_password_hash: string; p_username: string }
+        Returns: {
+          id: string
+          last_login: string
+          role: Database["public"]["Enums"]["coach_role"]
+          username: string
+        }[]
+      }
     }
     Enums: {
+      app_role: "admin" | "user" | "student" | "coach"
       coach_role: "head_coach" | "assistant_coach"
     }
     CompositeTypes: {
@@ -421,21 +854,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -453,14 +890,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -476,14 +915,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -499,14 +940,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -514,14 +957,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -529,6 +974,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user", "student", "coach"],
       coach_role: ["head_coach", "assistant_coach"],
     },
   },
