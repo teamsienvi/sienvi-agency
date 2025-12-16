@@ -10,30 +10,30 @@ export interface PricingTier {
 
 export const pricingTiers: PricingTier[] = [
   {
-    title: "Website + SEO Starter",
-    price: "$1,776/mo",
-    description: "Perfect for businesses launching their online presence with built-in SEO.",
+    title: "Website + Custom GPT",
+    price: "$888 x 3 months",
+    description: "Professional website with AI-powered chatbot for your business.",
     features: [
-      "Website Buildout Package",
-      "SEO/AEO Package included",
-      "3-month minimum contract",
+      "Website Buildout Package (3-month contract)",
+      "Custom GPT Product included",
+      "AI chatbot trained on your business",
       "Monthly performance reports",
       "Dedicated account manager"
     ],
-    note: "Save $0 - Best value for new sites"
+    note: "+ Custom GPT setup (TBD)"
   },
   {
-    title: "Growth Package",
-    price: "$2,398/mo",
-    description: "Our most popular package combining web presence with social media.",
+    title: "SEO/AEO + Custom GPT",
+    price: "$888 x 2 months",
+    description: "Boost visibility and automate customer interactions.",
     features: [
-      "Website Buildout Package",
       "SEO/AEO Package",
-      "Social Media Suite",
-      "10% bundle discount applied",
-      "Weekly performance reports",
-      "Quarterly strategy sessions"
+      "Custom GPT Product included",
+      "Search & AI engine optimization",
+      "AI chatbot for lead capture",
+      "Monthly ranking reports"
     ],
+    note: "Optional combo package",
     popular: true
   },
   {
@@ -70,7 +70,7 @@ export const standalonePricing = [
   },
   {
     title: "Custom GPT Product",
-    price: "$1,500 setup + $299/mo support",
+    price: "TBD",
     note: "Great for client upsells"
   },
   {
