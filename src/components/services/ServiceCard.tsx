@@ -9,6 +9,9 @@ interface ServiceCardProps {
   features: string[];
   price: string;
   index: number;
+  contractNote?: string;
+  monthlySupport?: string;
+  standalone?: boolean;
 }
 
 const cardVariants = {
@@ -40,7 +43,10 @@ const ServiceCard = ({
   subtitle, 
   features, 
   price,
-  index
+  index,
+  contractNote,
+  monthlySupport,
+  standalone
 }: ServiceCardProps) => {
   return (
     <motion.div 
@@ -66,12 +72,25 @@ const ServiceCard = ({
           <ServiceFeature key={idx} feature={feature} index={idx} />
         ))}
       </ul>
-      <motion.div 
-        className="text-plc-purple font-bold text-xl"
-        whileHover={{ scale: 1.1 }}
-      >
-        {price}/month
-      </motion.div>
+      <div className="mt-auto">
+        <motion.div 
+          className="text-plc-purple font-bold text-xl"
+          whileHover={{ scale: 1.1 }}
+        >
+          {price}
+        </motion.div>
+        {monthlySupport && (
+          <p className="text-sm text-gray-600 mt-1">+ {monthlySupport} support</p>
+        )}
+        {contractNote && (
+          <p className="text-xs text-gray-500 mt-1">{contractNote}</p>
+        )}
+        {standalone && (
+          <span className="inline-block mt-2 text-xs bg-plc-purple/10 text-plc-purple px-2 py-1 rounded-full">
+            Available standalone
+          </span>
+        )}
+      </div>
     </motion.div>
   );
 };

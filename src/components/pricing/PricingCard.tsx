@@ -15,6 +15,7 @@ const PricingCard = ({
   description, 
   features, 
   popular = false,
+  note,
   index
 }: PricingCardProps) => {
   return (
@@ -49,8 +50,10 @@ const PricingCard = ({
           whileHover={{ scale: 1.05 }}
         >
           <span className="text-3xl font-bold">{price}</span>
-          <span className="text-gray-500 ml-1">per month</span>
         </motion.div>
+        {note && (
+          <p className="text-xs text-plc-purple mb-4">{note}</p>
+        )}
         <p className="text-gray-600 text-sm mb-6">{description}</p>
         
         <ul className="space-y-3 mb-8">

@@ -5,46 +5,82 @@ export interface PricingTier {
   description: string;
   features: string[];
   popular?: boolean;
+  note?: string;
 }
 
 export const pricingTiers: PricingTier[] = [
   {
-    title: "Single Service",
-    price: "$888",
-    description: "Perfect for businesses looking to automate one area of their operations.",
+    title: "Website + SEO Starter",
+    price: "$1,776/mo",
+    description: "Perfect for businesses launching their online presence with built-in SEO.",
     features: [
-      "Full access to one core service",
-      "Detailed onboarding process",
-      "25% consulting call discount",
+      "Website Buildout Package",
+      "SEO/AEO Package included",
+      "3-month minimum contract",
       "Monthly performance reports",
       "Dedicated account manager"
-    ]
+    ],
+    note: "Save $0 - Best value for new sites"
   },
   {
-    title: "Triple Automation",
-    price: "$2,398.20",
-    description: "Our most popular package for businesses ready to integrate multiple services.",
+    title: "Growth Package",
+    price: "$2,398/mo",
+    description: "Our most popular package combining web presence with social media.",
     features: [
-      "Full access to three core services",
-      "10% discount on package price",
-      "15% consulting call discount",
+      "Website Buildout Package",
+      "SEO/AEO Package",
+      "Social Media Suite",
+      "10% bundle discount applied",
       "Weekly performance reports",
-      "Dedicated account manager",
       "Quarterly strategy sessions"
     ],
     popular: true
   },
   {
-    title: "Full Automation",
-    price: "$3,996.00",
-    description: "The complete solution for businesses ready to fully integrate automation.",
+    title: "Full Digital Suite",
+    price: "$3,996/mo",
+    description: "Complete solution for businesses ready to dominate digitally.",
     features: [
-      "All six core automation services",
-      "25% discount on package price",
-      "VIP support with 2-hour response",
-      "Bi-weekly performance reports",
-      "Dedicated senior account manager",
-      "Monthly strategy and optimization reviews"
+      "Website Buildout + SEO/AEO",
+      "Social Media Suite",
+      "Custom GPT Product (setup included)",
+      "E-Commerce Operations",
+      "25% bundle discount",
+      "VIP support with 2-hour response"
     ]
+  }
+];
+
+// Standalone service pricing
+export const standalonePricing = [
+  {
+    title: "Website Buildout",
+    price: "$888/mo",
+    note: "3-month contract"
+  },
+  {
+    title: "SEO/AEO Package",
+    price: "$888/mo",
+    note: "Available standalone"
+  },
+  {
+    title: "Social Media Suite",
+    price: "$888/mo",
+    note: "All-in-one social management"
+  },
+  {
+    title: "Custom GPT Product",
+    price: "$1,500 setup + $299/mo support",
+    note: "Great for client upsells"
+  },
+  {
+    title: "Custom LMS Package",
+    price: "$2,500 setup + $499/mo support",
+    note: "Full learning platform"
+  },
+  {
+    title: "E-Commerce Operations",
+    price: "$888/mo",
+    note: "Multi-channel automation"
   }
 ];
