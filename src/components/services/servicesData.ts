@@ -1,15 +1,14 @@
 
-import { RocketIcon, ShoppingCartIcon, GlobeIcon, PenToolIcon, CalendarIcon, UsersIcon, SearchIcon } from "lucide-react";
+import { ShoppingCartIcon, GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
-const RocketIcon2 = (props: any) => React.createElement(RocketIcon, props);
 const ShoppingCartIcon2 = (props: any) => React.createElement(ShoppingCartIcon, props);
 const GlobeIcon2 = (props: any) => React.createElement(GlobeIcon, props);
 const PenToolIcon2 = (props: any) => React.createElement(PenToolIcon, props);
-const CalendarIcon2 = (props: any) => React.createElement(CalendarIcon, props);
-const UsersIcon2 = (props: any) => React.createElement(UsersIcon, props);
 const SearchIcon2 = (props: any) => React.createElement(SearchIcon, props);
+const BookOpenIcon2 = (props: any) => React.createElement(BookOpenIcon, props);
+const BotIcon2 = (props: any) => React.createElement(BotIcon, props);
 
 export const services = [
   {
@@ -37,6 +36,18 @@ export const services = [
     price: "$888"
   },
   {
+    icon: GlobeIcon2,
+    title: "Website Buildout Package",
+    subtitle: "Complete website development (3-month contract)",
+    features: [
+      "Sleek, modern, and conversion-focused websites",
+      "Mobile-first, responsive designs",
+      "Integrated booking and payment solutions",
+      "Seamless user experiences tailored to your brand identity"
+    ],
+    price: "$888"
+  },
+  {
     icon: SearchIcon2,
     title: "SEO/AEO Package",
     subtitle: "Search & AI Engine Optimization for maximum visibility",
@@ -49,14 +60,26 @@ export const services = [
     price: "$888"
   },
   {
-    icon: GlobeIcon2,
-    title: "Website Buildout Package",
-    subtitle: "Complete website development (3-month contract)",
+    icon: BookOpenIcon2,
+    title: "Custom LMS Package",
+    subtitle: "Tailored learning management system for your business",
     features: [
-      "Sleek, modern, and conversion-focused websites",
-      "Mobile-first, responsive designs",
-      "Integrated booking and payment solutions",
-      "Seamless user experiences tailored to your brand identity"
+      "Custom course creation and content management",
+      "Student progress tracking and analytics",
+      "Interactive quizzes and assessments",
+      "Branded learning portal with user management"
+    ],
+    price: "$888"
+  },
+  {
+    icon: BotIcon2,
+    title: "Custom GPT Product",
+    subtitle: "AI-powered chatbot tailored to your business needs",
+    features: [
+      "Custom-trained AI assistant for your brand",
+      "Seamless website or app integration",
+      "24/7 automated customer support",
+      "Perfect for client upselling and engagement"
     ],
     price: "$888"
   }
