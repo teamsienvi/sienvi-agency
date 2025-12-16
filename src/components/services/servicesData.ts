@@ -1,5 +1,5 @@
 
-import { RocketIcon, ShoppingCartIcon, GlobeIcon, PenToolIcon, CalendarIcon, UsersIcon } from "lucide-react";
+import { RocketIcon, ShoppingCartIcon, GlobeIcon, PenToolIcon, CalendarIcon, UsersIcon, SearchIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
@@ -9,6 +9,7 @@ const GlobeIcon2 = (props: any) => React.createElement(GlobeIcon, props);
 const PenToolIcon2 = (props: any) => React.createElement(PenToolIcon, props);
 const CalendarIcon2 = (props: any) => React.createElement(CalendarIcon, props);
 const UsersIcon2 = (props: any) => React.createElement(UsersIcon, props);
+const SearchIcon2 = (props: any) => React.createElement(SearchIcon, props);
 
 export const services = [
   {
@@ -36,15 +37,26 @@ export const services = [
     price: "$888"
   },
   {
+    icon: SearchIcon2,
+    title: "SEO/AEO Package",
+    subtitle: "Search & AI Engine Optimization for maximum visibility",
+    features: [
+      "Comprehensive keyword research and optimization",
+      "On-page and technical SEO audits",
+      "AI search engine optimization (AEO) for voice & AI assistants",
+      "Monthly performance reports and ranking improvements"
+    ],
+    price: "$888"
+  },
+  {
     icon: GlobeIcon2,
-    title: "Website Design & Development",
-    subtitle: "Creating powerful online presence for your brand",
+    title: "Website Buildout Package",
+    subtitle: "Complete website development (3-month contract)",
     features: [
       "Sleek, modern, and conversion-focused websites",
       "Mobile-first, responsive designs",
       "Integrated booking and payment solutions",
-      "Seamless user experiences tailored to your brand identity",
-      "Strategic sales funnel development to maximize conversions"
+      "Seamless user experiences tailored to your brand identity"
     ],
     price: "$888"
   }
