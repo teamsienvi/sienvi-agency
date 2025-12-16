@@ -11,7 +11,7 @@ export interface PricingTier {
 export const pricingTiers: PricingTier[] = [
   {
     title: "Website + Custom GPT",
-    price: "$888 x 3 months + GPT (TBD)",
+    price: "$888 x 3 months",
     description: "Professional website with AI-powered chatbot for your business.",
     features: [
       "Website Buildout Package (3-month contract)",
@@ -20,7 +20,7 @@ export const pricingTiers: PricingTier[] = [
       "Monthly performance reports",
       "Dedicated account manager"
     ],
-    note: "Custom GPT setup fee + monthly support TBD"
+    note: "+ Custom GPT setup (TBD)"
   },
   {
     title: "SEO/AEO + Custom GPT",
