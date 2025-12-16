@@ -49,13 +49,13 @@ export const services = [
   },
   {
     icon: SearchIcon2,
-    title: "SEO/AEO Package",
-    subtitle: "Search & AI Engine Optimization for maximum visibility",
+    title: "SEO/AEO Website Package",
+    subtitle: "Comprehensive automation solutions for your business",
     features: [
-      "Comprehensive keyword research and optimization",
-      "On-page and technical SEO audits",
-      "AI search engine optimization (AEO) for voice & AI assistants",
-      "Monthly performance reports and ranking improvements"
+      "AI-powered ad optimization and automated bid adjustments",
+      "Automated task management and delegation systems",
+      "Implementation of AI-driven tools for business processes",
+      "Custom strategies for scaling efficiency across all operations"
     ],
     price: "$888"
   },
