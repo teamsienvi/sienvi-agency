@@ -38,7 +38,7 @@ export const services = [
   {
     icon: GlobeIcon2,
     title: "Website Buildout Package",
-    subtitle: "Complete website development (3-month contract)",
+    subtitle: "Complete website development (3-month contract) • Bundle with SEO or standalone",
     features: [
       "Sleek, modern, and conversion-focused websites",
       "Mobile-first, responsive designs",
@@ -50,7 +50,7 @@ export const services = [
   {
     icon: SearchIcon2,
     title: "SEO/AEO Website Package",
-    subtitle: "Comprehensive automation solutions for your business",
+    subtitle: "Comprehensive automation solutions • Bundle with Website or standalone",
     features: [
       "AI-powered ad optimization and automated bid adjustments",
       "Automated task management and delegation systems",
