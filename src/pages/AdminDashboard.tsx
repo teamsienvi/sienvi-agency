@@ -12,7 +12,13 @@ import {
   LogOut, 
   ArrowLeft,
   BarChart3,
-  MousePointer
+  MousePointer,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Globe,
+  FileText,
+  RefreshCw
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -22,12 +28,16 @@ interface AnalyticsData {
   bounceRate: number;
   pagesPerVisit: number;
   totalSessions: number;
+  topPages?: { path: string; views: number }[];
+  devices?: { device: string; count: number }[];
+  sources?: { source: string; count: number }[];
 }
 
 const AdminDashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -62,6 +72,7 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   const fetchAnalytics = async () => {
+    setIsRefreshing(true);
     try {
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -75,8 +86,14 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch analytics data",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -90,9 +107,18 @@ const AdminDashboard = () => {
   };
 
   const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.round(seconds % 60);
     return `${mins}m ${secs}s`;
+  };
+
+  const getDeviceIcon = (device: string) => {
+    switch (device.toLowerCase()) {
+      case 'mobile': return <Smartphone className="h-4 w-4" />;
+      case 'tablet': return <Tablet className="h-4 w-4" />;
+      default: return <Monitor className="h-4 w-4" />;
+    }
   };
 
   if (isLoading) {
@@ -116,20 +142,32 @@ const AdminDashboard = () => {
               <ArrowLeft className="h-4 w-4" />
               Back to Site
             </button>
-            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-white/20 text-white hover:bg-white/10"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={fetchAnalytics}
+              variant="outline"
+              size="sm"
+              className="border-white/20 text-white hover:bg-white/10"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Main Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="bg-white/10 backdrop-blur-lg border-white/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-white/70">Unique Visitors</CardTitle>
@@ -185,7 +223,7 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white">
-                {analytics?.pagesPerVisit?.toFixed(1) || 0}
+                {analytics?.pagesPerVisit?.toFixed(2) || 0}
               </div>
               <p className="text-xs text-white/50 mt-1">Average pages viewed</p>
             </CardContent>
@@ -199,6 +237,88 @@ const AdminDashboard = () => {
             <CardContent>
               <div className="text-3xl font-bold text-white">{analytics?.totalSessions || 0}</div>
               <p className="text-xs text-white/50 mt-1">Last 30 days</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detailed Breakdowns */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Top Pages */}
+          <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Top Pages
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {analytics?.topPages && analytics.topPages.length > 0 ? (
+                <div className="space-y-3">
+                  {analytics.topPages.map((page, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <span className="text-white/80 text-sm truncate max-w-[180px]" title={page.path}>
+                        {page.path}
+                      </span>
+                      <span className="text-white font-medium">{page.views}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/50 text-sm">No data yet</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Devices */}
+          <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Monitor className="h-5 w-5 text-primary" />
+                Devices
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {analytics?.devices && analytics.devices.length > 0 ? (
+                <div className="space-y-3">
+                  {analytics.devices.map((device, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-white/80">
+                        {getDeviceIcon(device.device)}
+                        <span className="text-sm capitalize">{device.device}</span>
+                      </div>
+                      <span className="text-white font-medium">{device.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/50 text-sm">No data yet</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Traffic Sources */}
+          <Card className="bg-white/10 backdrop-blur-lg border-white/20">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Globe className="h-5 w-5 text-primary" />
+                Traffic Sources
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {analytics?.sources && analytics.sources.length > 0 ? (
+                <div className="space-y-3">
+                  {analytics.sources.map((source, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <span className="text-white/80 text-sm truncate max-w-[180px]" title={source.source}>
+                        {source.source}
+                      </span>
+                      <span className="text-white font-medium">{source.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/50 text-sm">No data yet</p>
+              )}
             </CardContent>
           </Card>
         </div>

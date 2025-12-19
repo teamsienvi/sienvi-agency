@@ -12,18 +12,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate API key
-    const apiKey = req.headers.get("x-api-key");
-    const expectedKey = Deno.env.get("ANALYTICS_API_KEY");
-    
-    if (!apiKey || apiKey !== expectedKey) {
-      console.log("Invalid API key provided");
-      return new Response(
-        JSON.stringify({ success: false, error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const { startDate, endDate } = await req.json();
 
     if (!startDate || !endDate) {
@@ -39,7 +27,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch sessions
+    // Fetch sessions from database
     const { data: sessions, error: sessionsError } = await supabase
       .from("analytics_sessions")
       .select("*")
@@ -63,7 +51,7 @@ Deno.serve(async (req) => {
       throw pageViewsError;
     }
 
-    // Calculate metrics
+    // Calculate metrics from our database
     const uniqueVisitors = new Set(sessions?.map(s => s.visitor_id) || []).size;
     const totalPageViews = pageViews?.length || 0;
     const totalSessions = sessions?.length || 0;
@@ -75,8 +63,8 @@ Deno.serve(async (req) => {
       if (session.started_at && session.ended_at) {
         const start = new Date(session.started_at).getTime();
         const end = new Date(session.ended_at).getTime();
-        const duration = (end - start) / 1000; // Convert to seconds
-        if (duration > 0 && duration < 3600) { // Ignore sessions longer than 1 hour
+        const duration = (end - start) / 1000;
+        if (duration > 0 && duration < 3600) {
           totalDuration += duration;
           durationCount++;
         }
@@ -91,16 +79,65 @@ Deno.serve(async (req) => {
     // Calculate pages per visit
     const pagesPerVisit = totalSessions > 0 ? totalPageViews / totalSessions : 0;
 
+    // Get top pages
+    const pageCounts: Record<string, number> = {};
+    pageViews?.forEach(pv => {
+      const path = pv.path || '/';
+      pageCounts[path] = (pageCounts[path] || 0) + 1;
+    });
+    const topPages = Object.entries(pageCounts)
+      .map(([path, views]) => ({ path, views }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    // Get device breakdown
+    const deviceCounts: Record<string, number> = {};
+    sessions?.forEach(s => {
+      const device = s.device_type || 'unknown';
+      deviceCounts[device] = (deviceCounts[device] || 0) + 1;
+    });
+    const devices = Object.entries(deviceCounts)
+      .map(([device, count]) => ({ device, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Get referrer breakdown
+    const referrerCounts: Record<string, number> = {};
+    sessions?.forEach(s => {
+      let source = 'Direct';
+      if (s.referrer) {
+        try {
+          const url = new URL(s.referrer);
+          source = url.hostname;
+        } catch {
+          source = s.referrer;
+        }
+      }
+      referrerCounts[source] = (referrerCounts[source] || 0) + 1;
+    });
+    const sources = Object.entries(referrerCounts)
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
     const data = {
       visitors: uniqueVisitors,
       pageViews: totalPageViews,
       avgDuration,
       bounceRate: Math.round(bounceRate * 10) / 10,
-      pagesPerVisit: Math.round(pagesPerVisit * 10) / 10,
+      pagesPerVisit: Math.round(pagesPerVisit * 100) / 100,
       totalSessions,
+      topPages,
+      devices,
+      sources,
     };
 
-    console.log("Analytics data:", data);
+    console.log("Analytics calculated:", {
+      visitors: data.visitors,
+      pageViews: data.pageViews,
+      avgDuration: data.avgDuration,
+      bounceRate: data.bounceRate,
+      pagesPerVisit: data.pagesPerVisit,
+    });
 
     return new Response(
       JSON.stringify({ success: true, data }),
