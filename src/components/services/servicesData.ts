@@ -37,7 +37,7 @@ export const services = [
   },
   {
     icon: GlobeIcon2,
-    title: "Custom Website",
+    title: "Custom Website Development",
     subtitle: "Custom website development",
     features: [
       "Sleek, modern, and conversion-focused websites",
