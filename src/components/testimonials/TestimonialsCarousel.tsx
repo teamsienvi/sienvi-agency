@@ -136,10 +136,10 @@ const TestimonialsCarousel = ({
                     </p>
                     
                     {/* Decorative divider */}
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-0.5 bg-gradient-to-r from-transparent to-plc-burgundy/50 rounded-full" />
-                      <div className="w-2 h-2 rounded-full bg-gradient-to-br from-plc-burgundy to-plc-purple" />
-                      <div className="w-12 h-0.5 bg-gradient-to-l from-transparent to-plc-purple/50 rounded-full" />
+                    <div className="flex items-center justify-center gap-2 mb-6">
+                      <span className="w-8 h-px bg-plc-burgundy/40" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-plc-burgundy" />
+                      <span className="w-8 h-px bg-plc-purple/40" />
                     </div>
                     
                     {/* Author info */}
