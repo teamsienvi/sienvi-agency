@@ -53,12 +53,12 @@ export const services = [
   {
     icon: SearchIcon2,
     title: "SEO/AEO Package",
-    subtitle: "Comprehensive automation solutions for your business",
+    subtitle: "Search and answer engine optimization for lasting visibility",
     features: [
-      "AI-powered ad optimization and automated bid adjustments",
-      "Automated task management and delegation systems",
-      "Implementation of AI-driven tools for business processes",
-      "Custom strategies for scaling efficiency across all operations",
+      "Strategic blog content creation and optimization",
+      "Backlink strategy and quality link acquisition",
+      "On-page and technical SEO improvements",
+      "Modern AI-powered SEO/AEO tools for search and answer engine performance",
       "💡 Bundle with Custom Website or Custom GPT — Inquire for details"
     ],
     price: "$888"
