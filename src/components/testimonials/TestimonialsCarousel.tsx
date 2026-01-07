@@ -82,11 +82,8 @@ const TestimonialsCarousel = ({
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-plc-burgundy/10 text-plc-burgundy text-sm font-medium mb-4">
-            Testimonials
-          </span>
           <h2 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-plc-dark via-plc-burgundy to-plc-purple bg-clip-text text-transparent">
-            Client Success Stories
+            Testimonials
           </h2>
           <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
             Hear directly from our clients about their experience working with Sienvi.
@@ -134,7 +131,7 @@ const TestimonialsCarousel = ({
                   <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-plc-purple/10 to-plc-burgundy/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
                   
                   <div className="relative flex flex-col items-center text-center">
-                    <p className="text-foreground text-lg md:text-xl leading-relaxed mb-8 whitespace-pre-line max-w-3xl">
+                    <p className="text-foreground text-lg md:text-xl leading-relaxed mb-8 whitespace-pre-line max-w-3xl italic">
                       "{currentTestimonial.quote}"
                     </p>
                     
