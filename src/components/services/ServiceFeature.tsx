@@ -21,7 +21,7 @@ const ServiceFeature = ({ feature, index }: ServiceFeatureProps) => {
     const bundleText = feature.replace("💡 ", "");
     return (
       <motion.li 
-        className="flex items-start mt-4 pt-4 border-t border-primary/20"
+        className="flex items-start"
         initial={{ opacity: 0, x: -10 }}
         whileInView={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 * index }}

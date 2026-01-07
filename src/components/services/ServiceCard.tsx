@@ -42,9 +42,13 @@ const ServiceCard = ({
   price,
   index
 }: ServiceCardProps) => {
+  // Separate regular features from bundle suggestion
+  const regularFeatures = features.filter(f => !f.startsWith("💡"));
+  const bundleFeature = features.find(f => f.startsWith("💡"));
+
   return (
     <motion.div 
-      className="service-card"
+      className="service-card flex flex-col"
       variants={cardVariants}
       initial="hidden"
       whileInView="visible"
@@ -60,18 +64,29 @@ const ServiceCard = ({
         <Icon className="service-icon" />
       </motion.div>
       <h3 className="text-xl font-bold mb-1">{title}</h3>
-      <p className="text-sm text-gray-500 mb-4">{subtitle}</p>
-      <ul className="space-y-2 mb-6">
-        {features.map((feature, idx) => (
+      <p className="text-sm text-muted-foreground mb-4">{subtitle}</p>
+      
+      {/* Regular features */}
+      <ul className="space-y-2 mb-4 flex-grow">
+        {regularFeatures.map((feature, idx) => (
           <ServiceFeature key={idx} feature={feature} index={idx} />
         ))}
       </ul>
-      <motion.div 
-        className="text-plc-purple font-bold text-xl"
-        whileHover={{ scale: 1.1 }}
-      >
-        {price}/month
-      </motion.div>
+      
+      {/* Bundle suggestion and price at bottom */}
+      <div className="mt-auto">
+        {bundleFeature && (
+          <div className="mb-4">
+            <ServiceFeature feature={bundleFeature} index={regularFeatures.length} />
+          </div>
+        )}
+        <motion.div 
+          className="text-primary font-bold text-xl"
+          whileHover={{ scale: 1.1 }}
+        >
+          {price}/month
+        </motion.div>
+      </div>
     </motion.div>
   );
 };
