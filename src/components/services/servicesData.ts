@@ -16,6 +16,8 @@ export const services = [
     title: "Social Media Suite",
     subtitle: "Complete social media management and automation",
     features: [
+      "Unlimited content creation",
+      "All major channels including Facebook, Instagram, LinkedIn, TikTok, YouTube, X",
       "AI-assisted content creation (text, images, video)",
       "Auto-scheduling and cross-posting to all major platforms",
       "Automated engagement and community management",
@@ -55,6 +57,7 @@ export const services = [
     title: "SEO/AEO Package",
     subtitle: "Search and answer engine optimization for lasting visibility",
     features: [
+      "Keyword Research and Implementation",
       "Strategic blog content creation and optimization",
       "Backlink strategy and quality link acquisition",
       "On-page and technical SEO improvements",
