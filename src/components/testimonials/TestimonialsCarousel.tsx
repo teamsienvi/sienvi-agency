@@ -140,9 +140,6 @@ const TestimonialsCarousel = ({
                     
                     {/* Author info */}
                     <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-plc-burgundy to-plc-purple flex items-center justify-center text-white text-xl font-bold mb-3 shadow-lg">
-                        {currentTestimonial.author.charAt(0)}
-                      </div>
                       <p className="font-bold text-xl text-foreground">{currentTestimonial.author}</p>
                       <p className="text-plc-burgundy font-medium">{currentTestimonial.position}</p>
                     </div>
