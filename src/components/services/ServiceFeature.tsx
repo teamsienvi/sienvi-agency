@@ -59,7 +59,7 @@ const ServiceFeature = ({ feature, index }: ServiceFeatureProps) => {
           
           {/* Inquire for details - styled uniquely */}
           <motion.div 
-            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-md bg-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300"
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-md bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 group-hover:from-primary group-hover:via-primary/90 group-hover:to-primary transition-all duration-300"
             whileHover={{ scale: 1.03 }}
           >
             <span className="text-xs font-semibold uppercase tracking-wide text-primary group-hover:text-primary-foreground transition-colors duration-300">
