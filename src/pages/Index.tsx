@@ -8,7 +8,7 @@ import Process from "@/components/Process";
 import Pricing from "@/components/Pricing";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
-import TestimonialSection from "@/components/testimonials/TestimonialSection";
+import TestimonialsCarousel from "@/components/testimonials/TestimonialsCarousel";
 import { motion } from "framer-motion";
 
 const testimonials = [
@@ -26,6 +26,21 @@ const testimonials = [
     quote: "Working with Sienvi has been a game-changer for my business.\n\nThey helped automate my entire marketing across Amazon, Facebook, and Google, giving me back the time I needed to focus on other areas of my company that demand my full attention.\n\nTheir work is outstanding. They collaborated with me one-on-one, constantly updating information every week or even sooner. Lance, their Executive Director, is incredibly professional, always hands-on and making sure everything runs smoothly.\n\nThe systems they built are smart, fast, and powered by real-time AI tools. It truly lifted a huge weight off my shoulders.\n\nBut Sienvi didn't just automate my marketing, they streamlined my workflows, logistics, and sales too. It's amazing how they handle such a heavy workload in such a simple, uncomplicated way. I no longer have to wear the marketer hat every day, and now I have the freedom to focus on strategic priorities… and spend more time with my family.\n\nIf you're an entrepreneur or business owner looking to grow without burning out, Sienvi is the team to trust. I recommend %100",
     author: "Rafael Vélez",
     position: "Founder of Max Reach Tools"
+  },
+  {
+    quote: "I highly recommend Lance and the entire Sienvi Team. It was a surprise to find such an experienced group to assist me with product development and guidance in ecommerce. I have never been disappointed with their advice or results. I am in constant conversation with them about how to navigate the future which seems to be changing very rapidly. No matter where you are in your ecommerce journey, I feel confident about their abilities to guide your success.",
+    author: "Rodney Gray",
+    position: "Serenity Scrolls"
+  },
+  {
+    quote: "Working with the Sienvi team has genuinely been one of the strongest partnerships I've had. The communication is clear, the follow-through is reliable, and the creative support has helped bring OxiSureTech's vision to life in a way that feels aligned, thoughtful, and professionally executed.\n\nWhat I love most is how proactive the team is — you don't just deliver assets, you help shape direction, spot gaps, and elevate the brand with every cycle. That kind of collaboration makes a huge difference.\n\nSienvi has been an incredible partner—organized, creative, and fully invested in helping us build a strong, cohesive brand. Their strategic input and execution have been top-tier every step of the way.",
+    author: "Timothy Montgomery",
+    position: "OxiSureTech"
+  },
+  {
+    quote: "I've had the absolute pleasure of working with Lance, Scott, and the entire team at Sienvi Agency, and I can honestly say it's been one of the best agency experiences my team and I have ever had.\n\nThey've taken on several projects for us, and even though some are still in progress, every step of the process has been remarkably smooth, transparent, and collaborative. What stands out most is how much my staff and I have learned along the way—Sienvi doesn't just deliver results, they elevate your own understanding and capabilities.\n\nI couldn't recommend Lance, Scott, and the Sienvi team highly enough. If you're looking for partners who are professional, proactive, and truly invested in your success, these are your people.",
+    author: "David & Cissie Pryor",
+    position: "A Touch of Health / Cissie Pryor Presents"
   }
 ];
 
@@ -40,13 +55,11 @@ const Index = () => {
     >
       <Navbar />
       <Hero />
-      <TestimonialSection testimonial={testimonials[0]} />
       <ServicePreview />
       <Services />
       <About />
-      <TestimonialSection testimonial={testimonials[1]} />
+      <TestimonialsCarousel testimonials={testimonials} />
       <Process />
-      <TestimonialSection testimonial={testimonials[2]} />
       <Pricing />
       <Contact />
       <Footer />
