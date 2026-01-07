@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Testimonial {
   quote: string;
@@ -19,15 +19,18 @@ const TestimonialsCarousel = ({
 }: TestimonialsCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
+    if (isPaused) return;
+    
     const timer = setInterval(() => {
       setDirection(1);
       setCurrentIndex((prev) => (prev + 1) % testimonials.length);
     }, autoPlayInterval);
 
     return () => clearInterval(timer);
-  }, [testimonials.length, autoPlayInterval]);
+  }, [testimonials.length, autoPlayInterval, isPaused]);
 
   const goToPrevious = () => {
     setDirection(-1);
@@ -90,7 +93,11 @@ const TestimonialsCarousel = ({
           </p>
         </motion.div>
 
-        <div className="max-w-5xl mx-auto relative">
+        <div 
+          className="max-w-5xl mx-auto relative"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
           {/* Navigation Arrows */}
           <button
             onClick={goToPrevious}
@@ -109,7 +116,7 @@ const TestimonialsCarousel = ({
           </button>
 
           {/* Testimonial Card */}
-          <div className="overflow-hidden min-h-[450px] flex items-center px-4">
+          <div className="overflow-hidden min-h-[400px] flex items-center px-4">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={currentIndex}
@@ -127,18 +134,6 @@ const TestimonialsCarousel = ({
                   <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-plc-purple/10 to-plc-burgundy/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
                   
                   <div className="relative flex flex-col items-center text-center">
-                    {/* Quote icon */}
-                    <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-plc-burgundy to-plc-purple shadow-lg">
-                      <Quote className="h-8 w-8 text-white" />
-                    </div>
-                    
-                    {/* Star rating */}
-                    <div className="flex gap-1 mb-6">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    
                     <p className="text-foreground text-lg md:text-xl leading-relaxed mb-8 whitespace-pre-line max-w-3xl">
                       "{currentTestimonial.quote}"
                     </p>
