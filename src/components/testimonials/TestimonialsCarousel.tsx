@@ -138,6 +138,13 @@ const TestimonialsCarousel = ({
                       "{currentTestimonial.quote}"
                     </p>
                     
+                    {/* Decorative divider */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-0.5 bg-gradient-to-r from-transparent to-plc-burgundy/50 rounded-full" />
+                      <div className="w-2 h-2 rounded-full bg-gradient-to-br from-plc-burgundy to-plc-purple" />
+                      <div className="w-12 h-0.5 bg-gradient-to-l from-transparent to-plc-purple/50 rounded-full" />
+                    </div>
+                    
                     {/* Author info */}
                     <div className="flex flex-col items-center">
                       <p className="font-bold text-xl text-foreground">{currentTestimonial.author}</p>
