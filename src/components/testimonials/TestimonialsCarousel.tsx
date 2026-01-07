@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
 
 interface Testimonial {
   quote: string;
@@ -47,56 +47,69 @@ const TestimonialsCarousel = ({
   const variants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 300 : -300,
-      opacity: 0
+      opacity: 0,
+      scale: 0.95
     }),
     center: {
       x: 0,
-      opacity: 1
+      opacity: 1,
+      scale: 1
     },
     exit: (direction: number) => ({
       x: direction < 0 ? 300 : -300,
-      opacity: 0
+      opacity: 0,
+      scale: 0.95
     })
   };
 
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <section id="testimonials" className="section-padding bg-gray-50">
-      <div className="container-custom">
+    <section id="testimonials" className="section-padding relative overflow-hidden">
+      {/* Background with gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-plc-burgundy/5 via-transparent to-plc-purple/5" />
+      <div className="absolute top-0 left-0 w-72 h-72 bg-plc-burgundy/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-plc-purple/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      
+      <div className="container-custom relative z-10">
         <motion.div 
-          className="text-center mb-12"
+          className="text-center mb-16"
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Client Success Stories</h2>
-          <p className="max-w-3xl mx-auto text-gray-600">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-plc-burgundy/10 text-plc-burgundy text-sm font-medium mb-4">
+            Testimonials
+          </span>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-plc-dark via-plc-burgundy to-plc-purple bg-clip-text text-transparent">
+            Client Success Stories
+          </h2>
+          <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
             Hear directly from our clients about their experience working with Sienvi.
           </p>
         </motion.div>
 
-        <div className="max-w-4xl mx-auto relative">
+        <div className="max-w-5xl mx-auto relative">
           {/* Navigation Arrows */}
           <button
             onClick={goToPrevious}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 z-10 p-2 rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-16 z-10 p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 group border border-border/50"
             aria-label="Previous testimonial"
           >
-            <ChevronLeft className="h-6 w-6 text-gray-600" />
+            <ChevronLeft className="h-5 w-5 text-plc-burgundy group-hover:scale-110 transition-transform" />
           </button>
           
           <button
             onClick={goToNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 z-10 p-2 rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-16 z-10 p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 group border border-border/50"
             aria-label="Next testimonial"
           >
-            <ChevronRight className="h-6 w-6 text-gray-600" />
+            <ChevronRight className="h-5 w-5 text-plc-burgundy group-hover:scale-110 transition-transform" />
           </button>
 
           {/* Testimonial Card */}
-          <div className="overflow-hidden min-h-[400px] flex items-center">
+          <div className="overflow-hidden min-h-[450px] flex items-center px-4">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={currentIndex}
@@ -105,24 +118,38 @@ const TestimonialsCarousel = ({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.4, ease: "easeInOut" }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
                 className="w-full"
               >
-                <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
-                  <div className="flex flex-col items-center text-center">
-                    <svg 
-                      className="h-10 w-10 text-plc-burgundy/20 mb-6" 
-                      fill="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-                    </svg>
-                    <p className="text-gray-700 text-lg leading-relaxed mb-8 whitespace-pre-line">
-                      {currentTestimonial.quote}
+                <div className="relative bg-white rounded-3xl shadow-2xl p-8 md:p-14 border border-border/30 overflow-hidden">
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-plc-burgundy/10 to-plc-purple/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-plc-purple/10 to-plc-burgundy/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+                  
+                  <div className="relative flex flex-col items-center text-center">
+                    {/* Quote icon */}
+                    <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-plc-burgundy to-plc-purple shadow-lg">
+                      <Quote className="h-8 w-8 text-white" />
+                    </div>
+                    
+                    {/* Star rating */}
+                    <div className="flex gap-1 mb-6">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    
+                    <p className="text-foreground text-lg md:text-xl leading-relaxed mb-8 whitespace-pre-line max-w-3xl">
+                      "{currentTestimonial.quote}"
                     </p>
-                    <div>
-                      <p className="font-bold text-xl text-plc-dark">{currentTestimonial.author}</p>
-                      <p className="text-plc-burgundy">{currentTestimonial.position}</p>
+                    
+                    {/* Author info */}
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-plc-burgundy to-plc-purple flex items-center justify-center text-white text-xl font-bold mb-3 shadow-lg">
+                        {currentTestimonial.author.charAt(0)}
+                      </div>
+                      <p className="font-bold text-xl text-foreground">{currentTestimonial.author}</p>
+                      <p className="text-plc-burgundy font-medium">{currentTestimonial.position}</p>
                     </div>
                   </div>
                 </div>
@@ -131,15 +158,15 @@ const TestimonialsCarousel = ({
           </div>
 
           {/* Dot Indicators */}
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="flex justify-center gap-3 mt-10">
             {testimonials.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                className={`h-2.5 rounded-full transition-all duration-300 ${
                   index === currentIndex 
-                    ? 'bg-plc-burgundy w-8' 
-                    : 'bg-gray-300 hover:bg-gray-400'
+                    ? 'bg-gradient-to-r from-plc-burgundy to-plc-purple w-10 shadow-md' 
+                    : 'bg-gray-300 hover:bg-gray-400 w-2.5'
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
               />
