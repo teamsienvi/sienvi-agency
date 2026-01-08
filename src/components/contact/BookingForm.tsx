@@ -1,10 +1,10 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookingFormProps {
   calendarUrl: string;
@@ -12,6 +12,7 @@ interface BookingFormProps {
 
 const BookingForm = ({ calendarUrl }: BookingFormProps) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -27,26 +28,46 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+    setIsSubmitting(true);
     
-    // Show confirmation toast
-    toast({
-      title: "Form Submitted",
-      description: "Redirecting you to the booking calendar now!",
-    });
-    
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      message: ""
-    });
-    
-    // Use window.location.href to ensure consistent navigation behavior
-    window.location.href = calendarUrl;
+    try {
+      // Send email via edge function
+      const { error } = await supabase.functions.invoke("send-booking-email", {
+        body: formData,
+      });
+
+      if (error) {
+        console.error("Error sending email:", error);
+        toast({
+          title: "Submission received",
+          description: "Redirecting you to the booking calendar now!",
+        });
+      } else {
+        toast({
+          title: "Form Submitted",
+          description: "Redirecting you to the booking calendar now!",
+        });
+      }
+      
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        message: ""
+      });
+      
+      // Redirect to calendar
+      window.location.href = calendarUrl;
+    } catch (error) {
+      console.error("Error:", error);
+      // Still redirect even if email fails
+      window.location.href = calendarUrl;
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -114,9 +135,10 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
       >
         <Button 
           type="submit" 
+          disabled={isSubmitting}
           className="w-full bg-plc-purple hover:bg-plc-purple/90 text-white button-shadow"
         >
-          Book Your Call
+          {isSubmitting ? "Submitting..." : "Book Your Call"}
         </Button>
       </motion.div>
     </form>
