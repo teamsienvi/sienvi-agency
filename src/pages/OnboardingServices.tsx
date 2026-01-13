@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight, Sparkles, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,9 +22,11 @@ const OnboardingServices = () => {
     subscription_status: string;
     onboarding_completed: boolean;
     email: string;
+    stripe_customer_id: string | null;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   useEffect(() => {
     fetchSubscription();
@@ -51,7 +53,7 @@ const OnboardingServices = () => {
 
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("plan, subscription_status, onboarding_completed, email, selected_services")
+        .select("plan, subscription_status, onboarding_completed, email, selected_services, stripe_customer_id")
         .eq("email", email)
         .eq("is_active", true)
         .maybeSingle();
@@ -158,6 +160,43 @@ const OnboardingServices = () => {
     }
   };
 
+  const handleManageBilling = async () => {
+    if (!subscription?.email || !subscription?.stripe_customer_id) {
+      toast({
+        title: "Billing unavailable",
+        description: "No billing information found for your account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsOpeningPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "create-customer-portal-session",
+        {
+          body: { email: subscription.email },
+        }
+      );
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No portal URL returned");
+      }
+    } catch (error) {
+      console.error("Error opening billing portal:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open billing portal. Please try again.",
+        variant: "destructive",
+      });
+      setIsOpeningPortal(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -242,7 +281,7 @@ const OnboardingServices = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="flex justify-center"
+            className="flex flex-col sm:flex-row justify-center items-center gap-4"
           >
             <Button
               size="lg"
@@ -262,6 +301,28 @@ const OnboardingServices = () => {
                 </>
               )}
             </Button>
+
+            {subscription?.stripe_customer_id && subscription?.subscription_status === "active" && (
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleManageBilling}
+                disabled={isOpeningPortal}
+                className="px-8 py-6 text-lg font-semibold rounded-xl border-border"
+              >
+                {isOpeningPortal ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Opening...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Manage Billing
+                  </>
+                )}
+              </Button>
+            )}
           </motion.div>
 
           {selectedServices.length === 0 && (
