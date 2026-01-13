@@ -30,7 +30,7 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    const { priceId } = await req.json();
+    const { priceId, selectedServices, plan } = await req.json();
 
     if (!priceId) {
       console.error("Missing priceId in request body");
@@ -44,8 +44,8 @@ serve(async (req) => {
     }
 
     // Validate price ID
-    const plan = PRICE_TO_PLAN[priceId];
-    if (!plan) {
+    const planFromPrice = PRICE_TO_PLAN[priceId];
+    if (!planFromPrice) {
       console.error(`Invalid priceId: ${priceId}`);
       return new Response(
         JSON.stringify({ error: "Invalid priceId" }),
@@ -56,7 +56,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Creating checkout session for plan: ${plan}, priceId: ${priceId}`);
+    console.log(`Creating checkout session for plan: ${planFromPrice}, priceId: ${priceId}, services: ${selectedServices?.join(', ')}`);
 
     // Get the origin from the request or use a default
     const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
@@ -72,11 +72,12 @@ serve(async (req) => {
       ],
       metadata: {
         product: "sienvi_automation",
-        plan: plan,
+        plan: plan || planFromPrice,
+        selected_services: selectedServices ? JSON.stringify(selectedServices) : "",
       },
       // Use {CHECKOUT_SESSION_ID} placeholder - Stripe replaces this with actual session ID
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/#pricing`,
+      cancel_url: `${origin}/select-services?plan=${plan || planFromPrice}`,
     });
 
     console.log(`Checkout session created: ${session.id}`);

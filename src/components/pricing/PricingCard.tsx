@@ -1,12 +1,16 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { pricingVariants } from "./pricingAnimations";
 import PricingFeature from "./PricingFeature";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import type { PricingTier } from "./pricingData";
+
+// Map priceId to plan slug
+const PRICE_TO_PLAN: Record<string, string> = {
+  "price_1SpFvwDnw1azoLSp17B18jKB": "single",
+  "price_1SpFwRDnw1azoLSpuZNVz26s": "triple",
+  "price_1SpFwgDnw1azoLSpFNy5x58Z": "full",
+};
 
 interface PricingCardProps extends PricingTier {
   index: number;
@@ -21,32 +25,11 @@ const PricingCard = ({
   priceId,
   index
 }: PricingCardProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleGetStarted = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId },
-      });
-
-      if (error) {
-        console.error("Checkout error:", error);
-        toast.error("Failed to start checkout. Please try again.");
-        return;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast.error("No checkout URL received. Please try again.");
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGetStarted = () => {
+    const plan = PRICE_TO_PLAN[priceId] || "single";
+    navigate(`/select-services?plan=${plan}`);
   };
 
   return (
@@ -98,16 +81,8 @@ const PricingCard = ({
           <Button 
             className={`w-full ${popular ? 'bg-plc-purple hover:bg-plc-purple/90 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
             onClick={handleGetStarted}
-            disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              "Get Started"
-            )}
+            Get Started
           </Button>
         </motion.div>
       </div>
