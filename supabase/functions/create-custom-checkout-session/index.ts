@@ -24,7 +24,10 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" });
 
-    const { customAmount, maxServices, notes, customerEmail } = await req.json();
+    const { clientName, clientEmail, customAmount, maxServices, notes, customerEmail } = await req.json();
+
+    // Support both old (customerEmail) and new (clientEmail) parameter names
+    const email = clientEmail || customerEmail;
 
     // Validate inputs
     if (!customAmount || typeof customAmount !== "number" || customAmount < 1) {
@@ -43,16 +46,15 @@ serve(async (req) => {
       );
     }
 
-    console.log("Creating custom checkout session:", { customAmount, maxServices, notes, customerEmail });
+    console.log("Creating custom checkout session:", { clientName, email, customAmount, maxServices, notes });
 
     // Get the origin for redirect URLs
     const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
 
-    // Create the checkout session with price_data for custom pricing
-    const session = await stripe.checkout.sessions.create({
+    // Build checkout session options
+    const sessionOptions: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
-      customer_email: customerEmail,
       line_items: [
         {
           price_data: {
@@ -63,7 +65,7 @@ serve(async (req) => {
             },
             product_data: {
               name: "Sienvi Custom Automation Bundle",
-              description: `Custom plan with ${maxServices} service${maxServices > 1 ? "s" : ""} included`,
+              description: `Custom plan for ${clientName || "Client"} with ${maxServices} service${maxServices > 1 ? "s" : ""} included`,
             },
           },
           quantity: 1,
@@ -73,11 +75,20 @@ serve(async (req) => {
         plan: "custom",
         max_services: maxServices.toString(),
         custom_price: customAmount.toString(),
+        client_name: clientName || "",
         notes: notes || "",
       },
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/#pricing`,
-    });
+    };
+
+    // Add customer email if provided
+    if (email) {
+      sessionOptions.customer_email = email;
+    }
+
+    // Create the checkout session
+    const session = await stripe.checkout.sessions.create(sessionOptions);
 
     console.log("Custom checkout session created:", session.id);
 

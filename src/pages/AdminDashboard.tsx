@@ -19,7 +19,8 @@ import {
   Sparkles,
   Activity,
   ChevronDown,
-  MousePointer2
+  MousePointer2,
+  Package
 } from "lucide-react";
 import {
   Select,
@@ -191,6 +192,14 @@ const AdminDashboard = () => {
             <p className="text-gray-400 mt-1">Comprehensive traffic and performance analytics</p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              onClick={() => navigate("/admin/custom-bundles")}
+              variant="outline"
+              className="border-cyan-500/50 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Custom Bundles
+            </Button>
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-[160px] bg-[#1a1f2e] border-[#2a3142] text-white">
                 <SelectValue />
