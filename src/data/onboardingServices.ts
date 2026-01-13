@@ -50,10 +50,12 @@ export const planLimits: Record<string, number> = {
   single: 1,
   triple: 3,
   full: 6,
+  custom: 6, // Default for custom, will be overridden by metadata
 };
 
 export const planDisplayNames: Record<string, string> = {
   single: "Single Service",
   triple: "Triple Bundle",
   full: "Full Suite",
+  custom: "Custom Plan",
 };

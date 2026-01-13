@@ -1,14 +1,17 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import PricingCard from "./pricing/PricingCard";
+import CustomBundleCard from "./pricing/CustomBundleCard";
 import { pricingTiers } from "./pricing/pricingData";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 
 // Updated Google Calendar appointment URL
 const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 
 const Pricing = () => {
+  const { isAdmin } = useAdminCheck();
+  
   const handleBookCall = () => {
-    // Use window.location.href instead of window.open
     window.location.href = CALENDAR_BOOKING_URL;
   };
 
@@ -29,10 +32,11 @@ const Pricing = () => {
           </p>
         </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-8`}>
           {pricingTiers.map((tier, index) => (
             <PricingCard key={index} {...tier} index={index} />
           ))}
+          <CustomBundleCard index={pricingTiers.length} isAdmin={isAdmin} />
         </div>
         
         <motion.div 
