@@ -36,12 +36,31 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     plan = PRICE_TO_PLAN[session.line_items.data[0].price.id];
   }
   
+  // For custom plans, extract additional metadata
+  const isCustomPlan = plan === "custom";
+  const maxServices = isCustomPlan ? parseInt(metadata.max_services || "6") : null;
+  const customPrice = isCustomPlan ? parseFloat(metadata.custom_price || "0") : null;
+  const notes = isCustomPlan ? (metadata.notes || "") : null;
+  
   console.log("Customer:", customerId, "Subscription:", subscriptionId, "Plan:", plan, "Email:", customerEmail);
+  if (isCustomPlan) {
+    console.log("Custom plan details - Max Services:", maxServices, "Price:", customPrice, "Notes:", notes);
+  }
+  
+  // Build the metadata object to store
+  const storedMetadata = {
+    ...metadata,
+    ...(isCustomPlan && {
+      max_services: maxServices,
+      custom_price: customPrice,
+      notes: notes,
+    }),
+  };
   
   // Check if subscription already exists
   const { data: existing } = await supabase
     .from("subscriptions")
-    .select("id")
+    .select("id, plan")
     .eq("stripe_subscription_id", subscriptionId)
     .maybeSingle();
   
@@ -53,7 +72,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscription_status: "active",
         is_active: true,
         plan: plan || existing.plan,
-        metadata: metadata,
+        metadata: storedMetadata,
       })
       .eq("stripe_subscription_id", subscriptionId);
     
@@ -73,7 +92,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         plan: plan,
         subscription_status: "active",
         is_active: true,
-        metadata: metadata,
+        metadata: storedMetadata,
       });
     
     if (error) {

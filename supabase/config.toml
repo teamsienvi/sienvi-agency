@@ -1,5 +1,8 @@
 project_id = "ikazuqhukvtdorscoads"
 
+[functions.create-custom-checkout-session]
+verify_jwt = false
+
 [functions.get-analytics]
 verify_jwt = false
 

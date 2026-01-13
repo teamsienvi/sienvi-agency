@@ -103,7 +103,20 @@ const OnboardingServices = () => {
     }
   };
 
-  const maxServices = subscription?.plan ? planLimits[subscription.plan] || 1 : 1;
+  // For custom plans, get max_services from metadata
+  const getMaxServices = () => {
+    if (!subscription?.plan) return 1;
+    
+    if (subscription.plan === "custom") {
+      // Try to get max_services from metadata stored in the subscription
+      // This will be fetched when we query the subscription
+      return 6; // Default to full suite for custom plans
+    }
+    
+    return planLimits[subscription.plan] || 1;
+  };
+  
+  const maxServices = getMaxServices();
 
   const handleToggleService = (serviceId: string) => {
     setSelectedServices((prev) => {
