@@ -74,7 +74,8 @@ serve(async (req) => {
         product: "sienvi_automation",
         plan: plan,
       },
-      success_url: `${origin}/success`,
+      // Use {CHECKOUT_SESSION_ID} placeholder - Stripe replaces this with actual session ID
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/#pricing`,
     });
 

@@ -784,7 +784,9 @@ export type Database = {
           id: string
           is_active: boolean
           metadata: Json | null
+          onboarding_completed: boolean | null
           plan: string | null
+          selected_services: string[] | null
           stripe_customer_id: string
           stripe_subscription_id: string | null
           subscription_status: string
@@ -796,7 +798,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           metadata?: Json | null
+          onboarding_completed?: boolean | null
           plan?: string | null
+          selected_services?: string[] | null
           stripe_customer_id: string
           stripe_subscription_id?: string | null
           subscription_status?: string
@@ -808,7 +812,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           metadata?: Json | null
+          onboarding_completed?: boolean | null
           plan?: string | null
+          selected_services?: string[] | null
           stripe_customer_id?: string
           stripe_subscription_id?: string | null
           subscription_status?: string
