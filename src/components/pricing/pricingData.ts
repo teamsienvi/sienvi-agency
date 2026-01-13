@@ -20,7 +20,7 @@ export const pricingTiers: PricingTier[] = [
       "Monthly performance reports",
       "Dedicated account manager"
     ],
-    priceId: "price_1SpD4wKEtylNfLjGh9kGQO3z"
+    priceId: "price_1SpFvwDnw1azoLSp17B18jKB"
   },
   {
     title: "Triple Automation",
@@ -35,7 +35,7 @@ export const pricingTiers: PricingTier[] = [
       "Quarterly strategy sessions"
     ],
     popular: true,
-    priceId: "price_1SpD4wKEtylNfLjGfBzytYeS"
+    priceId: "price_1SpFwRDnw1azoLSpuZNVz26s"
   },
   {
     title: "Full Automation",
@@ -49,6 +49,6 @@ export const pricingTiers: PricingTier[] = [
       "Dedicated senior account manager",
       "Monthly strategy and optimization reviews"
     ],
-    priceId: "price_1SpD4wKEtylNfLjGGsGBcNq1"
+    priceId: "price_1SpFwgDnw1azoLSpFNy5x58Z"
   }
 ];
