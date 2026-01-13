@@ -1,8 +1,11 @@
-
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { pricingVariants } from "./pricingAnimations";
 import PricingFeature from "./PricingFeature";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { PricingTier } from "./pricingData";
 
 interface PricingCardProps extends PricingTier {
@@ -15,8 +18,37 @@ const PricingCard = ({
   description, 
   features, 
   popular = false,
+  priceId,
   index
 }: PricingCardProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGetStarted = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: { priceId },
+      });
+
+      if (error) {
+        console.error("Checkout error:", error);
+        toast.error("Failed to start checkout. Please try again.");
+        return;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("No checkout URL received. Please try again.");
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <motion.div 
       className={`bg-white rounded-2xl shadow-lg border ${popular ? 'border-plc-purple relative' : 'border-gray-200'}`}
@@ -65,8 +97,17 @@ const PricingCard = ({
         >
           <Button 
             className={`w-full ${popular ? 'bg-plc-purple hover:bg-plc-purple/90 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
+            onClick={handleGetStarted}
+            disabled={isLoading}
           >
-            Get Started
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Get Started"
+            )}
           </Button>
         </motion.div>
       </div>
