@@ -5,6 +5,7 @@ export interface PricingTier {
   description: string;
   features: string[];
   popular?: boolean;
+  priceId: string;
 }
 
 export const pricingTiers: PricingTier[] = [
@@ -18,7 +19,8 @@ export const pricingTiers: PricingTier[] = [
       "25% consulting call discount",
       "Monthly performance reports",
       "Dedicated account manager"
-    ]
+    ],
+    priceId: "price_1SpD4wKEtylNfLjGh9kGQO3z"
   },
   {
     title: "Triple Automation",
@@ -32,7 +34,8 @@ export const pricingTiers: PricingTier[] = [
       "Dedicated account manager",
       "Quarterly strategy sessions"
     ],
-    popular: true
+    popular: true,
+    priceId: "price_1SpD4wKEtylNfLjGfBzytYeS"
   },
   {
     title: "Full Automation",
@@ -45,6 +48,7 @@ export const pricingTiers: PricingTier[] = [
       "Bi-weekly performance reports",
       "Dedicated senior account manager",
       "Monthly strategy and optimization reviews"
-    ]
+    ],
+    priceId: "price_1SpD4wKEtylNfLjGGsGBcNq1"
   }
 ];
