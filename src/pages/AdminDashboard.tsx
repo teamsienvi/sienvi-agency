@@ -233,7 +233,25 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card 
+            className="bg-gradient-to-br from-blue-500/20 to-[#1a1f2e] border-blue-500/30 cursor-pointer hover:border-blue-500/50 transition-colors"
+            onClick={() => navigate("/admin/clients")}
+          >
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-blue-500/20">
+                  <Users className="h-6 w-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">View All Clients</h3>
+                  <p className="text-gray-400 text-sm">Manage subscriptions & services</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-blue-400" />
+            </CardContent>
+          </Card>
+
           <Card 
             className="bg-gradient-to-br from-cyan-500/20 to-[#1a1f2e] border-cyan-500/30 cursor-pointer hover:border-cyan-500/50 transition-colors"
             onClick={() => navigate("/admin/custom-bundles")}

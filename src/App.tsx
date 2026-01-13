@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminCustomBundles from "./pages/AdminCustomBundles";
+import AdminClients from "./pages/AdminClients";
 import Success from "./pages/Success";
 import OnboardingServices from "./pages/OnboardingServices";
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/custom-bundles" element={<AdminCustomBundles />} />
+            <Route path="/admin/clients" element={<AdminClients />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
