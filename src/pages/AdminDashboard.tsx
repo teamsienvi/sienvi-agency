@@ -2,146 +2,142 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
-  Eye, 
-  Clock, 
-  TrendingUp, 
   LogOut, 
-  BarChart3,
-  Monitor,
-  Smartphone,
-  Tablet,
-  Globe,
-  FileText,
+  Package,
+  DollarSign,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  ExternalLink,
+  RefreshCw,
   Sparkles,
-  Activity,
-  ChevronDown,
-  MousePointer2,
-  Package
+  ArrowRight,
+  BarChart3
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
-interface AnalyticsData {
-  visitors: number;
-  pageViews: number;
-  avgDuration: number;
-  bounceRate: number;
-  pagesPerVisit: number;
-  totalSessions: number;
-  topPages?: { path: string; views: number }[];
-  devices?: { device: string; count: number }[];
-  sources?: { source: string; count: number }[];
+interface Subscription {
+  id: string;
+  email: string | null;
+  plan: string | null;
+  subscription_status: string;
+  is_active: boolean;
+  created_at: string;
+  selected_services: string[] | null;
+  onboarding_completed: boolean | null;
+  metadata: any;
 }
 
-const StatCard = ({ 
-  title, 
-  value, 
-  icon: Icon,
-}: { 
-  title: string; 
-  value: string | number; 
-  icon: any;
-}) => (
-  <Card className="bg-[#1a1f2e] border-[#2a3142] hover:border-[#3a4152] transition-colors">
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-cyan-400 text-sm font-medium">{title}</span>
-        <Icon className="h-5 w-5 text-gray-500" />
-      </div>
-      <div className="text-3xl font-bold text-white">{value}</div>
-    </CardContent>
-  </Card>
-);
-
-const ProgressBar = ({ value, max, label, count }: { value: number; max: number; label: string; count: number }) => {
-  const percentage = max > 0 ? (value / max) * 100 : 0;
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-400">{label}</span>
-        <span className="text-white font-medium">{count}</span>
-      </div>
-      <div className="h-2 w-full bg-[#2a3142] rounded-full overflow-hidden">
-        <div 
-          className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-full transition-all duration-500"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-};
+interface DashboardStats {
+  totalSubscriptions: number;
+  activeSubscriptions: number;
+  customPlans: number;
+  revenue: number;
+}
 
 const AdminDashboard = () => {
   const [user, setUser] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalSubscriptions: 0,
+    activeSubscriptions: 0,
+    customPlans: 0,
+    revenue: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("30");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/admin");
-        return;
-      }
-
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!roleData) {
-        await supabase.auth.signOut();
-        navigate("/admin");
-        return;
-      }
-
-      setUser(session.user);
-      fetchAnalytics();
-    };
-
     checkAuth();
-  }, [navigate]);
+  }, []);
 
-  useEffect(() => {
-    if (user) {
-      fetchAnalytics();
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      navigate("/admin");
+      return;
     }
-  }, [dateRange]);
 
-  const fetchAnalytics = async () => {
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      await supabase.auth.signOut();
+      navigate("/admin");
+      return;
+    }
+
+    setUser(session.user);
+    fetchDashboardData();
+  };
+
+  const fetchDashboardData = async () => {
     try {
-      const endDate = new Date().toISOString().split('T')[0];
-      const days = parseInt(dateRange);
-      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      const response = await supabase.functions.invoke('get-analytics', {
-        body: { startDate, endDate }
+      if (error) throw error;
+
+      const subs = data || [];
+      setSubscriptions(subs);
+
+      // Calculate stats
+      const active = subs.filter(s => s.is_active);
+      const custom = subs.filter(s => s.plan === "custom");
+      
+      // Estimate revenue (simplified)
+      const planPrices: Record<string, number> = {
+        single: 888,
+        triple: 2398.20,
+        full: 3996,
+      };
+      
+      const revenue = active.reduce((sum, sub) => {
+        if (sub.plan === "custom" && sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata)) {
+          const meta = sub.metadata as Record<string, unknown>;
+          if (meta.custom_price) {
+            return sum + parseFloat(String(meta.custom_price));
+          }
+        }
+        return sum + (planPrices[sub.plan || ""] || 0);
+      }, 0);
+
+      setStats({
+        totalSubscriptions: subs.length,
+        activeSubscriptions: active.length,
+        customPlans: custom.length,
+        revenue,
       });
-
-      if (response.data?.success) {
-        setAnalytics(response.data.data);
-      }
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+      console.error("Failed to fetch data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchDashboardData();
   };
 
   const handleLogout = async () => {
@@ -153,18 +149,45 @@ const AdminDashboard = () => {
     navigate("/");
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    return `${mins}m ${secs}s`;
+  const getStatusBadge = (status: string, isActive: boolean) => {
+    if (status === "active" && isActive) {
+      return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Active</Badge>;
+    }
+    if (status === "canceled") {
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Canceled</Badge>;
+    }
+    if (status === "past_due") {
+      return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Past Due</Badge>;
+    }
+    return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">{status}</Badge>;
   };
 
-  const getDeviceIcon = (device: string) => {
-    switch (device.toLowerCase()) {
-      case 'mobile': return <Smartphone className="h-4 w-4" />;
-      case 'tablet': return <Tablet className="h-4 w-4" />;
-      default: return <Monitor className="h-4 w-4" />;
-    }
+  const getPlanBadge = (plan: string | null) => {
+    const planColors: Record<string, string> = {
+      single: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      triple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      full: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+      custom: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+    };
+    const planNames: Record<string, string> = {
+      single: "Single",
+      triple: "Triple",
+      full: "Full Suite",
+      custom: "Custom",
+    };
+    return (
+      <Badge className={planColors[plan || ""] || "bg-gray-500/20 text-gray-400"}>
+        {planNames[plan || ""] || plan || "Unknown"}
+      </Badge>
+    );
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   if (isLoading) {
@@ -172,15 +195,11 @@ const AdminDashboard = () => {
       <div className="min-h-screen bg-[#0f1219] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-          <p className="text-gray-400">Loading analytics...</p>
+          <p className="text-gray-400">Loading dashboard...</p>
         </div>
       </div>
     );
   }
-
-  const maxPageViews = Math.max(...(analytics?.topPages?.map(p => p.views) || [1]));
-  const maxDeviceCount = Math.max(...(analytics?.devices?.map(d => d.count) || [1]));
-  const maxSourceCount = Math.max(...(analytics?.sources?.map(s => s.count) || [1]));
 
   return (
     <div className="min-h-screen bg-[#0f1219]">
@@ -188,29 +207,20 @@ const AdminDashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Admin Analytics Dashboard</h1>
-            <p className="text-gray-400 mt-1">Comprehensive traffic and performance analytics</p>
+            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+            <p className="text-gray-400 mt-1">Manage subscriptions and create custom bundles</p>
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => navigate("/admin/custom-bundles")}
+              onClick={handleRefresh}
               variant="outline"
-              className="border-cyan-500/50 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
+              size="sm"
+              disabled={isRefreshing}
+              className="border-[#2a3142] bg-[#1a1f2e] text-white hover:bg-[#2a3142]"
             >
-              <Package className="h-4 w-4 mr-2" />
-              Custom Bundles
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[160px] bg-[#1a1f2e] border-[#2a3142] text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1a1f2e] border-[#2a3142]">
-                <SelectItem value="7" className="text-white hover:bg-[#2a3142]">Last 7 days</SelectItem>
-                <SelectItem value="14" className="text-white hover:bg-[#2a3142]">Last 14 days</SelectItem>
-                <SelectItem value="30" className="text-white hover:bg-[#2a3142]">Last 30 days</SelectItem>
-                <SelectItem value="90" className="text-white hover:bg-[#2a3142]">Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
             <Button
               onClick={handleLogout}
               variant="outline"
@@ -222,251 +232,178 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-[#1a1f2e] border border-[#2a3142] p-1">
-            <TabsTrigger 
-              value="overview" 
-              className="data-[state=active]:bg-[#2a3142] data-[state=active]:text-white text-gray-400"
-            >
-              <Activity className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="traffic" 
-              className="data-[state=active]:bg-[#2a3142] data-[state=active]:text-white text-gray-400"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Traffic Analytics
-            </TabsTrigger>
-            <TabsTrigger 
-              value="behavior" 
-              className="data-[state=active]:bg-[#2a3142] data-[state=active]:text-white text-gray-400"
-            >
-              <MousePointer2 className="h-4 w-4 mr-2" />
-              User Behavior
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                title="Avg Session Duration"
-                value={formatDuration(analytics?.avgDuration || 0)}
-                icon={Clock}
-              />
-              <StatCard
-                title="Bounce Rate"
-                value={`${analytics?.bounceRate?.toFixed(1) || 0}%`}
-                icon={TrendingUp}
-              />
-              <StatCard
-                title="Total Page Views"
-                value={analytics?.pageViews || 0}
-                icon={Eye}
-              />
-              <StatCard
-                title="Pages / Session"
-                value={analytics?.pagesPerVisit?.toFixed(1) || 0}
-                icon={Sparkles}
-              />
-            </div>
-
-            {/* Secondary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <StatCard
-                title="Unique Visitors"
-                value={analytics?.visitors || 0}
-                icon={Users}
-              />
-              <StatCard
-                title="Total Sessions"
-                value={analytics?.totalSessions || 0}
-                icon={BarChart3}
-              />
-            </div>
-
-            {/* Top Pages */}
-            <Card className="bg-[#1a1f2e] border-[#2a3142]">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-cyan-400" />
-                  Top Pages
-                </CardTitle>
-                <p className="text-gray-400 text-sm">Most visited pages on your site</p>
-              </CardHeader>
-              <CardContent>
-                {analytics?.topPages && analytics.topPages.length > 0 ? (
-                  <div className="space-y-4">
-                    {analytics.topPages.slice(0, 8).map((page, i) => (
-                      <ProgressBar 
-                        key={i}
-                        value={page.views}
-                        max={maxPageViews}
-                        label={page.path === "/" ? "Homepage" : page.path}
-                        count={page.views}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <FileText className="h-12 w-12 mb-3 opacity-50" />
-                    <p>No page data yet</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Traffic Analytics Tab */}
-          <TabsContent value="traffic" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Devices */}
-              <Card className="bg-[#1a1f2e] border-[#2a3142]">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Monitor className="h-5 w-5 text-cyan-400" />
-                    Device Distribution
-                  </CardTitle>
-                  <p className="text-gray-400 text-sm">Breakdown by device type</p>
-                </CardHeader>
-                <CardContent>
-                  {analytics?.devices && analytics.devices.length > 0 ? (
-                    <div className="space-y-4">
-                      {analytics.devices.map((device, i) => (
-                        <div key={i} className="flex items-center gap-4">
-                          <div className="p-2 rounded-lg bg-[#2a3142] text-cyan-400">
-                            {getDeviceIcon(device.device)}
-                          </div>
-                          <div className="flex-1">
-                            <ProgressBar 
-                              value={device.count}
-                              max={maxDeviceCount}
-                              label={device.device.charAt(0).toUpperCase() + device.device.slice(1)}
-                              count={device.count}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                      <Monitor className="h-12 w-12 mb-3 opacity-50" />
-                      <p>No device data yet</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Traffic Sources */}
-              <Card className="bg-[#1a1f2e] border-[#2a3142]">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-cyan-400" />
-                    Traffic Sources
-                  </CardTitle>
-                  <p className="text-gray-400 text-sm">Where your visitors come from</p>
-                </CardHeader>
-                <CardContent>
-                  {analytics?.sources && analytics.sources.length > 0 ? (
-                    <div className="space-y-4">
-                      {analytics.sources.slice(0, 6).map((source, i) => (
-                        <ProgressBar 
-                          key={i}
-                          value={source.count}
-                          max={maxSourceCount}
-                          label={source.source}
-                          count={source.count}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                      <Globe className="h-12 w-12 mb-3 opacity-50" />
-                      <p>No source data yet</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* User Behavior Tab */}
-          <TabsContent value="behavior" className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard
-                title="Avg Session Duration"
-                value={formatDuration(analytics?.avgDuration || 0)}
-                icon={Clock}
-              />
-              <StatCard
-                title="Bounce Rate"
-                value={`${analytics?.bounceRate?.toFixed(1) || 0}%`}
-                icon={TrendingUp}
-              />
-              <StatCard
-                title="Pages / Session"
-                value={analytics?.pagesPerVisit?.toFixed(2) || 0}
-                icon={Sparkles}
-              />
-            </div>
-
-            <Card className="bg-[#1a1f2e] border-[#2a3142]">
-              <CardHeader>
-                <CardTitle className="text-white">Session Insights</CardTitle>
-                <p className="text-gray-400 text-sm">Understanding user engagement</p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="text-cyan-400 font-medium">Engagement Metrics</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-[#2a3142] rounded-lg">
-                        <span className="text-gray-400">Total Sessions</span>
-                        <span className="text-white font-bold">{analytics?.totalSessions || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-[#2a3142] rounded-lg">
-                        <span className="text-gray-400">Unique Visitors</span>
-                        <span className="text-white font-bold">{analytics?.visitors || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-[#2a3142] rounded-lg">
-                        <span className="text-gray-400">Page Views</span>
-                        <span className="text-white font-bold">{analytics?.pageViews || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h4 className="text-cyan-400 font-medium">Performance</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-[#2a3142] rounded-lg">
-                        <span className="text-gray-400">Avg Duration</span>
-                        <span className="text-white font-bold">{formatDuration(analytics?.avgDuration || 0)}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-[#2a3142] rounded-lg">
-                        <span className="text-gray-400">Bounce Rate</span>
-                        <span className={`font-bold ${(analytics?.bounceRate || 0) > 70 ? 'text-red-400' : 'text-green-400'}`}>
-                          {analytics?.bounceRate?.toFixed(1) || 0}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-[#2a3142] rounded-lg">
-                        <span className="text-gray-400">Pages / Session</span>
-                        <span className="text-white font-bold">{analytics?.pagesPerVisit?.toFixed(2) || 0}</span>
-                      </div>
-                    </div>
-                  </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <Card 
+            className="bg-gradient-to-br from-cyan-500/20 to-[#1a1f2e] border-cyan-500/30 cursor-pointer hover:border-cyan-500/50 transition-colors"
+            onClick={() => navigate("/admin/custom-bundles")}
+          >
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-cyan-500/20">
+                  <Package className="h-6 w-6 text-cyan-400" />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Create Custom Bundle</h3>
+                  <p className="text-gray-400 text-sm">Generate custom pricing for clients</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-cyan-400" />
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="bg-gradient-to-br from-purple-500/20 to-[#1a1f2e] border-purple-500/30 cursor-pointer hover:border-purple-500/50 transition-colors"
+            onClick={() => window.open("https://dashboard.stripe.com", "_blank")}
+          >
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-purple-500/20">
+                  <DollarSign className="h-6 w-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Stripe Dashboard</h3>
+                  <p className="text-gray-400 text-sm">Manage payments and invoices</p>
+                </div>
+              </div>
+              <ExternalLink className="h-5 w-5 text-purple-400" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="bg-[#1a1f2e] border-[#2a3142]">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <Users className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-400 text-sm">Total Subscriptions</span>
+              </div>
+              <p className="text-3xl font-bold text-white">{stats.totalSubscriptions}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#1a1f2e] border-[#2a3142]">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <span className="text-gray-400 text-sm">Active</span>
+              </div>
+              <p className="text-3xl font-bold text-green-400">{stats.activeSubscriptions}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#1a1f2e] border-[#2a3142]">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <Sparkles className="h-5 w-5 text-pink-500" />
+                <span className="text-gray-400 text-sm">Custom Plans</span>
+              </div>
+              <p className="text-3xl font-bold text-pink-400">{stats.customPlans}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#1a1f2e] border-[#2a3142]">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <TrendingUp className="h-5 w-5 text-cyan-500" />
+                <span className="text-gray-400 text-sm">Est. MRR</span>
+              </div>
+              <p className="text-3xl font-bold text-cyan-400">
+                ${stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Subscriptions Table */}
+        <Card className="bg-[#1a1f2e] border-[#2a3142]">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Users className="h-5 w-5 text-cyan-400" />
+              Recent Subscriptions
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              All customer subscriptions and their current status
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {subscriptions.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400">No subscriptions yet</p>
+                <p className="text-gray-500 text-sm mt-1">
+                  Subscriptions will appear here after customers complete checkout
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#2a3142]">
+                      <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Customer</th>
+                      <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Plan</th>
+                      <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Status</th>
+                      <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Onboarding</th>
+                      <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Services</th>
+                      <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscriptions.slice(0, 10).map((sub) => (
+                      <tr key={sub.id} className="border-b border-[#2a3142] hover:bg-[#2a3142]/50 transition-colors">
+                        <td className="py-4 px-4">
+                          <p className="text-white text-sm font-medium">
+                            {(sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata) && (sub.metadata as Record<string, unknown>).client_name) 
+                              ? String((sub.metadata as Record<string, unknown>).client_name) 
+                              : sub.email || "Unknown"}
+                          </p>
+                          {sub.email && sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata) && (sub.metadata as Record<string, unknown>).client_name && (
+                            <p className="text-gray-500 text-xs">{sub.email}</p>
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            {getPlanBadge(sub.plan)}
+                            {sub.plan === "custom" && sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata) && (sub.metadata as Record<string, unknown>).custom_price && (
+                              <span className="text-gray-500 text-xs">
+                                ${parseFloat(String((sub.metadata as Record<string, unknown>).custom_price)).toFixed(0)}/mo
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {getStatusBadge(sub.subscription_status, sub.is_active)}
+                        </td>
+                        <td className="py-4 px-4">
+                          {sub.onboarding_completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <Clock className="h-5 w-5 text-yellow-500" />
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-gray-400 text-sm">
+                            {sub.selected_services?.length || 0} selected
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-gray-500 text-sm">{formatDate(sub.created_at)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-[#2a3142] flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-500 text-sm">
             <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span>Live tracking active</span>
+            <span>Connected to Stripe</span>
           </div>
           <div className="text-gray-500 text-sm">
             {user?.email}
