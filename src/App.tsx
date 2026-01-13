@@ -11,7 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminCustomBundles from "./pages/AdminCustomBundles";
 import AdminClients from "./pages/AdminClients";
 import Success from "./pages/Success";
-import OnboardingServices from "./pages/OnboardingServices";
+import SelectServices from "./pages/SelectServices";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/success" element={<Success />} />
-            <Route path="/onboarding/services" element={<OnboardingServices />} />
+            <Route path="/select-services" element={<SelectServices />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/custom-bundles" element={<AdminCustomBundles />} />

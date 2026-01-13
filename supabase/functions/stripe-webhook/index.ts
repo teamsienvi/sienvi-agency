@@ -36,6 +36,16 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     plan = PRICE_TO_PLAN[session.line_items.data[0].price.id];
   }
   
+  // Parse selected services from metadata
+  let selectedServices: string[] = [];
+  if (metadata.selected_services) {
+    try {
+      selectedServices = JSON.parse(metadata.selected_services);
+    } catch (e) {
+      console.error("Error parsing selected_services:", e);
+    }
+  }
+  
   // For custom plans, extract additional metadata
   const isCustomPlan = plan === "custom";
   const maxServices = isCustomPlan ? parseInt(metadata.max_services || "6") : null;
@@ -43,6 +53,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const notes = isCustomPlan ? (metadata.notes || "") : null;
   
   console.log("Customer:", customerId, "Subscription:", subscriptionId, "Plan:", plan, "Email:", customerEmail);
+  console.log("Selected Services:", selectedServices);
   if (isCustomPlan) {
     console.log("Custom plan details - Max Services:", maxServices, "Price:", customPrice, "Notes:", notes);
   }
@@ -72,6 +83,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscription_status: "active",
         is_active: true,
         plan: plan || existing.plan,
+        selected_services: selectedServices.length > 0 ? selectedServices : null,
+        onboarding_completed: selectedServices.length > 0,
         metadata: storedMetadata,
       })
       .eq("stripe_subscription_id", subscriptionId);
@@ -92,6 +105,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         plan: plan,
         subscription_status: "active",
         is_active: true,
+        selected_services: selectedServices.length > 0 ? selectedServices : null,
+        onboarding_completed: selectedServices.length > 0,
         metadata: storedMetadata,
       });
     
