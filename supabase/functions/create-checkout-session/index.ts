@@ -6,11 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Price ID to plan mapping
+// Price ID to plan mapping (Live keys)
 const PRICE_TO_PLAN: Record<string, string> = {
-  "price_1SpD4wKEtylNfLjGh9kGQO3z": "single",
-  "price_1SpD4wKEtylNfLjGfBzytYeS": "triple",
-  "price_1SpD4wKEtylNfLjGGsGBcNq1": "full",
+  "price_1SpFvwDnw1azoLSp17B18jKB": "single",
+  "price_1SpFwRDnw1azoLSpuZNVz26s": "triple",
+  "price_1SpFwgDnw1azoLSpFNy5x58Z": "full",
 };
 
 serve(async (req) => {
