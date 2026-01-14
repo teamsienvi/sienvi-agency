@@ -14,11 +14,11 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-// Price ID mapping
+// Price ID mapping (Test Mode)
 const PLAN_PRICE_IDS: Record<string, string> = {
-  single: "price_1SpFvwDnw1azoLSp17B18jKB",
-  triple: "price_1SpFwRDnw1azoLSpuZNVz26s",
-  full: "price_1SpFwgDnw1azoLSpFNy5x58Z",
+  single: "price_1SpbnaDnw1azoLSpAmnnUwMX",
+  triple: "price_1Spbo0Dnw1azoLSpUgAdICKR",
+  full: "price_1SpboRDnw1azoLSpG07N2lA0",
 };
 
 const SelectServices = () => {
