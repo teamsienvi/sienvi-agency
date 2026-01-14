@@ -38,3 +38,12 @@ verify_jwt = false
 
 [functions.delete-client]
 verify_jwt = false
+
+[functions.check-billing-reminders]
+verify_jwt = false
+
+[functions.get-billing-reminders]
+verify_jwt = false
+
+[functions.mark-reminder-read]
+verify_jwt = false

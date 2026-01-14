@@ -54,6 +54,12 @@ serve(async (req) => {
       subscriptionStatus,
       isActive,
       notes,
+      // Billing fields
+      billingCycle,
+      billingDay,
+      nextBillingDate,
+      lastBilledDate,
+      billingReminderEnabled,
     } = body;
 
     if (!clientId) {
@@ -112,6 +118,27 @@ serve(async (req) => {
 
     if (notes !== undefined) {
       metadataUpdates.notes = notes;
+    }
+
+    // Billing fields - only allow editing for manual clients
+    if (billingCycle !== undefined) {
+      updateData.billing_cycle = billingCycle;
+    }
+
+    if (billingDay !== undefined) {
+      updateData.billing_day = billingDay;
+    }
+
+    if (nextBillingDate !== undefined) {
+      updateData.next_billing_date = nextBillingDate;
+    }
+
+    if (lastBilledDate !== undefined) {
+      updateData.last_billed_date = lastBilledDate;
+    }
+
+    if (billingReminderEnabled !== undefined) {
+      updateData.billing_reminder_enabled = billingReminderEnabled;
     }
 
     // Fetch current metadata to merge
