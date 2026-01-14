@@ -17,28 +17,29 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { GoalSheetForm } from "@/components/onboarding/GoalSheetForm";
+import { AvatarProfileForm } from "@/components/onboarding/AvatarProfileForm";
+import { QuestionnaireForm } from "@/components/onboarding/QuestionnaireForm";
 
-interface OnboardingStep {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  status: "locked" | "available" | "completed";
+interface StepData {
+  goals: any;
+  avatars: any;
+  questionnaire: any;
 }
 
 const Onboarding = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profileStatus, setProfileStatus] = useState<{
-    contractStatus: string;
-    onboardingStatus: string;
-  } | null>(null);
+  const [clientProfileId, setClientProfileId] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [stepData, setStepData] = useState<StepData>({ goals: null, avatars: null, questionnaire: null });
+  const [completedSteps, setCompletedSteps] = useState<boolean[]>([false, false, false]);
 
   useEffect(() => {
-    checkAccess();
+    checkAccessAndLoadData();
   }, []);
 
-  const checkAccess = async () => {
+  const checkAccessAndLoadData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -48,9 +49,7 @@ const Onboarding = () => {
       }
 
       const response = await supabase.functions.invoke("get-client-profile", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (response.error || response.data.error) {
@@ -60,64 +59,83 @@ const Onboarding = () => {
 
       const profile = response.data.profile;
       
-      // Check if contract is signed
       if (profile.contractStatus !== "signed") {
         toast.error("Please sign the contract first");
         navigate("/dashboard");
         return;
       }
 
-      // Check if onboarding is already completed
       if (profile.onboardingStatus === "completed") {
         toast.info("Onboarding already completed!");
         navigate("/dashboard");
         return;
       }
 
-      setProfileStatus({
-        contractStatus: profile.contractStatus,
-        onboardingStatus: profile.onboardingStatus,
+      setClientProfileId(profile.id);
+
+      // Load existing onboarding data
+      const [goalsRes, avatarsRes, questionnaireRes] = await Promise.all([
+        supabase.from("onboarding_goals").select("*").eq("client_profile_id", profile.id).single(),
+        supabase.from("onboarding_avatars").select("*").eq("client_profile_id", profile.id).single(),
+        supabase.from("onboarding_questionnaire").select("*").eq("client_profile_id", profile.id).single(),
+      ]);
+
+      const completed = [
+        !!goalsRes.data?.completed_at,
+        !!avatarsRes.data?.completed_at,
+        !!questionnaireRes.data?.completed_at,
+      ];
+      
+      setCompletedSteps(completed);
+      setStepData({
+        goals: goalsRes.data,
+        avatars: avatarsRes.data,
+        questionnaire: questionnaireRes.data,
       });
 
-      // Start onboarding if not started
+      // Set current step to first incomplete
+      const firstIncomplete = completed.findIndex(c => !c);
+      setCurrentStep(firstIncomplete === -1 ? 0 : firstIncomplete);
+
       if (profile.onboardingStatus === "not_started") {
         await supabase.functions.invoke("update-client-status", {
           body: { action: "start_onboarding" },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
       }
     } catch (error: any) {
-      console.error("Error checking access:", error);
+      console.error("Error:", error);
       navigate("/dashboard");
     } finally {
       setLoading(false);
     }
   };
 
-  const steps: OnboardingStep[] = [
-    {
-      id: "goal-sheet",
-      title: "Goal Sheet",
-      description: "Tell us about your business goals and what success looks like for you.",
-      icon: <Target className="w-6 h-6" />,
-      status: "available",
-    },
-    {
-      id: "avatar-profile",
-      title: "Avatar Profile",
-      description: "Help us understand your ideal customer and target audience.",
-      icon: <User className="w-6 h-6" />,
-      status: "locked",
-    },
-    {
-      id: "questionnaire",
-      title: "Onboarding Questionnaire",
-      description: "Answer a few questions to help us customize your experience.",
-      icon: <ClipboardList className="w-6 h-6" />,
-      status: "locked",
-    },
+  const handleStepComplete = async (stepIndex: number) => {
+    const newCompleted = [...completedSteps];
+    newCompleted[stepIndex] = true;
+    setCompletedSteps(newCompleted);
+
+    if (newCompleted.every(c => c)) {
+      // All steps complete
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.functions.invoke("update-client-status", {
+          body: { action: "complete_onboarding" },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+      }
+      toast.success("Onboarding completed!");
+      navigate("/dashboard");
+    } else if (stepIndex < 2) {
+      setCurrentStep(stepIndex + 1);
+    }
+  };
+
+  const steps = [
+    { id: "goal-sheet", title: "Goal Sheet", icon: <Target className="w-6 h-6" /> },
+    { id: "avatar-profile", title: "Avatar Profile", icon: <User className="w-6 h-6" /> },
+    { id: "questionnaire", title: "Questionnaire", icon: <ClipboardList className="w-6 h-6" /> },
   ];
 
   if (loading) {
@@ -136,12 +154,7 @@ const Onboarding = () => {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl mx-auto space-y-6"
-        >
-          {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -152,92 +165,56 @@ const Onboarding = () => {
           <div className="text-center space-y-2">
             <Badge className="bg-purple-500">Onboarding</Badge>
             <h1 className="text-3xl font-bold">Complete Your Onboarding</h1>
-            <p className="text-muted-foreground max-w-lg mx-auto">
-              Complete these steps to help us deliver the best possible service for your business.
-            </p>
+            <p className="text-muted-foreground">Step {currentStep + 1} of 3</p>
           </div>
 
-          {/* Steps */}
-          <div className="space-y-4">
+          {/* Progress Steps */}
+          <div className="flex justify-center gap-4">
             {steps.map((step, index) => (
-              <motion.div
+              <button
                 key={step.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
+                onClick={() => (completedSteps[index] || index <= completedSteps.filter(Boolean).length) && setCurrentStep(index)}
+                disabled={index > completedSteps.filter(Boolean).length}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                  currentStep === index
+                    ? "bg-primary text-primary-foreground"
+                    : completedSteps[index]
+                    ? "bg-green-100 text-green-700"
+                    : "bg-muted text-muted-foreground"
+                } ${index > completedSteps.filter(Boolean).length ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:opacity-80"}`}
               >
-                <Card className={step.status === "locked" ? "opacity-60" : ""}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-full ${
-                        step.status === "completed" 
-                          ? "bg-green-100 text-green-600"
-                          : step.status === "available"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {step.status === "completed" ? (
-                          <CheckCircle2 className="w-6 h-6" />
-                        ) : step.status === "locked" ? (
-                          <Lock className="w-6 h-6" />
-                        ) : (
-                          step.icon
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">Step {index + 1}: {step.title}</h3>
-                          {step.status === "completed" && (
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              Completed
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{step.description}</p>
-                      </div>
-                      <div>
-                        {step.status === "available" ? (
-                          <Button disabled>
-                            Coming Soon
-                          </Button>
-                        ) : step.status === "completed" ? (
-                          <Button variant="outline" disabled>
-                            View
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" disabled>
-                            <Lock className="w-4 h-4 mr-2" />
-                            Locked
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                {completedSteps[index] ? <CheckCircle2 className="w-5 h-5" /> : index > completedSteps.filter(Boolean).length ? <Lock className="w-5 h-5" /> : step.icon}
+                <span className="hidden sm:inline">{step.title}</span>
+              </button>
             ))}
           </div>
 
-          {/* Info Box */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-lg">Coming Soon</CardTitle>
-              <CardDescription>
-                The onboarding forms are being built. You'll receive a notification when they're ready.
-                For now, your account is set up and our team will reach out to you directly.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          {/* Skip Button */}
-          <div className="text-center">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/dashboard")}
-            >
-              Return to Dashboard
-            </Button>
-          </div>
+          {/* Form Content */}
+          {clientProfileId && (
+            <div className="mt-8">
+              {currentStep === 0 && (
+                <GoalSheetForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(0)}
+                  initialData={stepData.goals}
+                />
+              )}
+              {currentStep === 1 && (
+                <AvatarProfileForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(1)}
+                  initialData={stepData.avatars}
+                />
+              )}
+              {currentStep === 2 && (
+                <QuestionnaireForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(2)}
+                  initialData={stepData.questionnaire}
+                />
+              )}
+            </div>
+          )}
         </motion.div>
       </main>
       <Footer />

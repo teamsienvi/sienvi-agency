@@ -677,6 +677,297 @@ export type Database = {
           },
         ]
       }
+      onboarding_avatars: {
+        Row: {
+          avatars: Json | null
+          client_profile_id: string
+          completed_at: string | null
+          created_at: string
+          customers_to_avoid: string | null
+          existing_data_available: boolean | null
+          id: string
+          most_important_avatar: string | null
+          most_important_reason: string | null
+          products_services: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatars?: Json | null
+          client_profile_id: string
+          completed_at?: string | null
+          created_at?: string
+          customers_to_avoid?: string | null
+          existing_data_available?: boolean | null
+          id?: string
+          most_important_avatar?: string | null
+          most_important_reason?: string | null
+          products_services?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatars?: Json | null
+          client_profile_id?: string
+          completed_at?: string | null
+          created_at?: string
+          customers_to_avoid?: string | null
+          existing_data_available?: boolean | null
+          id?: string
+          most_important_avatar?: string | null
+          most_important_reason?: string | null
+          products_services?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_avatars_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: true
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_goals: {
+        Row: {
+          achievable_goal_summary: string | null
+          achievable_realistic: string | null
+          achievable_steps: string | null
+          action_plan: Json | null
+          client_profile_id: string
+          completed_at: string | null
+          created_at: string
+          goal_narrative: string | null
+          id: string
+          measurable_goal_summary: string | null
+          measurable_metrics: string | null
+          measurable_target: string | null
+          obstacles_solutions: Json | null
+          primary_goal: string | null
+          relevant_alignment: string | null
+          relevant_goal_summary: string | null
+          relevant_worthwhile: string | null
+          specific_goal_summary: string | null
+          specific_what: string | null
+          specific_where: string | null
+          specific_who: string | null
+          specific_why: string | null
+          timebound_deadline: string | null
+          timebound_goal_summary: string | null
+          timebound_milestones: string | null
+          updated_at: string
+        }
+        Insert: {
+          achievable_goal_summary?: string | null
+          achievable_realistic?: string | null
+          achievable_steps?: string | null
+          action_plan?: Json | null
+          client_profile_id: string
+          completed_at?: string | null
+          created_at?: string
+          goal_narrative?: string | null
+          id?: string
+          measurable_goal_summary?: string | null
+          measurable_metrics?: string | null
+          measurable_target?: string | null
+          obstacles_solutions?: Json | null
+          primary_goal?: string | null
+          relevant_alignment?: string | null
+          relevant_goal_summary?: string | null
+          relevant_worthwhile?: string | null
+          specific_goal_summary?: string | null
+          specific_what?: string | null
+          specific_where?: string | null
+          specific_who?: string | null
+          specific_why?: string | null
+          timebound_deadline?: string | null
+          timebound_goal_summary?: string | null
+          timebound_milestones?: string | null
+          updated_at?: string
+        }
+        Update: {
+          achievable_goal_summary?: string | null
+          achievable_realistic?: string | null
+          achievable_steps?: string | null
+          action_plan?: Json | null
+          client_profile_id?: string
+          completed_at?: string | null
+          created_at?: string
+          goal_narrative?: string | null
+          id?: string
+          measurable_goal_summary?: string | null
+          measurable_metrics?: string | null
+          measurable_target?: string | null
+          obstacles_solutions?: Json | null
+          primary_goal?: string | null
+          relevant_alignment?: string | null
+          relevant_goal_summary?: string | null
+          relevant_worthwhile?: string | null
+          specific_goal_summary?: string | null
+          specific_what?: string | null
+          specific_where?: string | null
+          specific_who?: string | null
+          specific_why?: string | null
+          timebound_deadline?: string | null
+          timebound_goal_summary?: string | null
+          timebound_milestones?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_goals_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: true
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_questionnaire: {
+        Row: {
+          additional_notes: string | null
+          assets_to_review: string | null
+          automation_needs: string | null
+          big_win_expectation: string | null
+          biggest_challenges: string | null
+          brand_identity: string | null
+          budget_timeline: string | null
+          business_description: string | null
+          business_name: string | null
+          client_profile_id: string
+          communication_preference: string | null
+          completed_at: string | null
+          content_creation: string | null
+          core_offers: string | null
+          created_at: string
+          crm_email_tools: string | null
+          decision_maker: string | null
+          existing_funnels: string | null
+          goal_blockers: string | null
+          id: string
+          ideal_collaboration: string | null
+          important_platforms: string | null
+          industry_niche: string | null
+          lead_acquisition: string | null
+          marketing_not_working: string | null
+          marketing_tools: string | null
+          marketing_working: string | null
+          past_agencies_experience: string | null
+          performance_tracking: string | null
+          planned_launches: string | null
+          primary_contact: string | null
+          project_management_tools: string | null
+          revenue_goals: string | null
+          revenue_streams: string | null
+          sales_funnel_tools: string | null
+          start_timeline: string | null
+          stuck_areas: string | null
+          target_audience: string | null
+          team_structure: string | null
+          top_3_goals: string | null
+          updated_at: string
+          vision_3_5_years: string | null
+          years_operating: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          assets_to_review?: string | null
+          automation_needs?: string | null
+          big_win_expectation?: string | null
+          biggest_challenges?: string | null
+          brand_identity?: string | null
+          budget_timeline?: string | null
+          business_description?: string | null
+          business_name?: string | null
+          client_profile_id: string
+          communication_preference?: string | null
+          completed_at?: string | null
+          content_creation?: string | null
+          core_offers?: string | null
+          created_at?: string
+          crm_email_tools?: string | null
+          decision_maker?: string | null
+          existing_funnels?: string | null
+          goal_blockers?: string | null
+          id?: string
+          ideal_collaboration?: string | null
+          important_platforms?: string | null
+          industry_niche?: string | null
+          lead_acquisition?: string | null
+          marketing_not_working?: string | null
+          marketing_tools?: string | null
+          marketing_working?: string | null
+          past_agencies_experience?: string | null
+          performance_tracking?: string | null
+          planned_launches?: string | null
+          primary_contact?: string | null
+          project_management_tools?: string | null
+          revenue_goals?: string | null
+          revenue_streams?: string | null
+          sales_funnel_tools?: string | null
+          start_timeline?: string | null
+          stuck_areas?: string | null
+          target_audience?: string | null
+          team_structure?: string | null
+          top_3_goals?: string | null
+          updated_at?: string
+          vision_3_5_years?: string | null
+          years_operating?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          assets_to_review?: string | null
+          automation_needs?: string | null
+          big_win_expectation?: string | null
+          biggest_challenges?: string | null
+          brand_identity?: string | null
+          budget_timeline?: string | null
+          business_description?: string | null
+          business_name?: string | null
+          client_profile_id?: string
+          communication_preference?: string | null
+          completed_at?: string | null
+          content_creation?: string | null
+          core_offers?: string | null
+          created_at?: string
+          crm_email_tools?: string | null
+          decision_maker?: string | null
+          existing_funnels?: string | null
+          goal_blockers?: string | null
+          id?: string
+          ideal_collaboration?: string | null
+          important_platforms?: string | null
+          industry_niche?: string | null
+          lead_acquisition?: string | null
+          marketing_not_working?: string | null
+          marketing_tools?: string | null
+          marketing_working?: string | null
+          past_agencies_experience?: string | null
+          performance_tracking?: string | null
+          planned_launches?: string | null
+          primary_contact?: string | null
+          project_management_tools?: string | null
+          revenue_goals?: string | null
+          revenue_streams?: string | null
+          sales_funnel_tools?: string | null
+          start_timeline?: string | null
+          stuck_areas?: string | null
+          target_audience?: string | null
+          team_structure?: string | null
+          top_3_goals?: string | null
+          updated_at?: string
+          vision_3_5_years?: string | null
+          years_operating?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_questionnaire_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: true
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
