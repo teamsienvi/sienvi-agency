@@ -128,19 +128,48 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     return;
   }
   
+  // Calculate next billing date from the invoice period end
+  const periodEnd = invoice.lines?.data?.[0]?.period?.end;
+  let nextBillingDate: string | null = null;
+  let lastBilledDate: string | null = null;
+  
+  if (periodEnd) {
+    nextBillingDate = new Date(periodEnd * 1000).toISOString().split('T')[0];
+  }
+  
+  // Set last billed date to now
+  lastBilledDate = new Date().toISOString().split('T')[0];
+  
+  // Extract billing day from the period end date
+  const billingDay = periodEnd ? new Date(periodEnd * 1000).getDate() : null;
+  
+  console.log("Billing dates - Last:", lastBilledDate, "Next:", nextBillingDate, "Day:", billingDay);
+  
+  const updateData: Record<string, unknown> = {
+    subscription_status: "active",
+    is_active: true,
+    last_billed_date: lastBilledDate,
+  };
+  
+  if (nextBillingDate) {
+    updateData.next_billing_date = nextBillingDate;
+  }
+  
+  if (billingDay) {
+    updateData.billing_day = billingDay;
+    updateData.billing_cycle = "monthly";
+  }
+  
   const { error } = await supabase
     .from("subscriptions")
-    .update({
-      subscription_status: "active",
-      is_active: true,
-    })
+    .update(updateData)
     .eq("stripe_subscription_id", subscriptionId);
   
   if (error) {
     console.error("Error updating subscription on payment success:", error);
     // Don't throw - subscription might not exist yet (will be created by checkout.session.completed)
   } else {
-    console.log("Subscription marked active:", subscriptionId);
+    console.log("Subscription updated with billing dates:", subscriptionId);
   }
 }
 
