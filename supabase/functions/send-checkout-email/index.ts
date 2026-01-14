@@ -91,7 +91,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const emailResponse = await resend.emails.send({
-      from: "Sienvi <onboarding@resend.dev>",
+      from: "Sienvi <noreply@sienvi.com>",
       to: [clientEmail],
       subject: "Complete Your Sienvi Subscription",
       html: `
