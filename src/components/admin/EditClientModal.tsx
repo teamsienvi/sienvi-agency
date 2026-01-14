@@ -19,8 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar, Bell } from "lucide-react";
 
 const services = [
   { id: "social-media-suite", label: "Social Media Suite" },
@@ -55,6 +56,11 @@ interface Client {
   isManual: boolean;
   paymentMethod: string;
   migrationStatus: string | null;
+  billingCycle: string | null;
+  billingDay: number | null;
+  nextBillingDate: string | null;
+  lastBilledDate: string | null;
+  billingReminderEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,7 +90,15 @@ export const EditClientModal = ({
     subscriptionStatus: "active" as string,
     isActive: true,
     notes: "",
+    // Billing fields
+    billingCycle: "monthly",
+    billingDay: 1 as number | null,
+    nextBillingDate: "" as string,
+    lastBilledDate: "" as string,
+    billingReminderEnabled: true,
   });
+
+  const isManualBilling = formData.paymentMethod !== "stripe";
 
   // Reset form when client changes
   useEffect(() => {
@@ -100,6 +114,11 @@ export const EditClientModal = ({
         subscriptionStatus: client.subscriptionStatus || "active",
         isActive: client.isActive,
         notes: client.notes || "",
+        billingCycle: client.billingCycle || "monthly",
+        billingDay: client.billingDay || 1,
+        nextBillingDate: client.nextBillingDate || "",
+        lastBilledDate: client.lastBilledDate || "",
+        billingReminderEnabled: client.billingReminderEnabled ?? true,
       });
     }
   }, [client]);
@@ -168,6 +187,8 @@ export const EditClientModal = ({
         body: {
           clientId: client.id,
           ...formData,
+          nextBillingDate: formData.nextBillingDate || null,
+          lastBilledDate: formData.lastBilledDate || null,
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -295,6 +316,94 @@ export const EditClientModal = ({
               </Select>
             </div>
           </div>
+
+          {/* Billing Section - Only for manual/invoice clients */}
+          {isManualBilling && (
+            <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                <h3 className="font-medium">Billing Settings</h3>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nextBillingDate">Next Billing Date</Label>
+                  <Input
+                    id="edit-nextBillingDate"
+                    type="date"
+                    value={formData.nextBillingDate}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, nextBillingDate: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastBilledDate">Last Billed Date</Label>
+                  <Input
+                    id="edit-lastBilledDate"
+                    type="date"
+                    value={formData.lastBilledDate}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, lastBilledDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Billing Cycle</Label>
+                  <Select
+                    value={formData.billingCycle}
+                    onValueChange={(v) => setFormData((prev) => ({ ...prev, billingCycle: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="annually">Annually</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-billingDay">Billing Day (1-31)</Label>
+                  <Input
+                    id="edit-billingDay"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.billingDay || ""}
+                    onChange={(e) => setFormData((prev) => ({ 
+                      ...prev, 
+                      billingDay: e.target.value ? Math.min(31, Math.max(1, parseInt(e.target.value))) : null 
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Billing Reminders</p>
+                    <p className="text-xs text-muted-foreground">Get notified when billing is due or overdue</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={formData.billingReminderEnabled}
+                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, billingReminderEnabled: checked }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Stripe billing info notice */}
+          {!isManualBilling && (
+            <div className="p-4 bg-gray-100 rounded-lg border">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Calendar className="w-4 h-4" />
+                <p className="text-sm">Billing is managed automatically by Stripe for this client.</p>
+              </div>
+            </div>
+          )}
 
           {/* Custom Plan Options */}
           {formData.plan === "custom" && (

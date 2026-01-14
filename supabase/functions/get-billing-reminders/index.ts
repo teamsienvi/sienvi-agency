@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,53 +57,65 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all subscriptions using service role
-    const { data: subscriptions, error: subsError } = await supabaseAdmin
-      .from("subscriptions")
-      .select("*")
-      .order("created_at", { ascending: false });
+    // Parse query params
+    const url = new URL(req.url);
+    const unreadOnly = url.searchParams.get("unread") === "true";
 
-    if (subsError) {
-      console.error("Error fetching subscriptions:", subsError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch clients" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Fetch reminders with subscription details
+    let query = supabaseAdmin
+      .from("billing_reminders")
+      .select(`
+        *,
+        subscriptions (
+          id,
+          email,
+          metadata,
+          plan,
+          next_billing_date,
+          is_manual,
+          payment_method
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (unreadOnly) {
+      query = query.eq("is_read", false);
     }
 
-    // Format the response
-    const clients = subscriptions.map((sub: any) => ({
-      id: sub.id,
-      email: sub.email,
-      clientName: sub.metadata?.client_name || sub.metadata?.clientName || null,
-      plan: sub.plan,
-      subscriptionStatus: sub.subscription_status,
-      isActive: sub.is_active,
-      selectedServices: sub.selected_services || [],
-      onboardingCompleted: sub.onboarding_completed,
-      stripeCustomerId: sub.stripe_customer_id,
-      stripeSubscriptionId: sub.stripe_subscription_id,
-      customPrice: sub.metadata?.custom_price || sub.metadata?.customPrice || null,
-      maxServices: sub.metadata?.max_services || sub.metadata?.maxServices || null,
-      notes: sub.metadata?.notes || null,
-      isManual: sub.is_manual || false,
-      paymentMethod: sub.payment_method || "stripe",
-      migrationStatus: sub.migration_status || null,
-      billingCycle: sub.billing_cycle || "monthly",
-      billingDay: sub.billing_day || null,
-      nextBillingDate: sub.next_billing_date || null,
-      lastBilledDate: sub.last_billed_date || null,
-      billingReminderEnabled: sub.billing_reminder_enabled ?? true,
-      createdAt: sub.created_at,
-      updatedAt: sub.updated_at,
+    const { data: reminders, error: remindersError } = await query;
+
+    if (remindersError) {
+      console.error("Error fetching reminders:", remindersError);
+      throw remindersError;
+    }
+
+    // Format reminders
+    const formattedReminders = (reminders || []).map((reminder: any) => ({
+      id: reminder.id,
+      subscriptionId: reminder.subscription_id,
+      reminderType: reminder.reminder_type,
+      reminderDate: reminder.reminder_date,
+      daysUntilDue: reminder.days_until_due,
+      isRead: reminder.is_read,
+      createdAt: reminder.created_at,
+      client: reminder.subscriptions ? {
+        id: reminder.subscriptions.id,
+        email: reminder.subscriptions.email,
+        clientName: reminder.subscriptions.metadata?.client_name || reminder.subscriptions.metadata?.clientName || null,
+        plan: reminder.subscriptions.plan,
+        nextBillingDate: reminder.subscriptions.next_billing_date,
+        isManual: reminder.subscriptions.is_manual,
+        paymentMethod: reminder.subscriptions.payment_method,
+      } : null,
     }));
 
     return new Response(
-      JSON.stringify({ clients }),
+      JSON.stringify({ reminders: formattedReminders }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
-    console.error("Error in get-admin-clients:", error);
+  } catch (error: any) {
+    console.error("Error in get-billing-reminders:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

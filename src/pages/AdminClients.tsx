@@ -39,6 +39,9 @@ import {
   ArrowRightLeft,
   Pencil,
   Trash2,
+  Bell,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AddManualClientModal } from "@/components/admin/AddManualClientModal";
@@ -63,6 +66,11 @@ interface Client {
   isManual: boolean;
   paymentMethod: string;
   migrationStatus: string | null;
+  billingCycle: string | null;
+  billingDay: number | null;
+  nextBillingDate: string | null;
+  lastBilledDate: string | null;
+  billingReminderEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,6 +175,48 @@ const AdminClients = () => {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Past Due</Badge>;
     }
     return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
+  };
+
+  const getBillingStatusBadge = (client: Client) => {
+    // Stripe clients are auto-billed
+    if (client.paymentMethod === "stripe" && !client.isManual) {
+      return <Badge variant="outline" className="bg-gray-100 text-gray-600">Auto-billed</Badge>;
+    }
+
+    // No billing date set
+    if (!client.nextBillingDate) {
+      return <Badge variant="outline" className="text-muted-foreground">Not set</Badge>;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const billingDate = new Date(client.nextBillingDate);
+    billingDate.setHours(0, 0, 0, 0);
+    const daysUntil = Math.ceil((billingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntil < 0) {
+      return (
+        <Badge className="bg-red-500 hover:bg-red-600">
+          <AlertTriangle className="w-3 h-3 mr-1" />
+          Overdue ({Math.abs(daysUntil)}d)
+        </Badge>
+      );
+    }
+
+    if (daysUntil <= 7) {
+      return (
+        <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">
+          <Calendar className="w-3 h-3 mr-1" />
+          Due in {daysUntil}d
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="bg-green-50 text-green-700">
+        Due in {daysUntil}d
+      </Badge>
+    );
   };
 
   const getPaymentMethodBadge = (client: Client) => {
@@ -390,8 +440,9 @@ const AdminClients = () => {
                   <TableHead>Client</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Next Billing</TableHead>
+                  <TableHead>Billing Type</TableHead>
                   <TableHead>Services</TableHead>
-                  <TableHead>Onboarding</TableHead>
                   <TableHead>Subscribed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -426,7 +477,25 @@ const AdminClients = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {getBillingStatusBadge(client)}
+                      {client.nextBillingDate && (client.isManual || client.paymentMethod !== "stripe") && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(client.nextBillingDate).toLocaleDateString()}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {getPaymentMethodBadge(client)}
+                        {(client.isManual || client.paymentMethod !== "stripe") && client.billingReminderEnabled && (
+                          <span title="Reminders enabled">
+                            <Bell className="w-3 h-3 text-muted-foreground" />
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[150px]">
                         {client.selectedServices.length > 0 ? (
                           client.selectedServices.slice(0, 2).map((service, i) => (
                             <Badge key={i} variant="secondary" className="text-xs">
@@ -442,15 +511,6 @@ const AdminClients = () => {
                           </Badge>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {client.onboardingCompleted ? (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                          Complete
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Pending</Badge>
-                      )}
                     </TableCell>
                     <TableCell>
                       {new Date(client.createdAt).toLocaleDateString()}

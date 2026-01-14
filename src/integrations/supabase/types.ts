@@ -281,6 +281,44 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_reminders: {
+        Row: {
+          created_at: string
+          days_until_due: number | null
+          id: string
+          is_read: boolean | null
+          reminder_date: string
+          reminder_type: string
+          subscription_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_until_due?: number | null
+          id?: string
+          is_read?: boolean | null
+          reminder_date: string
+          reminder_type: string
+          subscription_id: string
+        }
+        Update: {
+          created_at?: string
+          days_until_due?: number | null
+          id?: string
+          is_read?: boolean | null
+          reminder_date?: string
+          reminder_type?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_reminders_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posting: {
         Row: {
           blog_content: string
@@ -779,13 +817,18 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_cycle: string | null
+          billing_day: number | null
+          billing_reminder_enabled: boolean | null
           created_at: string
           email: string | null
           id: string
           is_active: boolean
           is_manual: boolean | null
+          last_billed_date: string | null
           metadata: Json | null
           migration_status: string | null
+          next_billing_date: string | null
           onboarding_completed: boolean | null
           payment_method: string | null
           plan: string | null
@@ -796,13 +839,18 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_cycle?: string | null
+          billing_day?: number | null
+          billing_reminder_enabled?: boolean | null
           created_at?: string
           email?: string | null
           id?: string
           is_active?: boolean
           is_manual?: boolean | null
+          last_billed_date?: string | null
           metadata?: Json | null
           migration_status?: string | null
+          next_billing_date?: string | null
           onboarding_completed?: boolean | null
           payment_method?: string | null
           plan?: string | null
@@ -813,13 +861,18 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_cycle?: string | null
+          billing_day?: number | null
+          billing_reminder_enabled?: boolean | null
           created_at?: string
           email?: string | null
           id?: string
           is_active?: boolean
           is_manual?: boolean | null
+          last_billed_date?: string | null
           metadata?: Json | null
           migration_status?: string | null
+          next_billing_date?: string | null
           onboarding_completed?: boolean | null
           payment_method?: string | null
           plan?: string | null
