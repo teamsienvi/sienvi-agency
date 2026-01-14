@@ -37,10 +37,12 @@ import {
   RefreshCw,
   UserPlus,
   ArrowRightLeft,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AddManualClientModal } from "@/components/admin/AddManualClientModal";
 import { MigrateToStripeModal } from "@/components/admin/MigrateToStripeModal";
+import { EditClientModal } from "@/components/admin/EditClientModal";
 
 interface Client {
   id: string;
@@ -81,6 +83,7 @@ const AdminClients = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [migrateClient, setMigrateClient] = useState<Client | null>(null);
+  const [editClient, setEditClient] = useState<Client | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -459,6 +462,14 @@ const AdminClients = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditClient(client)}
+                          title="Edit Client"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                         {(client.isManual || client.paymentMethod !== "stripe") && !client.stripeSubscriptionId && (
                           <Button
                             variant="ghost"
@@ -643,6 +654,14 @@ const AdminClients = () => {
           onOpenChange={(open) => !open && setMigrateClient(null)}
           client={migrateClient}
           onMigrationStarted={fetchClients}
+        />
+
+        {/* Edit Client Modal */}
+        <EditClientModal
+          open={!!editClient}
+          onOpenChange={(open) => !open && setEditClient(null)}
+          client={editClient}
+          onClientUpdated={fetchClients}
         />
       </div>
     </div>
