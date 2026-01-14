@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.update-client]
 verify_jwt = false
+
+[functions.delete-client]
+verify_jwt = false
