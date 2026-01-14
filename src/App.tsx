@@ -14,6 +14,7 @@ import AdminCreateClient from "./pages/AdminCreateClient";
 import Success from "./pages/Success";
 import SelectServices from "./pages/SelectServices";
 import ClientDashboard from "./pages/ClientDashboard";
+import ClientLogin from "./pages/ClientLogin";
 import Onboarding from "./pages/Onboarding";
 import Contract from "./pages/Contract";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/success" element={<Success />} />
             <Route path="/select-services" element={<SelectServices />} />
             <Route path="/dashboard" element={<ClientDashboard />} />
+            <Route path="/login" element={<ClientLogin />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/contract" element={<Contract />} />
             <Route path="/admin" element={<AdminLogin />} />

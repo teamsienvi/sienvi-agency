@@ -44,7 +44,7 @@ const Onboarding = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate("/admin");
+        navigate("/login");
         return;
       }
 
