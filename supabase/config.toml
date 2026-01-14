@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.update-client-status]
 verify_jwt = false
+
+[functions.send-login-invite]
+verify_jwt = false
+
+[functions.send-checkout-email]
+verify_jwt = false
