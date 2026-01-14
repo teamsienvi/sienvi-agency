@@ -21,31 +21,32 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface Subscription {
+interface Client {
   id: string;
   email: string | null;
+  clientName: string | null;
   plan: string | null;
-  subscription_status: string;
-  is_active: boolean;
-  created_at: string;
-  selected_services: string[] | null;
-  onboarding_completed: boolean | null;
-  metadata: any;
+  subscriptionStatus: string;
+  isActive: boolean;
+  selectedServices: string[];
+  onboardingCompleted: boolean;
+  customPrice: number | null;
+  createdAt: string;
 }
 
 interface DashboardStats {
-  totalSubscriptions: number;
-  activeSubscriptions: number;
+  totalClients: number;
+  activeClients: number;
   customPlans: number;
   revenue: number;
 }
 
 const AdminDashboard = () => {
   const [user, setUser] = useState<any>(null);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
-    totalSubscriptions: 0,
-    activeSubscriptions: 0,
+    totalClients: 0,
+    activeClients: 0,
     customPlans: 0,
     revenue: 0,
   });
@@ -85,40 +86,40 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-      if (error) throw error;
+      const response = await supabase.functions.invoke("get-admin-clients", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      const subs = data || [];
-      setSubscriptions(subs);
+      if (response.error) throw new Error(response.error.message);
 
-      // Calculate stats
-      const active = subs.filter(s => s.is_active);
-      const custom = subs.filter(s => s.plan === "custom");
-      
+      const fetchedClients: Client[] = response.data?.clients || [];
+      setClients(fetchedClients);
+
+      const active = fetchedClients.filter(
+        (c) => c.subscriptionStatus === "active" && c.isActive
+      );
+      const custom = fetchedClients.filter((c) => c.plan === "custom");
+
       // Estimate revenue (simplified)
       const planPrices: Record<string, number> = {
         single: 888,
-        triple: 2398.20,
+        triple: 2398.2,
         full: 3996,
       };
-      
-      const revenue = active.reduce((sum, sub) => {
-        if (sub.plan === "custom" && sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata)) {
-          const meta = sub.metadata as Record<string, unknown>;
-          if (meta.custom_price) {
-            return sum + parseFloat(String(meta.custom_price));
-          }
-        }
-        return sum + (planPrices[sub.plan || ""] || 0);
+
+      const revenue = active.reduce((sum, c) => {
+        if (c.plan === "custom" && c.customPrice) return sum + c.customPrice;
+        return sum + (planPrices[c.plan || ""] || 0);
       }, 0);
 
       setStats({
-        totalSubscriptions: subs.length,
-        activeSubscriptions: active.length,
+        totalClients: fetchedClients.length,
+        activeClients: active.length,
         customPlans: custom.length,
         revenue,
       });
@@ -295,9 +296,9 @@ const AdminDashboard = () => {
             <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-2">
                 <Users className="h-5 w-5 text-gray-500" />
-                <span className="text-gray-400 text-sm">Total Subscriptions</span>
+                <span className="text-gray-400 text-sm">Total Clients</span>
               </div>
-              <p className="text-3xl font-bold text-white">{stats.totalSubscriptions}</p>
+              <p className="text-3xl font-bold text-white">{stats.totalClients}</p>
             </CardContent>
           </Card>
 
@@ -307,7 +308,7 @@ const AdminDashboard = () => {
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 <span className="text-gray-400 text-sm">Active</span>
               </div>
-              <p className="text-3xl font-bold text-green-400">{stats.activeSubscriptions}</p>
+              <p className="text-3xl font-bold text-green-400">{stats.activeClients}</p>
             </CardContent>
           </Card>
 
@@ -334,24 +335,24 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Subscriptions Table */}
+        {/* Clients Table */}
         <Card className="bg-[#1a1f2e] border-[#2a3142]">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Users className="h-5 w-5 text-cyan-400" />
-              Recent Subscriptions
+              Recent Clients
             </CardTitle>
             <CardDescription className="text-gray-400">
-              All customer subscriptions and their current status
+              Canonical client records from client_profiles
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {subscriptions.length === 0 ? (
+            {clients.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">No subscriptions yet</p>
+                <p className="text-gray-400">No clients yet</p>
                 <p className="text-gray-500 text-sm mt-1">
-                  Subscriptions will appear here after customers complete checkout
+                  Clients will appear here after you create them.
                 </p>
               </div>
             ) : (
@@ -368,33 +369,34 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {subscriptions.slice(0, 10).map((sub) => (
-                      <tr key={sub.id} className="border-b border-[#2a3142] hover:bg-[#2a3142]/50 transition-colors">
+                    {clients.slice(0, 10).map((client) => (
+                      <tr
+                        key={client.id}
+                        className="border-b border-[#2a3142] hover:bg-[#2a3142]/50 transition-colors"
+                      >
                         <td className="py-4 px-4">
                           <p className="text-white text-sm font-medium">
-                            {(sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata) && (sub.metadata as Record<string, unknown>).client_name) 
-                              ? String((sub.metadata as Record<string, unknown>).client_name) 
-                              : sub.email || "Unknown"}
+                            {client.clientName || client.email || "Unknown"}
                           </p>
-                          {sub.email && sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata) && (sub.metadata as Record<string, unknown>).client_name && (
-                            <p className="text-gray-500 text-xs">{sub.email}</p>
+                          {client.clientName && client.email && (
+                            <p className="text-gray-500 text-xs">{client.email}</p>
                           )}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
-                            {getPlanBadge(sub.plan)}
-                            {sub.plan === "custom" && sub.metadata && typeof sub.metadata === "object" && !Array.isArray(sub.metadata) && (sub.metadata as Record<string, unknown>).custom_price && (
+                            {getPlanBadge(client.plan)}
+                            {client.plan === "custom" && client.customPrice && (
                               <span className="text-gray-500 text-xs">
-                                ${parseFloat(String((sub.metadata as Record<string, unknown>).custom_price)).toFixed(0)}/mo
+                                ${client.customPrice.toFixed(0)}/mo
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          {getStatusBadge(sub.subscription_status, sub.is_active)}
+                          {getStatusBadge(client.subscriptionStatus, client.isActive)}
                         </td>
                         <td className="py-4 px-4">
-                          {sub.onboarding_completed ? (
+                          {client.onboardingCompleted ? (
                             <CheckCircle2 className="h-5 w-5 text-green-500" />
                           ) : (
                             <Clock className="h-5 w-5 text-yellow-500" />
@@ -402,11 +404,11 @@ const AdminDashboard = () => {
                         </td>
                         <td className="py-4 px-4">
                           <span className="text-gray-400 text-sm">
-                            {sub.selected_services?.length || 0} selected
+                            {client.selectedServices?.length || 0} selected
                           </span>
                         </td>
                         <td className="py-4 px-4">
-                          <span className="text-gray-500 text-sm">{formatDate(sub.created_at)}</span>
+                          <span className="text-gray-500 text-sm">{formatDate(client.createdAt)}</span>
                         </td>
                       </tr>
                     ))}
