@@ -138,12 +138,12 @@ serve(async (req) => {
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
             
             <p style="font-size: 14px; color: #666; margin: 0;">
-              Questions? Reply to this email or contact us at support@sienvi.com
+              Questions? Reply to this email or contact us at teamsienvi@gmail.com
             </p>
           </div>
           
           <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-            <p>© 2024 Sienvi. All rights reserved.</p>
+            <p>© 2015 Sienvi. All rights reserved.</p>
           </div>
         </body>
         </html>

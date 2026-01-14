@@ -58,7 +58,8 @@ const ClientDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate("/admin");
+        // No session - redirect to home page, not admin login
+        navigate("/");
         return;
       }
 
