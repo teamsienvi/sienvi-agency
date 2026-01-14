@@ -317,93 +317,98 @@ export const EditClientModal = ({
             </div>
           </div>
 
-          {/* Billing Section - Only for manual/invoice clients */}
-          {isManualBilling && (
-            <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+          {/* Billing Section */}
+          <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 <h3 className="font-medium">Billing Settings</h3>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-nextBillingDate">Next Billing Date</Label>
-                  <Input
-                    id="edit-nextBillingDate"
-                    type="date"
-                    value={formData.nextBillingDate}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, nextBillingDate: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-lastBilledDate">Last Billed Date</Label>
-                  <Input
-                    id="edit-lastBilledDate"
-                    type="date"
-                    value={formData.lastBilledDate}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, lastBilledDate: e.target.value }))}
-                  />
-                </div>
+              {!isManualBilling && (
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">
+                  Stripe Auto-Billed
+                </span>
+              )}
+            </div>
+            
+            {!isManualBilling && (
+              <p className="text-xs text-muted-foreground">
+                Stripe manages billing automatically. You can still track dates and enable reminders for visibility.
+              </p>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nextBillingDate">Next Billing Date</Label>
+                <Input
+                  id="edit-nextBillingDate"
+                  type="date"
+                  value={formData.nextBillingDate}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, nextBillingDate: e.target.value }))}
+                />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Billing Cycle</Label>
-                  <Select
-                    value={formData.billingCycle}
-                    onValueChange={(v) => setFormData((prev) => ({ ...prev, billingCycle: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="annually">Annually</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-billingDay">Billing Day (1-31)</Label>
-                  <Input
-                    id="edit-billingDay"
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={formData.billingDay || ""}
-                    onChange={(e) => setFormData((prev) => ({ 
-                      ...prev, 
-                      billingDay: e.target.value ? Math.min(31, Math.max(1, parseInt(e.target.value))) : null 
-                    }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-background rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Billing Reminders</p>
-                    <p className="text-xs text-muted-foreground">Get notified when billing is due or overdue</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={formData.billingReminderEnabled}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, billingReminderEnabled: checked }))}
+              <div className="space-y-2">
+                <Label htmlFor="edit-lastBilledDate">Last Billed Date</Label>
+                <Input
+                  id="edit-lastBilledDate"
+                  type="date"
+                  value={formData.lastBilledDate}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, lastBilledDate: e.target.value }))}
                 />
               </div>
             </div>
-          )}
 
-          {/* Stripe billing info notice */}
-          {!isManualBilling && (
-            <div className="p-4 bg-gray-100 rounded-lg border">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="w-4 h-4" />
-                <p className="text-sm">Billing is managed automatically by Stripe for this client.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Billing Cycle</Label>
+                <Select
+                  value={formData.billingCycle}
+                  onValueChange={(v) => setFormData((prev) => ({ ...prev, billingCycle: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="annually">Annually</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-billingDay">Billing Day (1-31)</Label>
+                <Input
+                  id="edit-billingDay"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.billingDay || ""}
+                  onChange={(e) => setFormData((prev) => ({ 
+                    ...prev, 
+                    billingDay: e.target.value ? Math.min(31, Math.max(1, parseInt(e.target.value))) : null 
+                  }))}
+                />
               </div>
             </div>
-          )}
+
+            <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Billing Reminders</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isManualBilling 
+                      ? "Get notified when billing is due or overdue" 
+                      : "Get notified for visibility (Stripe handles actual billing)"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={formData.billingReminderEnabled}
+                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, billingReminderEnabled: checked }))}
+              />
+            </div>
+          </div>
 
           {/* Custom Plan Options */}
           {formData.plan === "custom" && (
