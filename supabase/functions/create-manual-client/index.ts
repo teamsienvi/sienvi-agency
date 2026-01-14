@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ManualClientRequest {
+  clientName: string;
+  email: string;
+  plan: "single" | "triple" | "full" | "custom";
+  monthlyAmount: number;
+  maxServices: number;
+  selectedServices: string[];
+  paymentMethod: "manual" | "stripe" | "invoice";
+  notes?: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -57,48 +68,74 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all subscriptions using service role
-    const { data: subscriptions, error: subsError } = await supabaseAdmin
-      .from("subscriptions")
-      .select("*")
-      .order("created_at", { ascending: false });
+    // Parse request body
+    const body: ManualClientRequest = await req.json();
+    console.log("Creating manual client:", body);
 
-    if (subsError) {
-      console.error("Error fetching subscriptions:", subsError);
+    // Validate required fields
+    if (!body.clientName || !body.email || !body.plan || !body.monthlyAmount || !body.maxServices) {
       return new Response(
-        JSON.stringify({ error: "Failed to fetch clients" }),
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate plan limits
+    const planLimits: Record<string, number> = { single: 1, triple: 3, full: 6, custom: 6 };
+    const maxAllowed = body.plan === "custom" ? body.maxServices : planLimits[body.plan];
+    if (body.selectedServices.length > maxAllowed) {
+      return new Response(
+        JSON.stringify({ error: `Too many services selected. Max allowed: ${maxAllowed}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create manual client record
+    const { data: newClient, error: insertError } = await supabaseAdmin
+      .from("subscriptions")
+      .insert({
+        email: body.email,
+        plan: body.plan,
+        selected_services: body.selectedServices,
+        is_active: true,
+        subscription_status: "manual",
+        is_manual: true,
+        payment_method: body.paymentMethod,
+        stripe_customer_id: `manual_${Date.now()}`, // Placeholder ID for manual clients
+        stripe_subscription_id: null,
+        onboarding_completed: body.selectedServices.length > 0,
+        metadata: {
+          client_name: body.clientName,
+          custom_price: body.monthlyAmount,
+          max_services: body.maxServices,
+          notes: body.notes || null,
+          created_by_admin: user.id,
+          original_payment_method: body.paymentMethod,
+        },
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Error creating manual client:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create client" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Format the response
-    const clients = subscriptions.map((sub: any) => ({
-      id: sub.id,
-      email: sub.email,
-      clientName: sub.metadata?.client_name || sub.metadata?.clientName || null,
-      plan: sub.plan,
-      subscriptionStatus: sub.subscription_status,
-      isActive: sub.is_active,
-      selectedServices: sub.selected_services || [],
-      onboardingCompleted: sub.onboarding_completed,
-      stripeCustomerId: sub.stripe_customer_id,
-      stripeSubscriptionId: sub.stripe_subscription_id,
-      customPrice: sub.metadata?.custom_price || sub.metadata?.customPrice || null,
-      maxServices: sub.metadata?.max_services || sub.metadata?.maxServices || null,
-      notes: sub.metadata?.notes || null,
-      isManual: sub.is_manual || false,
-      paymentMethod: sub.payment_method || "stripe",
-      migrationStatus: sub.migration_status || null,
-      createdAt: sub.created_at,
-      updatedAt: sub.updated_at,
-    }));
+    console.log("Manual client created:", newClient.id);
 
     return new Response(
-      JSON.stringify({ clients }),
+      JSON.stringify({ 
+        success: true, 
+        client: newClient,
+        message: "Manual client created successfully" 
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in get-admin-clients:", error);
+    console.error("Error in create-manual-client:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

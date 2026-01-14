@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.create-customer-portal-session]
 verify_jwt = false
+
+[functions.get-admin-clients]
+verify_jwt = false
+
+[functions.create-manual-client]
+verify_jwt = false
+
+[functions.migrate-client-to-stripe]
+verify_jwt = false

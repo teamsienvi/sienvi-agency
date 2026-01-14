@@ -35,8 +35,12 @@ import {
   Eye,
   Check,
   RefreshCw,
+  UserPlus,
+  ArrowRightLeft,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AddManualClientModal } from "@/components/admin/AddManualClientModal";
+import { MigrateToStripeModal } from "@/components/admin/MigrateToStripeModal";
 
 interface Client {
   id: string;
@@ -52,6 +56,9 @@ interface Client {
   customPrice: number | null;
   maxServices: number | null;
   notes: string | null;
+  isManual: boolean;
+  paymentMethod: string;
+  migrationStatus: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +79,8 @@ const AdminClients = () => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [migrateClient, setMigrateClient] = useState<Client | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -132,14 +141,36 @@ const AdminClients = () => {
     }
   };
 
-  const getStatusBadge = (status: string, isActive: boolean) => {
-    if (!isActive || status === "canceled") {
+  const getStatusBadge = (client: Client) => {
+    // Manual client statuses
+    if (client.isManual || client.paymentMethod === "manual" || client.paymentMethod === "invoice") {
+      if (client.migrationStatus === "pending_migration") {
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Pending Migration</Badge>;
+      }
+      if (!client.isActive || client.subscriptionStatus === "canceled") {
+        return <Badge variant="destructive">Canceled</Badge>;
+      }
+      return <Badge className="bg-gray-500 hover:bg-gray-600">Manual</Badge>;
+    }
+    
+    // Stripe client statuses
+    if (!client.isActive || client.subscriptionStatus === "canceled") {
       return <Badge variant="destructive">Canceled</Badge>;
     }
-    if (status === "past_due") {
+    if (client.subscriptionStatus === "past_due") {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Past Due</Badge>;
     }
     return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
+  };
+
+  const getPaymentMethodBadge = (client: Client) => {
+    if (client.paymentMethod === "manual") {
+      return <Badge variant="outline" className="text-xs">Manual</Badge>;
+    }
+    if (client.paymentMethod === "invoice") {
+      return <Badge variant="outline" className="text-xs">Invoice</Badge>;
+    }
+    return <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">Stripe</Badge>;
   };
 
   const getPlanDisplay = (plan: string | null, customPrice: number | null) => {
@@ -227,10 +258,16 @@ const AdminClients = () => {
                 </p>
               </div>
             </div>
-            <Button onClick={fetchClients} variant="outline" disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowAddModal(true)}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Manual Client
+              </Button>
+              <Button onClick={fetchClients} variant="outline" disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -377,7 +414,10 @@ const AdminClients = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(client.subscriptionStatus, client.isActive)}
+                      <div className="flex flex-col gap-1">
+                        {getStatusBadge(client)}
+                        {getPaymentMethodBadge(client)}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
@@ -410,32 +450,50 @@ const AdminClients = () => {
                       {new Date(client.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setSelectedClient(client)}
+                          title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(client.stripeCustomerId, client.id)}
-                        >
-                          {copiedId === client.id ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openStripeCustomer(client.stripeCustomerId)}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
+                        {(client.isManual || client.paymentMethod !== "stripe") && !client.stripeSubscriptionId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setMigrateClient(client)}
+                            title="Migrate to Stripe"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <ArrowRightLeft className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!client.isManual && client.stripeCustomerId && !client.stripeCustomerId.startsWith("manual_") && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(client.stripeCustomerId, client.id)}
+                              title="Copy Customer ID"
+                            >
+                              {copiedId === client.id ? (
+                                <Check className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openStripeCustomer(client.stripeCustomerId)}
+                              title="View in Stripe"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -476,8 +534,9 @@ const AdminClients = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
-                    <div className="mt-1">
-                      {getStatusBadge(selectedClient.subscriptionStatus, selectedClient.isActive)}
+                    <div className="mt-1 flex flex-col gap-1">
+                      {getStatusBadge(selectedClient)}
+                      {getPaymentMethodBadge(selectedClient)}
                     </div>
                   </div>
                   <div>
@@ -570,6 +629,21 @@ const AdminClients = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Add Manual Client Modal */}
+        <AddManualClientModal
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          onClientAdded={fetchClients}
+        />
+
+        {/* Migrate to Stripe Modal */}
+        <MigrateToStripeModal
+          open={!!migrateClient}
+          onOpenChange={(open) => !open && setMigrateClient(null)}
+          client={migrateClient}
+          onMigrationStarted={fetchClients}
+        />
       </div>
     </div>
   );
