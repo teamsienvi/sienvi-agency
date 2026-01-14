@@ -40,6 +40,8 @@ const AdminCreateClient = () => {
   const [createdClient, setCreatedClient] = useState<any>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [sendingLoginInvite, setSendingLoginInvite] = useState(false);
+  const [sendingCheckoutEmail, setSendingCheckoutEmail] = useState(false);
   const [copied, setCopied] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -174,6 +176,71 @@ const AdminCreateClient = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleSendLoginInvite = async () => {
+    if (!createdClient) return;
+    
+    setSendingLoginInvite(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("send-login-invite", {
+        body: {
+          clientId: createdClient.id,
+          clientEmail: createdClient.email,
+          clientName: `${createdClient.first_name || ""} ${createdClient.last_name || ""}`.trim(),
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+
+      toast.success("Login invite sent successfully!");
+    } catch (error: any) {
+      console.error("Error sending login invite:", error);
+      toast.error(error.message || "Failed to send login invite");
+    } finally {
+      setSendingLoginInvite(false);
+    }
+  };
+
+  const handleSendCheckoutEmail = async () => {
+    if (!createdClient || !checkoutUrl) return;
+    
+    setSendingCheckoutEmail(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("send-checkout-email", {
+        body: {
+          clientId: createdClient.id,
+          clientEmail: createdClient.email,
+          clientName: `${createdClient.first_name || ""} ${createdClient.last_name || ""}`.trim(),
+          checkoutUrl: checkoutUrl,
+          plan: createdClient.plan,
+          price: createdClient.custom_price,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+
+      toast.success("Checkout email sent successfully!");
+    } catch (error: any) {
+      console.error("Error sending checkout email:", error);
+      toast.error(error.message || "Failed to send checkout email");
+    } finally {
+      setSendingCheckoutEmail(false);
+    }
+  };
+
   const maxAllowed = formData.plan === "custom" ? formData.maxServices : planLimits[formData.plan];
 
   // Show success state after client creation
@@ -239,7 +306,7 @@ const AdminCreateClient = () => {
                           Generate Stripe Checkout Link
                         </Button>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <p className="text-sm text-green-600 font-medium">Checkout link ready:</p>
                           <div className="flex gap-2">
                             <Input value={checkoutUrl} readOnly className="flex-1 text-xs" />
@@ -247,17 +314,36 @@ const AdminCreateClient = () => {
                               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             </Button>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Send this link to the client to complete payment
-                          </p>
+                          <Button 
+                            onClick={handleSendCheckoutEmail} 
+                            variant="secondary" 
+                            className="w-full"
+                            disabled={sendingCheckoutEmail}
+                          >
+                            {sendingCheckoutEmail ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4 mr-2" />
+                            )}
+                            Email Checkout Link to Client
+                          </Button>
                         </div>
                       )}
                     </div>
                   )}
 
-                  <Button variant="outline" className="w-full" disabled>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send Login Invite (Coming Soon)
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleSendLoginInvite}
+                    disabled={sendingLoginInvite}
+                  >
+                    {sendingLoginInvite ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Mail className="w-4 h-4 mr-2" />
+                    )}
+                    Send Login Invite
                   </Button>
 
                   <Button 

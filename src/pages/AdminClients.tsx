@@ -40,10 +40,13 @@ import {
   Trash2,
   Link,
   Loader2,
+  Mail,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
+import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
 
 interface Client {
   id: string;
@@ -82,6 +85,8 @@ const AdminClients = () => {
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteClient, setDeleteClient] = useState<Client | null>(null);
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [onboardingViewClient, setOnboardingViewClient] = useState<Client | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -214,6 +219,37 @@ const AdminClients = () => {
       toast.error(error.message || "Failed to generate checkout link");
     } finally {
       setGeneratingLink(null);
+    }
+  };
+
+  const handleSendLoginInvite = async (client: Client) => {
+    if (sendingEmail) return;
+    
+    setSendingEmail(client.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("send-login-invite", {
+        body: {
+          clientId: client.id,
+          clientEmail: client.email,
+          clientName: client.clientName,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+
+      toast.success("Login invite sent to " + client.email);
+    } catch (error: any) {
+      console.error("Error sending login invite:", error);
+      toast.error(error.message || "Failed to send login invite");
+    } finally {
+      setSendingEmail(null);
     }
   };
 
@@ -502,6 +538,31 @@ const AdminClients = () => {
                             )}
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSendLoginInvite(client)}
+                          title="Send Login Invite"
+                          className="text-green-600 hover:text-green-700"
+                          disabled={sendingEmail === client.id}
+                        >
+                          {sendingEmail === client.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4" />
+                          )}
+                        </Button>
+                        {client.onboardingCompleted && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setOnboardingViewClient(client)}
+                            title="View Onboarding Responses"
+                            className="text-purple-600 hover:text-purple-700"
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                          </Button>
+                        )}
                         {client.stripeCustomerId && !client.stripeCustomerId.startsWith("pending_") && (
                           <>
                             <Button
@@ -646,7 +707,7 @@ const AdminClients = () => {
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {selectedClient.subscriptionStatus === "pending_payment" ? (
                     <Button
                       onClick={() => handleGenerateCheckoutLink(selectedClient)}
@@ -669,6 +730,27 @@ const AdminClients = () => {
                       View in Stripe
                     </Button>
                   ) : null}
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSendLoginInvite(selectedClient)}
+                    disabled={sendingEmail === selectedClient.id}
+                  >
+                    {sendingEmail === selectedClient.id ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Mail className="w-4 h-4 mr-2" />
+                    )}
+                    Send Login Invite
+                  </Button>
+                  {selectedClient.onboardingCompleted && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setOnboardingViewClient(selectedClient)}
+                    >
+                      <ClipboardList className="w-4 h-4 mr-2" />
+                      View Onboarding
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -689,6 +771,14 @@ const AdminClients = () => {
           onOpenChange={(open) => !open && setDeleteClient(null)}
           client={deleteClient}
           onClientDeleted={fetchClients}
+        />
+
+        {/* Onboarding Responses Modal */}
+        <OnboardingResponsesModal
+          open={!!onboardingViewClient}
+          onOpenChange={(open) => !open && setOnboardingViewClient(null)}
+          clientId={onboardingViewClient?.id || ""}
+          clientName={onboardingViewClient?.clientName || onboardingViewClient?.email || "Client"}
         />
       </div>
     </div>
