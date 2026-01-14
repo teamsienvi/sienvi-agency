@@ -783,8 +783,11 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean
+          is_manual: boolean | null
           metadata: Json | null
+          migration_status: string | null
           onboarding_completed: boolean | null
+          payment_method: string | null
           plan: string | null
           selected_services: string[] | null
           stripe_customer_id: string
@@ -797,8 +800,11 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          is_manual?: boolean | null
           metadata?: Json | null
+          migration_status?: string | null
           onboarding_completed?: boolean | null
+          payment_method?: string | null
           plan?: string | null
           selected_services?: string[] | null
           stripe_customer_id: string
@@ -811,8 +817,11 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          is_manual?: boolean | null
           metadata?: Json | null
+          migration_status?: string | null
           onboarding_completed?: boolean | null
+          payment_method?: string | null
           plan?: string | null
           selected_services?: string[] | null
           stripe_customer_id?: string
