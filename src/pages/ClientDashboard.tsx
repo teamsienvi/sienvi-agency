@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
   CheckCircle2, 
@@ -17,6 +18,11 @@ import {
   Loader2,
   LogOut,
   User,
+  Package,
+  Calendar,
+  DollarSign,
+  Settings,
+  ExternalLink,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -41,13 +47,34 @@ interface ClientProfile {
   customPrice: number | null;
   createdAt: string;
   updatedAt: string;
+  notes: string | null;
 }
+
+const planDetails: Record<string, { name: string; price: number; services: number }> = {
+  single: { name: "Single Service", price: 888, services: 1 },
+  triple: { name: "Triple Automation", price: 2398.20, services: 3 },
+  full: { name: "Full Automation", price: 3996, services: 6 },
+  custom: { name: "Custom Plan", price: 0, services: 0 },
+};
+
+const serviceLabels: Record<string, string> = {
+  "social-media": "Social Media Management",
+  "content-creation": "Content Creation",
+  "email-marketing": "Email Marketing",
+  "seo": "SEO Optimization",
+  "paid-ads": "Paid Advertising",
+  "analytics": "Analytics & Reporting",
+  "web-design": "Web Design",
+  "branding": "Branding",
+  "video-production": "Video Production",
+};
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [managingBilling, setManagingBilling] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -58,7 +85,6 @@ const ClientDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // No session - redirect to client login page
         navigate("/login");
         return;
       }
@@ -74,7 +100,6 @@ const ClientDashboard = () => {
       }
 
       if (response.data.error) {
-        // No profile found - might be admin-only account
         if (response.data.isAdmin) {
           navigate("/admin/dashboard");
           return;
@@ -97,6 +122,27 @@ const ClientDashboard = () => {
     navigate("/");
   };
 
+  const handleManageBilling = async () => {
+    if (!profile?.email) return;
+    
+    setManagingBilling(true);
+    try {
+      const response = await supabase.functions.invoke("create-customer-portal-session", {
+        body: { email: profile.email },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+
+      window.location.href = response.data.url;
+    } catch (error: any) {
+      console.error("Error opening billing portal:", error);
+      toast.error("Unable to open billing portal. Please contact support.");
+    } finally {
+      setManagingBilling(false);
+    }
+  };
+
   const getStatusBadge = () => {
     if (!profile) return null;
     
@@ -117,7 +163,7 @@ const ClientDashboard = () => {
 
   const getProgress = () => {
     if (!profile) return 0;
-    let completed = 1; // Account created
+    let completed = 1;
     if (profile.subscriptionStatus === "active") completed++;
     if (profile.contractStatus === "signed") completed++;
     if (profile.onboardingStatus === "completed") completed++;
@@ -154,12 +200,23 @@ const ClientDashboard = () => {
       );
     }
     
-    return (
-      <Button size="lg" className="w-full" variant="outline">
-        <LayoutDashboard className="w-5 h-5 mr-2" />
-        View Dashboard
-      </Button>
-    );
+    return null;
+  };
+
+  const getPlanPrice = () => {
+    if (!profile) return 0;
+    if (profile.plan === "custom" && profile.customPrice) {
+      return profile.customPrice;
+    }
+    return planDetails[profile.plan || ""]?.price || 0;
+  };
+
+  const getPlanName = () => {
+    if (!profile?.plan) return "No Plan";
+    if (profile.plan === "custom") {
+      return `Custom Plan`;
+    }
+    return planDetails[profile.plan]?.name || profile.plan;
   };
 
   if (loading) {
@@ -205,7 +262,7 @@ const ClientDashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl mx-auto space-y-6"
+          className="max-w-4xl mx-auto space-y-6"
         >
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -233,118 +290,235 @@ const ClientDashboard = () => {
             </div>
           </div>
 
-          {/* Progress Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Progress</CardTitle>
-              <CardDescription>Complete all steps to get started</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Progress value={getProgress()} className="h-3" />
-              
-              <div className="space-y-4">
-                {/* Step 1: Account Created */}
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  <div>
-                    <p className="font-medium">Account Created</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(profile.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
+          {/* Primary CTA - only show if there's a next action */}
+          {getPrimaryCTA() && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                {getPrimaryCTA()}
+              </CardContent>
+            </Card>
+          )}
 
-                {/* Step 2: Payment */}
-                <div className="flex items-center gap-3">
-                  {profile.subscriptionStatus === "active" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-muted-foreground" />
-                  )}
-                  <div>
-                    <p className="font-medium">Payment Completed</p>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.subscriptionStatus === "active" 
-                        ? `${profile.plan?.replace("_", " ") || "Plan"} subscription active`
-                        : "Awaiting payment via Stripe"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 3: Contract */}
-                <div className="flex items-center gap-3">
-                  {profile.contractStatus === "signed" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-muted-foreground" />
-                  )}
-                  <div>
-                    <p className="font-medium">Contract Signed</p>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.contractStatus === "signed" && profile.contractSignedAt
-                        ? `Signed on ${new Date(profile.contractSignedAt).toLocaleDateString()}`
-                        : "Service agreement pending"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 4: Onboarding */}
-                <div className="flex items-center gap-3">
-                  {profile.onboardingStatus === "completed" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-muted-foreground" />
-                  )}
-                  <div>
-                    <p className="font-medium">Onboarding Completed</p>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.onboardingStatus === "completed"
-                        ? "All set up and ready to go!"
-                        : profile.onboardingStatus === "in_progress"
-                        ? "In progress..."
-                        : "Complete your profile and preferences"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Primary CTA */}
-          <Card>
-            <CardContent className="pt-6">
-              {getPrimaryCTA()}
-            </CardContent>
-          </Card>
-
-          {/* Plan Info */}
-          {profile.plan && (
+          {/* Main Content Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Progress Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Your Plan</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <LayoutDashboard className="w-5 h-5" />
+                  Setup Progress
+                </CardTitle>
+                <CardDescription>Complete all steps to get started</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Progress value={getProgress()} className="h-3" />
+                
+                <div className="space-y-4">
+                  {/* Step 1: Account Created */}
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Account Created</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(profile.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Payment */}
+                  <div className="flex items-center gap-3">
+                    {profile.subscriptionStatus === "active" ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Payment Completed</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile.subscriptionStatus === "active" 
+                          ? "Subscription active"
+                          : "Awaiting payment"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 3: Contract */}
+                  <div className="flex items-center gap-3">
+                    {profile.contractStatus === "signed" ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Contract Signed</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile.contractStatus === "signed" && profile.contractSignedAt
+                          ? `Signed ${new Date(profile.contractSignedAt).toLocaleDateString()}`
+                          : "Pending signature"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 4: Onboarding */}
+                  <div className="flex items-center gap-3">
+                    {profile.onboardingStatus === "completed" ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Onboarding Completed</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile.onboardingStatus === "completed"
+                          ? "All set!"
+                          : profile.onboardingStatus === "in_progress"
+                          ? "In progress..."
+                          : "Not started"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Plan & Billing Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Your Plan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-semibold">{getPlanName()}</p>
+                    <p className="text-2xl font-bold text-primary">
+                      ${getPlanPrice().toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                    </p>
+                  </div>
+                  <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
+                    {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus}
+                  </Badge>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Services Included ({profile.maxServices})</p>
+                  {profile.selectedServices.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {profile.selectedServices.map((service) => (
+                        <Badge key={service} variant="outline" className="text-xs">
+                          {serviceLabels[service] || service}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No services selected yet</p>
+                  )}
+                </div>
+
+                {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
+                  <>
+                    <Separator />
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={handleManageBilling}
+                      disabled={managingBilling}
+                    >
+                      {managingBilling ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Settings className="w-4 h-4 mr-2" />
+                      )}
+                      Manage Billing
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Contract Status Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSignature className="w-5 h-5" />
+                  Contract
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-semibold capitalize">
-                      {profile.plan === "custom" 
-                        ? `Custom Plan ($${profile.customPrice}/mo)`
-                        : `${profile.plan.replace("_", " ")} Plan`}
-                    </p>
+                    <p className="font-medium">Service Agreement</p>
                     <p className="text-sm text-muted-foreground">
-                      Up to {profile.maxServices} service{profile.maxServices > 1 ? "s" : ""}
+                      {profile.contractStatus === "signed" 
+                        ? `Signed on ${new Date(profile.contractSignedAt!).toLocaleDateString()}`
+                        : "Awaiting your signature"}
                     </p>
                   </div>
-                  {profile.selectedServices.length > 0 && (
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Selected Services</p>
-                      <p className="font-medium">{profile.selectedServices.length}/{profile.maxServices}</p>
-                    </div>
+                  {profile.contractStatus === "signed" ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <Button size="sm" onClick={() => navigate("/contract")}>
+                      Sign Now
+                    </Button>
                   )}
                 </div>
               </CardContent>
             </Card>
-          )}
+
+            {/* Account Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Account Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Member Since</span>
+                  <span className="font-medium">{new Date(profile.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Last Updated</span>
+                  <span className="font-medium">{new Date(profile.updatedAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Account Status</span>
+                  <Badge variant="outline" className="capitalize">{profile.accountStatus}</Badge>
+                </div>
+                {profile.stripeSubscriptionId && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subscription ID</span>
+                    <span className="font-mono text-xs">{profile.stripeSubscriptionId.slice(-8)}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Help Section */}
+          <Card className="bg-muted/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Need Help?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Contact our support team at teamsienvi@gmail.com
+                  </p>
+                </div>
+                <Button variant="outline" asChild>
+                  <a href="mailto:teamsienvi@gmail.com">
+                    Contact Support
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       </main>
       <Footer />

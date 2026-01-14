@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, Mail, ArrowLeft, KeyRound, ArrowRight } from "lucide-react";
+import { Lock, Mail, ArrowLeft, KeyRound, CheckCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-type ViewMode = "login" | "reset-request" | "reset-confirm";
+type ViewMode = "login" | "reset-request" | "reset-confirm" | "set-password";
 
 const ClientLogin = () => {
   const [email, setEmail] = useState("");
@@ -20,29 +20,45 @@ const ClientLogin = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // Check if user is coming from a password reset link
+  // Check if user is coming from a password reset link or setup password flow
   useEffect(() => {
     const checkForPasswordReset = async () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const type = hashParams.get("type");
+      const setup = searchParams.get("setup");
       
-      if (type === "recovery") {
-        setViewMode("reset-confirm");
+      if (type === "recovery" || type === "magiclink") {
+        // User clicked a magic link - check if they need to set password
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && setup === "password") {
+          setViewMode("set-password");
+        } else if (type === "recovery") {
+          setViewMode("reset-confirm");
+        } else if (session) {
+          // Regular magic link login - redirect to dashboard
+          navigate("/dashboard");
+        }
       }
     };
     
     checkForPasswordReset();
 
-    // Listen for auth state changes (for password reset flow)
+    // Listen for auth state changes (for password reset/magic link flow)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         setViewMode("reset-confirm");
+      } else if (event === "SIGNED_IN" && searchParams.get("setup") === "password") {
+        setViewMode("set-password");
+      } else if (event === "SIGNED_IN" && viewMode === "login") {
+        // User just signed in normally
+        navigate("/dashboard");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate, searchParams, viewMode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +141,40 @@ const ClientLogin = () => {
       }
 
       toast.success("Password updated successfully!");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success("Password set successfully! You can now log in with your email and password.");
       navigate("/dashboard");
     } catch (err) {
       toast.error("An unexpected error occurred.");
@@ -314,12 +364,78 @@ const ClientLogin = () => {
     </form>
   );
 
+  const renderSetPasswordForm = () => (
+    <form onSubmit={handleSetPassword} className="space-y-6">
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20 mb-2">
+          <CheckCircle className="h-6 w-6 text-green-400" />
+        </div>
+        <p className="text-white/70">
+          Welcome! Set a password so you can easily log in next time.
+        </p>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="set-password" className="text-white">Choose a Password</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            id="set-password"
+            type="password"
+            placeholder="••••••••"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+            required
+            minLength={6}
+          />
+        </div>
+        <p className="text-xs text-white/50">At least 6 characters</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="confirm-set-password" className="text-white">Confirm Password</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            id="confirm-set-password"
+            type="password"
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+            required
+            minLength={6}
+          />
+        </div>
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full bg-primary hover:bg-primary/90"
+        disabled={isLoading}
+      >
+        {isLoading ? "Setting Password..." : "Set Password & Continue"}
+      </Button>
+
+      <button
+        type="button"
+        onClick={() => navigate("/dashboard")}
+        className="w-full text-center text-white/70 hover:text-white text-sm transition-colors"
+      >
+        Skip for now
+      </button>
+    </form>
+  );
+
   const getTitle = () => {
     switch (viewMode) {
       case "reset-request":
         return "Reset Password";
       case "reset-confirm":
         return "Create New Password";
+      case "set-password":
+        return "Set Your Password";
       default:
         return "Client Login";
     }
@@ -330,6 +446,8 @@ const ClientLogin = () => {
       case "reset-request":
       case "reset-confirm":
         return <KeyRound className="h-8 w-8 text-primary" />;
+      case "set-password":
+        return <CheckCircle className="h-8 w-8 text-primary" />;
       default:
         return <Lock className="h-8 w-8 text-primary" />;
     }
@@ -354,6 +472,7 @@ const ClientLogin = () => {
             {viewMode === "login" && renderLoginForm()}
             {viewMode === "reset-request" && renderResetRequestForm()}
             {viewMode === "reset-confirm" && renderResetConfirmForm()}
+            {viewMode === "set-password" && renderSetPasswordForm()}
           </div>
 
           {viewMode === "login" && (
