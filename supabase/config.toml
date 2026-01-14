@@ -27,23 +27,20 @@ verify_jwt = false
 [functions.get-admin-clients]
 verify_jwt = false
 
-[functions.create-manual-client]
-verify_jwt = false
-
-[functions.migrate-client-to-stripe]
-verify_jwt = false
-
 [functions.update-client]
 verify_jwt = false
 
 [functions.delete-client]
 verify_jwt = false
 
-[functions.check-billing-reminders]
+[functions.create-client]
 verify_jwt = false
 
-[functions.get-billing-reminders]
+[functions.generate-checkout-link]
 verify_jwt = false
 
-[functions.mark-reminder-read]
+[functions.get-client-profile]
+verify_jwt = false
+
+[functions.update-client-status]
 verify_jwt = false

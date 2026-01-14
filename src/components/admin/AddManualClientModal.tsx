@@ -38,7 +38,7 @@ const planLimits: Record<string, number> = {
   custom: 6,
 };
 
-interface AddManualClientModalProps {
+interface AddClientModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onClientAdded: () => void;
@@ -48,16 +48,20 @@ export const AddManualClientModal = ({
   open,
   onOpenChange,
   onClientAdded,
-}: AddManualClientModalProps) => {
+}: AddClientModalProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    clientName: "",
     email: "",
+    firstName: "",
+    lastName: "",
+    clientType: "new" as "new" | "existing",
     plan: "single" as "single" | "triple" | "full" | "custom",
-    monthlyAmount: 888,
+    customPrice: 888,
     maxServices: 1,
     selectedServices: [] as string[],
-    paymentMethod: "manual" as "manual" | "stripe" | "invoice",
+    subscriptionStatus: "pending_payment" as "pending_payment" | "active" | "past_due" | "canceled",
+    contractStatus: "not_signed" as "not_signed" | "signed",
+    onboardingStatus: "not_started" as "not_started" | "in_progress" | "completed",
     notes: "",
   });
 
@@ -66,14 +70,14 @@ export const AddManualClientModal = ({
       single: { amount: 888, services: 1 },
       triple: { amount: 2398.20, services: 3 },
       full: { amount: 3996, services: 6 },
-      custom: { amount: formData.monthlyAmount, services: formData.maxServices },
+      custom: { amount: formData.customPrice, services: formData.maxServices },
     };
 
     const planConfig = limits[plan] || limits.single;
     setFormData((prev) => ({
       ...prev,
       plan: plan as typeof prev.plan,
-      monthlyAmount: planConfig.amount,
+      customPrice: planConfig.amount,
       maxServices: planConfig.services,
       selectedServices: prev.selectedServices.slice(0, planConfig.services),
     }));
@@ -102,10 +106,6 @@ export const AddManualClientModal = ({
   };
 
   const handleSubmit = async () => {
-    if (!formData.clientName.trim()) {
-      toast.error("Client name is required");
-      return;
-    }
     if (!formData.email.trim()) {
       toast.error("Email is required");
       return;
@@ -119,7 +119,7 @@ export const AddManualClientModal = ({
         return;
       }
 
-      const response = await supabase.functions.invoke("create-manual-client", {
+      const response = await supabase.functions.invoke("create-client", {
         body: formData,
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -134,23 +134,27 @@ export const AddManualClientModal = ({
         throw new Error(response.data.error);
       }
 
-      toast.success("Manual client created successfully");
+      toast.success("Client created successfully");
       onClientAdded();
       onOpenChange(false);
       
       // Reset form
       setFormData({
-        clientName: "",
         email: "",
+        firstName: "",
+        lastName: "",
+        clientType: "new",
         plan: "single",
-        monthlyAmount: 888,
+        customPrice: 888,
         maxServices: 1,
         selectedServices: [],
-        paymentMethod: "manual",
+        subscriptionStatus: "pending_payment",
+        contractStatus: "not_signed",
+        onboardingStatus: "not_started",
         notes: "",
       });
     } catch (error: any) {
-      console.error("Error creating manual client:", error);
+      console.error("Error creating client:", error);
       toast.error(error.message || "Failed to create client");
     } finally {
       setLoading(false);
@@ -163,101 +167,185 @@ export const AddManualClientModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Manual Client</DialogTitle>
+          <DialogTitle>Create New Client</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Client Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name *</Label>
-              <Input
-                id="clientName"
-                value={formData.clientName}
-                onChange={(e) => setFormData((prev) => ({ ...prev, clientName: e.target.value }))}
-                placeholder="John Doe"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                placeholder="john@example.com"
-              />
-            </div>
-          </div>
-
-          {/* Plan Selection */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Plan Type *</Label>
-              <Select value={formData.plan} onValueChange={handlePlanChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="single">Single Service ($888/mo)</SelectItem>
-                  <SelectItem value="triple">Triple Automation ($2,398.20/mo)</SelectItem>
-                  <SelectItem value="full">Full Automation ($3,996/mo)</SelectItem>
-                  <SelectItem value="custom">Custom Plan</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Payment Method *</Label>
-              <Select
-                value={formData.paymentMethod}
-                onValueChange={(v) => setFormData((prev) => ({ ...prev, paymentMethod: v as typeof prev.paymentMethod }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual Payment</SelectItem>
-                  <SelectItem value="invoice">Invoice</SelectItem>
-                  <SelectItem value="stripe">Stripe (Pending)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Custom Plan Options */}
-          {formData.plan === "custom" && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+          {/* Section A: Client Identity */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Client Identity
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="monthlyAmount">Monthly Amount ($) *</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
-                  id="monthlyAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.monthlyAmount}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, monthlyAmount: parseFloat(e.target.value) || 0 }))}
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="john@example.com"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="maxServices">Max Services (1-6) *</Label>
+                <Label>Client Type</Label>
+                <Select
+                  value={formData.clientType}
+                  onValueChange={(v) => setFormData((prev) => ({ ...prev, clientType: v as "new" | "existing" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">New Client</SelectItem>
+                    <SelectItem value="existing">Existing Client</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
                 <Input
-                  id="maxServices"
-                  type="number"
-                  min="1"
-                  max="6"
-                  value={formData.maxServices}
-                  onChange={(e) => {
-                    const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
-                    setFormData((prev) => ({
-                      ...prev,
-                      maxServices: value,
-                      selectedServices: prev.selectedServices.slice(0, value),
-                    }));
-                  }}
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="John"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Doe"
                 />
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Section B: Plan & Billing */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Plan & Billing
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Plan *</Label>
+                <Select value={formData.plan} onValueChange={handlePlanChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Service ($888/mo)</SelectItem>
+                    <SelectItem value="triple">Triple Automation ($2,398.20/mo)</SelectItem>
+                    <SelectItem value="full">Full Automation ($3,996/mo)</SelectItem>
+                    <SelectItem value="custom">Custom Plan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Subscription Status</Label>
+                <Select
+                  value={formData.subscriptionStatus}
+                  onValueChange={(v) => setFormData((prev) => ({ 
+                    ...prev, 
+                    subscriptionStatus: v as typeof prev.subscriptionStatus 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending_payment">Awaiting Payment</SelectItem>
+                    <SelectItem value="active">Active (Existing Client)</SelectItem>
+                    <SelectItem value="past_due">Past Due</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Custom Plan Options */}
+            {formData.plan === "custom" && (
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="customPrice">Monthly Amount ($) *</Label>
+                  <Input
+                    id="customPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.customPrice}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, customPrice: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxServices">Max Services (1-6) *</Label>
+                  <Input
+                    id="maxServices"
+                    type="number"
+                    min="1"
+                    max="6"
+                    value={formData.maxServices}
+                    onChange={(e) => {
+                      const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
+                      setFormData((prev) => ({
+                        ...prev,
+                        maxServices: value,
+                        selectedServices: prev.selectedServices.slice(0, value),
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section C: Contract & Onboarding Status */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Lifecycle Status
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Contract Status</Label>
+                <Select
+                  value={formData.contractStatus}
+                  onValueChange={(v) => setFormData((prev) => ({ 
+                    ...prev, 
+                    contractStatus: v as typeof prev.contractStatus 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_signed">Not Signed</SelectItem>
+                    <SelectItem value="signed">Signed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Onboarding Status</Label>
+                <Select
+                  value={formData.onboardingStatus}
+                  onValueChange={(v) => setFormData((prev) => ({ 
+                    ...prev, 
+                    onboardingStatus: v as typeof prev.onboardingStatus 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_started">Not Started</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
 
           {/* Service Selection */}
           <div className="space-y-3">

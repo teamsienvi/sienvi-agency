@@ -281,44 +281,6 @@ export type Database = {
         }
         Relationships: []
       }
-      billing_reminders: {
-        Row: {
-          created_at: string
-          days_until_due: number | null
-          id: string
-          is_read: boolean | null
-          reminder_date: string
-          reminder_type: string
-          subscription_id: string
-        }
-        Insert: {
-          created_at?: string
-          days_until_due?: number | null
-          id?: string
-          is_read?: boolean | null
-          reminder_date: string
-          reminder_type: string
-          subscription_id: string
-        }
-        Update: {
-          created_at?: string
-          days_until_due?: number | null
-          id?: string
-          is_read?: boolean | null
-          reminder_date?: string
-          reminder_type?: string
-          subscription_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "billing_reminders_subscription_id_fkey"
-            columns: ["subscription_id"]
-            isOneToOne: false
-            referencedRelation: "subscriptions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       blog_posting: {
         Row: {
           blog_content: string
@@ -343,6 +305,78 @@ export type Database = {
           created_at?: string | null
           image_url?: string | null
           Status?: string
+        }
+        Relationships: []
+      }
+      client_profiles: {
+        Row: {
+          account_status: string
+          contract_signed_at: string | null
+          contract_status: string
+          created_at: string
+          custom_price: number | null
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          max_services: number | null
+          notes: string | null
+          onboarding_completed_at: string | null
+          onboarding_status: string
+          plan: string | null
+          role: string
+          selected_services: string[] | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          account_status?: string
+          contract_signed_at?: string | null
+          contract_status?: string
+          created_at?: string
+          custom_price?: number | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          max_services?: number | null
+          notes?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_status?: string
+          plan?: string | null
+          role?: string
+          selected_services?: string[] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_status?: string
+          contract_signed_at?: string | null
+          contract_status?: string
+          created_at?: string
+          custom_price?: number | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          max_services?: number | null
+          notes?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_status?: string
+          plan?: string | null
+          role?: string
+          selected_services?: string[] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

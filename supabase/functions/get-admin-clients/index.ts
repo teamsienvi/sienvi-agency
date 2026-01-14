@@ -16,7 +16,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Get the authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -25,12 +24,10 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user's token to verify their identity
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Get the current user
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(
@@ -39,10 +36,8 @@ serve(async (req) => {
       );
     }
 
-    // Use service role client to check admin status
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if user is admin
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -57,7 +52,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all subscriptions using service role
     const { data: subscriptions, error: subsError } = await supabaseAdmin
       .from("subscriptions")
       .select("*")
@@ -71,7 +65,6 @@ serve(async (req) => {
       );
     }
 
-    // Format the response
     const clients = subscriptions.map((sub: any) => ({
       id: sub.id,
       email: sub.email,
@@ -86,14 +79,6 @@ serve(async (req) => {
       customPrice: sub.metadata?.custom_price || sub.metadata?.customPrice || null,
       maxServices: sub.metadata?.max_services || sub.metadata?.maxServices || null,
       notes: sub.metadata?.notes || null,
-      isManual: sub.is_manual || false,
-      paymentMethod: sub.payment_method || "stripe",
-      migrationStatus: sub.migration_status || null,
-      billingCycle: sub.billing_cycle || "monthly",
-      billingDay: sub.billing_day || null,
-      nextBillingDate: sub.next_billing_date || null,
-      lastBilledDate: sub.last_billed_date || null,
-      billingReminderEnabled: sub.billing_reminder_enabled ?? true,
       createdAt: sub.created_at,
       updatedAt: sub.updated_at,
     }));

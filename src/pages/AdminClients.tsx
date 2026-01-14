@@ -36,16 +36,12 @@ import {
   Check,
   RefreshCw,
   UserPlus,
-  ArrowRightLeft,
   Pencil,
   Trash2,
-  Bell,
-  Calendar,
-  AlertTriangle,
+  Link,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AddManualClientModal } from "@/components/admin/AddManualClientModal";
-import { MigrateToStripeModal } from "@/components/admin/MigrateToStripeModal";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 
@@ -63,14 +59,6 @@ interface Client {
   customPrice: number | null;
   maxServices: number | null;
   notes: string | null;
-  isManual: boolean;
-  paymentMethod: string;
-  migrationStatus: string | null;
-  billingCycle: string | null;
-  billingDay: number | null;
-  nextBillingDate: string | null;
-  lastBilledDate: string | null;
-  billingReminderEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,10 +79,9 @@ const AdminClients = () => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [migrateClient, setMigrateClient] = useState<Client | null>(null);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteClient, setDeleteClient] = useState<Client | null>(null);
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -109,7 +96,6 @@ const AdminClients = () => {
         return;
       }
 
-      // Check admin role
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -156,18 +142,9 @@ const AdminClients = () => {
   };
 
   const getStatusBadge = (client: Client) => {
-    // Manual client statuses
-    if (client.isManual || client.paymentMethod === "manual" || client.paymentMethod === "invoice") {
-      if (client.migrationStatus === "pending_migration") {
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Pending Migration</Badge>;
-      }
-      if (!client.isActive || client.subscriptionStatus === "canceled") {
-        return <Badge variant="destructive">Canceled</Badge>;
-      }
-      return <Badge className="bg-gray-500 hover:bg-gray-600">Manual</Badge>;
+    if (client.subscriptionStatus === "pending_payment") {
+      return <Badge className="bg-orange-500 hover:bg-orange-600">Awaiting Payment</Badge>;
     }
-    
-    // Stripe client statuses
     if (!client.isActive || client.subscriptionStatus === "canceled") {
       return <Badge variant="destructive">Canceled</Badge>;
     }
@@ -175,58 +152,6 @@ const AdminClients = () => {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Past Due</Badge>;
     }
     return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
-  };
-
-  const getBillingStatusBadge = (client: Client) => {
-    // Stripe clients are auto-billed
-    if (client.paymentMethod === "stripe" && !client.isManual) {
-      return <Badge variant="outline" className="bg-gray-100 text-gray-600">Auto-billed</Badge>;
-    }
-
-    // No billing date set
-    if (!client.nextBillingDate) {
-      return <Badge variant="outline" className="text-muted-foreground">Not set</Badge>;
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const billingDate = new Date(client.nextBillingDate);
-    billingDate.setHours(0, 0, 0, 0);
-    const daysUntil = Math.ceil((billingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysUntil < 0) {
-      return (
-        <Badge className="bg-red-500 hover:bg-red-600">
-          <AlertTriangle className="w-3 h-3 mr-1" />
-          Overdue ({Math.abs(daysUntil)}d)
-        </Badge>
-      );
-    }
-
-    if (daysUntil <= 7) {
-      return (
-        <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">
-          <Calendar className="w-3 h-3 mr-1" />
-          Due in {daysUntil}d
-        </Badge>
-      );
-    }
-
-    return (
-      <Badge variant="outline" className="bg-green-50 text-green-700">
-        Due in {daysUntil}d
-      </Badge>
-    );
-  };
-
-  const getPaymentMethodBadge = (client: Client) => {
-    if (client.paymentMethod === "manual") {
-      return <Badge variant="outline" className="text-xs">Manual</Badge>;
-    }
-    if (client.paymentMethod === "invoice") {
-      return <Badge variant="outline" className="text-xs">Invoice</Badge>;
-    }
-    return <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">Stripe</Badge>;
   };
 
   const getPlanDisplay = (plan: string | null, customPrice: number | null) => {
@@ -257,7 +182,41 @@ const AdminClients = () => {
     window.open(`https://dashboard.stripe.com/customers/${customerId}`, "_blank");
   };
 
-  // Filter and sort clients
+  const handleGenerateCheckoutLink = async (client: Client) => {
+    if (generatingLink) return;
+    
+    setGeneratingLink(client.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("generate-checkout-link", {
+        body: {
+          clientId: client.id,
+          clientEmail: client.email,
+          plan: client.plan,
+          customPrice: client.customPrice,
+          selectedServices: client.selectedServices,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+
+      const checkoutUrl = response.data.checkoutUrl;
+      await navigator.clipboard.writeText(checkoutUrl);
+      toast.success("Checkout link copied to clipboard!");
+    } catch (error: any) {
+      console.error("Error generating checkout link:", error);
+      toast.error(error.message || "Failed to generate checkout link");
+    } finally {
+      setGeneratingLink(null);
+    }
+  };
+
   const filteredClients = clients
     .filter((client) => {
       const matchesSearch =
@@ -266,6 +225,7 @@ const AdminClients = () => {
       const matchesPlan = planFilter === "all" || client.plan === planFilter;
       const matchesStatus =
         statusFilter === "all" ||
+        (statusFilter === "pending_payment" && client.subscriptionStatus === "pending_payment") ||
         (statusFilter === "active" && client.isActive && client.subscriptionStatus === "active") ||
         (statusFilter === "past_due" && client.subscriptionStatus === "past_due") ||
         (statusFilter === "canceled" && (!client.isActive || client.subscriptionStatus === "canceled"));
@@ -310,14 +270,14 @@ const AdminClients = () => {
               <div>
                 <h1 className="text-3xl font-bold">Client Overview</h1>
                 <p className="text-muted-foreground">
-                  Manage and monitor all client subscriptions
+                  Manage all client subscriptions (Stripe-only billing)
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => setShowAddModal(true)}>
+              <Button onClick={() => navigate("/admin/create-client")}>
                 <UserPlus className="w-4 h-4 mr-2" />
-                Add Manual Client
+                Add Client
               </Button>
               <Button onClick={fetchClients} variant="outline" disabled={loading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -332,11 +292,17 @@ const AdminClients = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
+          className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6"
         >
           <div className="bg-white p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Total Clients</p>
             <p className="text-2xl font-bold">{clients.length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border shadow-sm">
+            <p className="text-sm text-muted-foreground">Awaiting Payment</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {clients.filter((c) => c.subscriptionStatus === "pending_payment").length}
+            </p>
           </div>
           <div className="bg-white p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Active</p>
@@ -354,7 +320,7 @@ const AdminClients = () => {
             <p className="text-sm text-muted-foreground">Est. MRR</p>
             <p className="text-2xl font-bold">
               ${clients
-                .filter((c) => c.isActive)
+                .filter((c) => c.isActive && c.subscriptionStatus === "active")
                 .reduce((sum, c) => sum + getMonthlyPrice(c.plan, c.customPrice), 0)
                 .toLocaleString()}
             </p>
@@ -398,6 +364,7 @@ const AdminClients = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending_payment">Awaiting Payment</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="past_due">Past Due</SelectItem>
                 <SelectItem value="canceled">Canceled</SelectItem>
@@ -440,8 +407,6 @@ const AdminClients = () => {
                   <TableHead>Client</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Next Billing</TableHead>
-                  <TableHead>Billing Type</TableHead>
                   <TableHead>Services</TableHead>
                   <TableHead>Subscribed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -471,28 +436,7 @@ const AdminClients = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {getStatusBadge(client)}
-                        {getPaymentMethodBadge(client)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getBillingStatusBadge(client)}
-                      {client.nextBillingDate && (client.isManual || client.paymentMethod !== "stripe") && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(client.nextBillingDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {getPaymentMethodBadge(client)}
-                        {(client.isManual || client.paymentMethod !== "stripe") && client.billingReminderEnabled && (
-                          <span title="Reminders enabled">
-                            <Bell className="w-3 h-3 text-muted-foreground" />
-                          </span>
-                        )}
-                      </div>
+                      {getStatusBadge(client)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1 max-w-[150px]">
@@ -542,18 +486,23 @@ const AdminClients = () => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        {(client.isManual || client.paymentMethod !== "stripe") && !client.stripeSubscriptionId && (
+                        {client.subscriptionStatus === "pending_payment" && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setMigrateClient(client)}
-                            title="Migrate to Stripe"
+                            onClick={() => handleGenerateCheckoutLink(client)}
+                            title="Generate Checkout Link"
                             className="text-blue-600 hover:text-blue-700"
+                            disabled={generatingLink === client.id}
                           >
-                            <ArrowRightLeft className="w-4 h-4" />
+                            {generatingLink === client.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Link className="w-4 h-4" />
+                            )}
                           </Button>
                         )}
-                        {!client.isManual && client.stripeCustomerId && !client.stripeCustomerId.startsWith("manual_") && (
+                        {client.stripeCustomerId && !client.stripeCustomerId.startsWith("pending_") && (
                           <>
                             <Button
                               variant="ghost"
@@ -617,9 +566,8 @@ const AdminClients = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
-                    <div className="mt-1 flex flex-col gap-1">
+                    <div className="mt-1">
                       {getStatusBadge(selectedClient)}
-                      {getPaymentMethodBadge(selectedClient)}
                     </div>
                   </div>
                   <div>
@@ -668,65 +616,64 @@ const AdminClients = () => {
                   </div>
                 )}
 
-                <div className="border-t pt-4">
-                  <p className="text-sm text-muted-foreground mb-2">Stripe IDs</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between bg-muted p-2 rounded">
-                      <span className="text-sm font-mono">{selectedClient.stripeCustomerId}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(selectedClient.stripeCustomerId, "modal-cus")}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    {selectedClient.stripeSubscriptionId && (
+                {selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") && (
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-muted-foreground mb-2">Stripe IDs</p>
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between bg-muted p-2 rounded">
-                        <span className="text-sm font-mono">{selectedClient.stripeSubscriptionId}</span>
+                        <span className="text-sm font-mono">{selectedClient.stripeCustomerId}</span>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => copyToClipboard(selectedClient.stripeSubscriptionId!, "modal-sub")}
+                          onClick={() => copyToClipboard(selectedClient.stripeCustomerId, "modal-cus")}
                         >
                           <Copy className="w-4 h-4" />
                         </Button>
                       </div>
-                    )}
+                      {selectedClient.stripeSubscriptionId && (
+                        <div className="flex items-center justify-between bg-muted p-2 rounded">
+                          <span className="text-sm font-mono">{selectedClient.stripeSubscriptionId}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(selectedClient.stripeSubscriptionId!, "modal-sub")}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
-                    className="flex-1"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View in Stripe
-                  </Button>
-                  <Button variant="outline" disabled className="flex-1">
-                    Adjust Services (Coming Soon)
-                  </Button>
+                  {selectedClient.subscriptionStatus === "pending_payment" ? (
+                    <Button
+                      onClick={() => handleGenerateCheckoutLink(selectedClient)}
+                      className="flex-1"
+                      disabled={generatingLink === selectedClient.id}
+                    >
+                      {generatingLink === selectedClient.id ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Link className="w-4 h-4 mr-2" />
+                      )}
+                      Generate Checkout Link
+                    </Button>
+                  ) : selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") ? (
+                    <Button
+                      onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
+                      className="flex-1"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View in Stripe
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             )}
           </DialogContent>
         </Dialog>
-
-        {/* Add Manual Client Modal */}
-        <AddManualClientModal
-          open={showAddModal}
-          onOpenChange={setShowAddModal}
-          onClientAdded={fetchClients}
-        />
-
-        {/* Migrate to Stripe Modal */}
-        <MigrateToStripeModal
-          open={!!migrateClient}
-          onOpenChange={(open) => !open && setMigrateClient(null)}
-          client={migrateClient}
-          onMigrationStarted={fetchClients}
-        />
 
         {/* Edit Client Modal */}
         <EditClientModal
