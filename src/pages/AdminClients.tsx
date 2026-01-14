@@ -38,11 +38,13 @@ import {
   UserPlus,
   ArrowRightLeft,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AddManualClientModal } from "@/components/admin/AddManualClientModal";
 import { MigrateToStripeModal } from "@/components/admin/MigrateToStripeModal";
 import { EditClientModal } from "@/components/admin/EditClientModal";
+import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 
 interface Client {
   id: string;
@@ -84,6 +86,7 @@ const AdminClients = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [migrateClient, setMigrateClient] = useState<Client | null>(null);
   const [editClient, setEditClient] = useState<Client | null>(null);
+  const [deleteClient, setDeleteClient] = useState<Client | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -470,6 +473,15 @@ const AdminClients = () => {
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteClient(client)}
+                          title="Delete Client"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                         {(client.isManual || client.paymentMethod !== "stripe") && !client.stripeSubscriptionId && (
                           <Button
                             variant="ghost"
@@ -662,6 +674,14 @@ const AdminClients = () => {
           onOpenChange={(open) => !open && setEditClient(null)}
           client={editClient}
           onClientUpdated={fetchClients}
+        />
+
+        {/* Delete Client Dialog */}
+        <DeleteClientDialog
+          open={!!deleteClient}
+          onOpenChange={(open) => !open && setDeleteClient(null)}
+          client={deleteClient}
+          onClientDeleted={fetchClients}
         />
       </div>
     </div>
