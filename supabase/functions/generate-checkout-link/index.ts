@@ -7,11 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Standard price IDs for plans
+// Standard price IDs for plans (Test Mode)
 const PLAN_PRICE_IDS: Record<string, string> = {
-  single: "price_1QyEDJFbEbLVySHo2c2fLT1K",
-  triple: "price_1QyEFMFbEbLVySHorXEkjySz", 
-  full: "price_1QyEGaFbEbLVySHotXhbdEp0",
+  single: "price_1SpbnaDnw1azoLSpAmnnUwMX",
+  triple: "price_1Spbo0Dnw1azoLSpUgAdICKR",
+  full: "price_1SpboRDnw1azoLSpG07N2lA0",
 };
 
 serve(async (req) => {
