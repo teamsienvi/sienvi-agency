@@ -49,15 +49,46 @@ serve(async (req) => {
 
     console.log(`Admin ${user.email} deleting client ${clientId}`);
 
-    // Delete the subscription record
-    const { error: deleteError } = await supabase
+    // First, get the client profile to find the email (needed for subscriptions cleanup)
+    const { data: clientProfile } = await supabase
+      .from("client_profiles")
+      .select("email")
+      .eq("id", clientId)
+      .single();
+
+    // Delete from client_profiles table (primary source of truth)
+    const { error: profileDeleteError } = await supabase
+      .from("client_profiles")
+      .delete()
+      .eq("id", clientId);
+
+    if (profileDeleteError) {
+      console.error("Profile delete error:", profileDeleteError);
+      throw new Error(`Failed to delete client profile: ${profileDeleteError.message}`);
+    }
+
+    // Also delete from subscriptions table if email exists (for backwards compatibility)
+    if (clientProfile?.email) {
+      const { error: subDeleteError } = await supabase
+        .from("subscriptions")
+        .delete()
+        .eq("email", clientProfile.email);
+
+      if (subDeleteError) {
+        console.warn("Subscription delete warning:", subDeleteError);
+        // Don't throw - client_profiles is the source of truth
+      }
+    }
+
+    // Also try deleting from subscriptions by ID (legacy records)
+    const { error: subIdDeleteError } = await supabase
       .from("subscriptions")
       .delete()
       .eq("id", clientId);
 
-    if (deleteError) {
-      console.error("Delete error:", deleteError);
-      throw new Error(`Failed to delete client: ${deleteError.message}`);
+    if (subIdDeleteError) {
+      console.warn("Subscription ID delete warning:", subIdDeleteError);
+      // Don't throw - this is optional cleanup
     }
 
     console.log(`Successfully deleted client ${clientId}`);
