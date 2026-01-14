@@ -61,9 +61,20 @@ serve(async (req) => {
     // Get the origin from the request or use a default
     const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
 
+    // Create a customer first (required for Stripe Accounts V2 in testmode)
+    const customer = await stripe.customers.create({
+      metadata: {
+        source: "checkout_session",
+        plan: plan || planFromPrice,
+      },
+    });
+
+    console.log(`Created Stripe customer: ${customer.id}`);
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
+      customer: customer.id,
       line_items: [
         {
           price: priceId,
