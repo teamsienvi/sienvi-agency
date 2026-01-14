@@ -52,107 +52,59 @@ serve(async (req) => {
 
     console.log(`Admin ${user.email} deleting client ${clientId}`);
 
-    // Admin UI passes the subscriptions.id as clientId.
-    // We need to resolve the related client_profiles row to avoid "email already exists" on re-create.
-    const { data: subscription, error: subFetchError } = await supabase
-      .from("subscriptions")
-      .select("id,email,metadata")
+    // clientId is now the client_profiles.id directly
+    // First, fetch the client profile to get the email
+    const { data: clientProfile, error: profileFetchError } = await supabase
+      .from("client_profiles")
+      .select("id, email, user_id")
       .eq("id", clientId)
       .maybeSingle();
 
-    if (subFetchError) {
-      console.warn("Subscription fetch warning:", subFetchError);
+    if (profileFetchError) {
+      console.error("Error fetching client profile:", profileFetchError);
+      throw new Error(`Failed to fetch client profile: ${profileFetchError.message}`);
     }
 
-    const email = (subscription?.email || "").toLowerCase() || null;
-    const meta: any = subscription?.metadata ?? null;
-    const profileIdFromMeta: string | null =
-      meta?.client_profile_id || meta?.clientProfileId || null;
-
-    // Try to resolve a client profile by metadata id, then by email
-    let clientProfileId: string | null = null;
-
-    if (profileIdFromMeta) {
-      const { data: profileById, error: profileByIdError } = await supabase
-        .from("client_profiles")
-        .select("id")
-        .eq("id", profileIdFromMeta)
-        .maybeSingle();
-
-      if (profileByIdError) {
-        console.warn("Profile-by-id lookup warning:", profileByIdError);
-      }
-      clientProfileId = profileById?.id ?? null;
+    if (!clientProfile) {
+      throw new Error("Client profile not found");
     }
 
-    if (!clientProfileId && email) {
-      const { data: profileByEmail, error: profileByEmailError } = await supabase
-        .from("client_profiles")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
+    const email = (clientProfile.email || "").toLowerCase();
+    const userId = clientProfile.user_id;
 
-      if (profileByEmailError) {
-        console.warn("Profile-by-email lookup warning:", profileByEmailError);
-      }
-      clientProfileId = profileByEmail?.id ?? null;
-    }
+    console.log(`Found client profile: id=${clientId}, email=${email}, user_id=${userId}`);
 
     // Cleanup dependent onboarding rows first (FK constraints)
-    if (clientProfileId) {
-      const { error: avatarsDelErr } = await supabase
-        .from("onboarding_avatars")
-        .delete()
-        .eq("client_profile_id", clientProfileId);
-      if (avatarsDelErr) console.warn("onboarding_avatars delete warning:", avatarsDelErr);
+    const { error: avatarsDelErr } = await supabase
+      .from("onboarding_avatars")
+      .delete()
+      .eq("client_profile_id", clientId);
+    if (avatarsDelErr) console.warn("onboarding_avatars delete warning:", avatarsDelErr);
 
-      const { error: goalsDelErr } = await supabase
-        .from("onboarding_goals")
-        .delete()
-        .eq("client_profile_id", clientProfileId);
-      if (goalsDelErr) console.warn("onboarding_goals delete warning:", goalsDelErr);
+    const { error: goalsDelErr } = await supabase
+      .from("onboarding_goals")
+      .delete()
+      .eq("client_profile_id", clientId);
+    if (goalsDelErr) console.warn("onboarding_goals delete warning:", goalsDelErr);
 
-      const { error: questionnaireDelErr } = await supabase
-        .from("onboarding_questionnaire")
-        .delete()
-        .eq("client_profile_id", clientProfileId);
-      if (questionnaireDelErr) console.warn("onboarding_questionnaire delete warning:", questionnaireDelErr);
+    const { error: questionnaireDelErr } = await supabase
+      .from("onboarding_questionnaire")
+      .delete()
+      .eq("client_profile_id", clientId);
+    if (questionnaireDelErr) console.warn("onboarding_questionnaire delete warning:", questionnaireDelErr);
 
-      const { error: profileDelErr } = await supabase
-        .from("client_profiles")
-        .delete()
-        .eq("id", clientProfileId);
-
-      if (profileDelErr) {
-        console.error("client_profiles delete error:", profileDelErr);
-        throw new Error(`Failed to delete client profile: ${profileDelErr.message}`);
-      }
-    } else if (email) {
-      // Fallback (should be rare): delete profile by email
-      const { error: profileDelByEmailErr } = await supabase
-        .from("client_profiles")
-        .delete()
-        .eq("email", email);
-
-      if (profileDelByEmailErr) {
-        console.error("client_profiles delete-by-email error:", profileDelByEmailErr);
-        throw new Error(`Failed to delete client profile: ${profileDelByEmailErr.message}`);
-      }
-    } else {
-      console.warn("Could not resolve client profile for deletion; continuing with subscriptions cleanup only.");
-    }
-
-    // Delete subscription record(s)
-    const { error: subDeleteByIdErr } = await supabase
-      .from("subscriptions")
+    // Delete the client profile
+    const { error: profileDelErr } = await supabase
+      .from("client_profiles")
       .delete()
       .eq("id", clientId);
 
-    if (subDeleteByIdErr) {
-      console.warn("Subscription delete-by-id warning:", subDeleteByIdErr);
-      // Don't throw - client_profiles is primary
+    if (profileDelErr) {
+      console.error("client_profiles delete error:", profileDelErr);
+      throw new Error(`Failed to delete client profile: ${profileDelErr.message}`);
     }
 
+    // Also cleanup any subscription records by email (if they exist)
     if (email) {
       const { error: subDeleteByEmailErr } = await supabase
         .from("subscriptions")
@@ -164,7 +116,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Successfully deleted client ${clientId} (email=${email ?? "n/a"}, profileId=${clientProfileId ?? "n/a"})`);
+    console.log(`Successfully deleted client ${clientId} (email=${email || "n/a"}, userId=${userId || "n/a"})`);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

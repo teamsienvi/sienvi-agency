@@ -1,21 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogIn, User } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 
 // Updated Google Calendar appointment URL
 const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if user is logged in
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
   const handleBookCall = () => {
-    // Use window.location.href instead of window.open for consistent behavior
     window.location.href = CALENDAR_BOOKING_URL;
   };
+
+  const handleLogin = () => {
+    setIsMenuOpen(false);
+    navigate("/login");
+  };
+
+  const handleDashboard = () => {
+    setIsMenuOpen(false);
+    navigate("/dashboard");
+  };
+
+  // Check if we're on landing page (show anchor links) or internal page
+  const isLandingPage = location.pathname === "/";
 
   return (
     <nav className="py-4 bg-white sticky top-0 z-50 shadow-sm">
@@ -33,14 +67,41 @@ const Navbar = () => {
 
         {/* Desktop navigation */}
         <div className="hidden md:flex items-center space-x-8">
-          <a href="#services" className="text-sm font-medium hover:text-plc-purple transition-colors">Services</a>
-          <a href="#about" className="text-sm font-medium hover:text-plc-purple transition-colors">About</a>
-          <a href="#process" className="text-sm font-medium hover:text-plc-purple transition-colors">Process</a>
-          <a href="#pricing" className="text-sm font-medium hover:text-plc-purple transition-colors">Pricing</a>
-          <a href="#contact" className="text-sm font-medium hover:text-plc-purple transition-colors">Contact</a>
+          {isLandingPage && (
+            <>
+              <a href="#services" className="text-sm font-medium hover:text-plc-purple transition-colors">Services</a>
+              <a href="#about" className="text-sm font-medium hover:text-plc-purple transition-colors">About</a>
+              <a href="#process" className="text-sm font-medium hover:text-plc-purple transition-colors">Process</a>
+              <a href="#pricing" className="text-sm font-medium hover:text-plc-purple transition-colors">Pricing</a>
+              <a href="#contact" className="text-sm font-medium hover:text-plc-purple transition-colors">Contact</a>
+            </>
+          )}
+          
+          {isLoggedIn ? (
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="ml-4"
+              onClick={handleDashboard}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+          ) : (
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="ml-4"
+              onClick={handleLogin}
+            >
+              <LogIn className="h-4 w-4 mr-2" />
+              Client Login
+            </Button>
+          )}
+          
           <Button 
             size="sm" 
-            className="ml-4 bg-plc-purple hover:bg-plc-purple/90 text-white"
+            className="bg-plc-purple hover:bg-plc-purple/90 text-white"
             onClick={handleBookCall}
           >
             Book a Call
@@ -61,41 +122,68 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white py-4 px-4 shadow-md absolute w-full">
           <div className="flex flex-col space-y-4">
-            <a 
-              href="#services" 
-              className="text-sm font-medium hover:text-plc-purple transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Services
-            </a>
-            <a 
-              href="#about" 
-              className="text-sm font-medium hover:text-plc-purple transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              About
-            </a>
-            <a 
-              href="#process" 
-              className="text-sm font-medium hover:text-plc-purple transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Process
-            </a>
-            <a 
-              href="#pricing" 
-              className="text-sm font-medium hover:text-plc-purple transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Pricing
-            </a>
-            <a 
-              href="#contact" 
-              className="text-sm font-medium hover:text-plc-purple transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Contact
-            </a>
+            {isLandingPage && (
+              <>
+                <a 
+                  href="#services" 
+                  className="text-sm font-medium hover:text-plc-purple transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Services
+                </a>
+                <a 
+                  href="#about" 
+                  className="text-sm font-medium hover:text-plc-purple transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  About
+                </a>
+                <a 
+                  href="#process" 
+                  className="text-sm font-medium hover:text-plc-purple transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Process
+                </a>
+                <a 
+                  href="#pricing" 
+                  className="text-sm font-medium hover:text-plc-purple transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Pricing
+                </a>
+                <a 
+                  href="#contact" 
+                  className="text-sm font-medium hover:text-plc-purple transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Contact
+                </a>
+              </>
+            )}
+            
+            {isLoggedIn ? (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="w-full"
+                onClick={handleDashboard}
+              >
+                <User className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="w-full"
+                onClick={handleLogin}
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Client Login
+              </Button>
+            )}
+            
             <Button 
               size="sm" 
               className="w-full bg-plc-purple hover:bg-plc-purple/90 text-white"

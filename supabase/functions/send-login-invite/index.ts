@@ -69,12 +69,65 @@ serve(async (req) => {
       );
     }
 
+    // Get client profile to check their status
+    let clientStatus = {
+      subscriptionStatus: "pending_payment",
+      contractStatus: "not_signed",
+      onboardingStatus: "not_started",
+    };
+
+    if (clientId) {
+      const { data: profile } = await supabaseAdmin
+        .from("client_profiles")
+        .select("subscription_status, contract_status, onboarding_status")
+        .eq("id", clientId)
+        .single();
+
+      if (profile) {
+        clientStatus = {
+          subscriptionStatus: profile.subscription_status,
+          contractStatus: profile.contract_status,
+          onboardingStatus: profile.onboarding_status,
+        };
+      }
+    }
+
+    // Determine redirect URL based on client status
+    const baseUrl = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
+    let redirectPath = "/dashboard";
+    let actionMessage = "Access Your Dashboard";
+    let emailSubject = "Welcome to Sienvi - Your Login Link";
+    let emailIntro = "Your account has been created! Click the button below to access your dashboard:";
+
+    // First-time users should set up their password
+    // Check if user already exists in auth
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingAuthUser = authUsers?.users?.find(u => u.email?.toLowerCase() === clientEmail.toLowerCase());
+    const isNewUser = !existingAuthUser;
+
+    if (isNewUser) {
+      // New user - redirect to set password
+      redirectPath = "/login?setup=password";
+      actionMessage = "Set Your Password";
+      emailSubject = "Welcome to Sienvi - Set Up Your Account";
+      emailIntro = "Your client account has been created! Click the button below to set your password and access your dashboard:";
+    } else if (clientStatus.subscriptionStatus === "pending_payment") {
+      redirectPath = "/dashboard";
+      actionMessage = "View Payment Status";
+    } else if (clientStatus.subscriptionStatus === "active" && clientStatus.contractStatus === "not_signed") {
+      redirectPath = "/contract";
+      actionMessage = "Sign Your Contract";
+    } else if (clientStatus.contractStatus === "signed" && clientStatus.onboardingStatus !== "completed") {
+      redirectPath = "/onboarding";
+      actionMessage = "Complete Onboarding";
+    }
+
     // Generate a magic link for the user
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: clientEmail,
       options: {
-        redirectTo: `${req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app"}/dashboard`,
+        redirectTo: `${baseUrl}${redirectPath}`,
       },
     });
 
@@ -90,7 +143,7 @@ serve(async (req) => {
     const emailResponse = await resend.emails.send({
       from: "Sienvi <noreply@sienvi.com>",
       to: [clientEmail],
-      subject: "Welcome to Sienvi - Your Login Link",
+      subject: emailSubject,
       html: `
         <!DOCTYPE html>
         <html>
@@ -106,13 +159,19 @@ serve(async (req) => {
           <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
             <p style="font-size: 16px;">Hi ${displayName},</p>
             
-            <p style="font-size: 16px;">Your account has been created! Click the button below to access your dashboard:</p>
+            <p style="font-size: 16px;">${emailIntro}</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${loginUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
-                Access Your Dashboard
+                ${actionMessage}
               </a>
             </div>
+            
+            ${isNewUser ? `
+            <p style="font-size: 14px; color: #666; background: #e8f4f8; padding: 15px; border-radius: 8px;">
+              <strong>Tip:</strong> After clicking the link, you'll be able to set a password for easier future logins.
+            </p>
+            ` : ""}
             
             <p style="font-size: 14px; color: #666;">This link will expire in 24 hours. If you didn't request this, please ignore this email.</p>
             
@@ -131,26 +190,14 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Login invite sent to:", clientEmail, "Response:", emailResponse);
-
-    // Update client profile to track invite sent
-    if (clientId) {
-      await supabaseAdmin
-        .from("client_profiles")
-        .update({ 
-          notes: supabaseAdmin.rpc('concat_notes', { 
-            current_notes: '', 
-            new_note: `Login invite sent on ${new Date().toISOString().split('T')[0]}` 
-          })
-        })
-        .eq("id", clientId);
-    }
+    console.log("Login invite sent to:", clientEmail, "Response:", emailResponse, "Redirect:", redirectPath);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Login invite sent successfully",
         emailId: emailResponse.id,
+        redirectPath,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
