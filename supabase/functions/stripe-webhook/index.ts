@@ -34,7 +34,7 @@ async function getNextBillingDate(subscriptionId: string): Promise<string | null
   return null;
 }
 
-// Helper to update client_profiles
+// Helper to upsert client_profiles by email
 async function updateClientProfile(
   email: string | null,
   updates: {
@@ -43,27 +43,104 @@ async function updateClientProfile(
     stripe_subscription_id?: string;
     account_status?: string;
   },
-  nextBillingDate?: string | null
+  options?: {
+    // Used when creating a brand-new client profile from Stripe checkout
+    plan?: string | null;
+    selected_services?: string[];
+    max_services?: number | null;
+    custom_price?: number | null;
+    notes?: string | null;
+    contract_status?: string;
+    onboarding_status?: string;
+  }
 ) {
   if (!email) {
-    console.log("No email provided, skipping client_profiles update");
+    console.log("No email provided, skipping client_profiles upsert");
     return;
   }
 
-  const updateData: Record<string, unknown> = { ...updates };
-  
-  // Note: next_billing_date would need to be added to client_profiles if needed
-  // For now, we store it in the account_status or metadata
-  
-  const { error } = await supabase
+  const normalizedEmail = email.toLowerCase().trim();
+  const nowIso = new Date().toISOString();
+
+  // If the row exists → update it.
+  // If it doesn't exist → insert a new row with safe defaults.
+  const { data: existing, error: existingError } = await supabase
     .from("client_profiles")
-    .update(updateData)
-    .eq("email", email);
-  
-  if (error) {
-    console.error("Error updating client_profiles:", error);
+    .select("id")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("Error checking existing client_profiles:", existingError);
+    // Continue and attempt insert/update anyway.
+  }
+
+  if (existing?.id) {
+    const updateData: Record<string, unknown> = {
+      ...updates,
+      updated_at: nowIso,
+    };
+
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("client_profiles")
+      .update(updateData)
+      .eq("id", existing.id)
+      .select("id");
+
+    if (updateError) {
+      console.error("Error updating client_profiles:", updateError);
+    } else {
+      console.log(
+        `Updated client_profiles (${updatedRows?.length || 0} row(s)) for:`,
+        normalizedEmail,
+        updates
+      );
+    }
+
+    return;
+  }
+
+  // Insert new client profile (this is what was missing previously)
+  const insertData: Record<string, unknown> = {
+    email: normalizedEmail,
+    first_name: null,
+    last_name: null,
+    role: "client",
+
+    // Status defaults
+    subscription_status: updates.subscription_status ?? "pending_payment",
+    account_status: updates.account_status ?? "pending",
+    contract_status: options?.contract_status ?? "not_signed",
+    onboarding_status: options?.onboarding_status ?? "not_started",
+    onboarding_completed_at: null,
+    contract_signed_at: null,
+
+    // Commercial fields
+    plan: options?.plan ?? null,
+    max_services: options?.max_services ?? null,
+    custom_price: options?.custom_price ?? null,
+    notes: options?.notes ?? null,
+    selected_services: options?.selected_services ?? [],
+
+    // Stripe linkage
+    stripe_customer_id: updates.stripe_customer_id ?? null,
+    stripe_subscription_id: updates.stripe_subscription_id ?? null,
+
+    created_at: nowIso,
+    updated_at: nowIso,
+  };
+
+  const { error: insertError } = await supabase
+    .from("client_profiles")
+    .insert(insertData);
+
+  if (insertError) {
+    console.error("Error inserting client_profiles:", insertError, { email: normalizedEmail });
   } else {
-    console.log("Updated client_profiles for:", email, updates);
+    console.log("Inserted client_profiles for:", normalizedEmail, {
+      ...updates,
+      ...options,
+    });
   }
 }
 
@@ -97,6 +174,16 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const maxServices = isCustomPlan ? parseInt(metadata.max_services || "6") : null;
   const customPrice = isCustomPlan ? parseFloat(metadata.custom_price || "0") : null;
   const notes = isCustomPlan ? (metadata.notes || "") : null;
+
+  const maxServicesForProfile = isCustomPlan
+    ? maxServices
+    : plan === "single"
+      ? 1
+      : plan === "triple"
+        ? 3
+        : plan === "full"
+          ? 6
+          : null;
   
   console.log("Customer:", customerId, "Subscription:", subscriptionId, "Plan:", plan, "Email:", customerEmail);
   console.log("Selected Services:", selectedServices);
@@ -163,13 +250,25 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.log("Created new subscription:", subscriptionId);
   }
   
-  // Sync to client_profiles
-  await updateClientProfile(customerEmail, {
-    subscription_status: "active",
-    stripe_customer_id: customerId,
-    stripe_subscription_id: subscriptionId,
-    account_status: "active",
-  });
+  // Sync to client_profiles (source of truth for the admin dashboard)
+  await updateClientProfile(
+    customerEmail,
+    {
+      subscription_status: "active",
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      account_status: "active",
+    },
+    {
+      plan: plan || null,
+      selected_services: selectedServices,
+      max_services: maxServicesForProfile,
+      custom_price: customPrice,
+      notes: notes,
+      contract_status: "not_signed",
+      onboarding_status: selectedServices.length > 0 ? "in_progress" : "not_started",
+    }
+  );
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
