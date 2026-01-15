@@ -21,6 +21,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ClientCreatedActions } from "./ClientCreatedActions";
 
 const services = [
   { id: "social-media-suite", label: "Social Media Suite" },
@@ -38,6 +39,15 @@ const planLimits: Record<string, number> = {
   custom: 6,
 };
 
+interface CreatedClient {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  plan: string;
+  subscriptionStatus: string;
+}
+
 interface AddClientModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +60,7 @@ export const AddManualClientModal = ({
   onClientAdded,
 }: AddClientModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [createdClient, setCreatedClient] = useState<CreatedClient | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -135,40 +146,62 @@ export const AddManualClientModal = ({
       }
 
       toast.success("Client created successfully");
-      onClientAdded();
-      onOpenChange(false);
       
-      // Reset form
-      setFormData({
-        email: "",
-        firstName: "",
-        lastName: "",
-        clientType: "new",
-        plan: "single",
-        customPrice: 888,
-        maxServices: 1,
-        selectedServices: [],
-        subscriptionStatus: "pending_payment",
-        contractStatus: "not_signed",
-        onboardingStatus: "not_started",
-        notes: "",
+      // Show post-creation actions instead of closing immediately
+      setCreatedClient({
+        id: response.data.client.id,
+        email: response.data.client.email,
+        firstName: formData.firstName || null,
+        lastName: formData.lastName || null,
+        plan: formData.plan,
+        subscriptionStatus: formData.subscriptionStatus,
       });
-    } catch (error: any) {
+      
+      onClientAdded();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create client";
       console.error("Error creating client:", error);
-      toast.error(error.message || "Failed to create client");
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDone = () => {
+    setCreatedClient(null);
+    onOpenChange(false);
+    // Reset form
+    setFormData({
+      email: "",
+      firstName: "",
+      lastName: "",
+      clientType: "new",
+      plan: "single",
+      customPrice: 888,
+      maxServices: 1,
+      selectedServices: [],
+      subscriptionStatus: "pending_payment",
+      contractStatus: "not_signed",
+      onboardingStatus: "not_started",
+      notes: "",
+    });
+  };
+
   const maxAllowed = formData.plan === "custom" ? formData.maxServices : planLimits[formData.plan];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) handleDone();
+      else onOpenChange(isOpen);
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Client</DialogTitle>
-        </DialogHeader>
+        {createdClient ? (
+          <ClientCreatedActions client={createdClient} onDone={handleDone} />
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Create New Client</DialogTitle>
+            </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Section A: Client Identity */}
@@ -387,7 +420,7 @@ export const AddManualClientModal = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={handleDone} disabled={loading}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
@@ -395,6 +428,8 @@ export const AddManualClientModal = ({
             Create Client
           </Button>
         </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
