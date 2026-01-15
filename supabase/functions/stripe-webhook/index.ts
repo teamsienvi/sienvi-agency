@@ -21,6 +21,30 @@ const PRICE_TO_PLAN: Record<string, string> = {
   "price_1SpD4wKEtylNfLjGGsGBcNq1": "full",
 };
 
+// Log webhook event to database
+async function logWebhookEvent(
+  eventType: string,
+  eventId: string,
+  customerEmail: string | null,
+  status: "success" | "error",
+  errorMessage?: string,
+  metadata?: Record<string, unknown>
+) {
+  try {
+    await supabase.from("webhook_logs").insert({
+      event_type: eventType,
+      event_id: eventId,
+      customer_email: customerEmail,
+      status,
+      error_message: errorMessage || null,
+      metadata: metadata || null,
+    });
+    console.log(`Logged webhook event: ${eventType} (${status})`);
+  } catch (e) {
+    console.error("Failed to log webhook event:", e);
+  }
+}
+
 // Helper to get next billing date from Stripe subscription
 async function getNextBillingDate(subscriptionId: string): Promise<string | null> {
   try {
@@ -378,12 +402,14 @@ serve(async (req) => {
   
   if (!signature) {
     console.error("Missing stripe-signature header");
+    await logWebhookEvent("unknown", "no-signature", null, "error", "Missing stripe-signature header");
     return new Response("Missing signature", { status: 400 });
   }
   
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
   if (!webhookSecret) {
     console.error("STRIPE_WEBHOOK_SECRET not configured");
+    await logWebhookEvent("unknown", "no-secret", null, "error", "STRIPE_WEBHOOK_SECRET not configured");
     return new Response("Webhook secret not configured", { status: 500 });
   }
   
@@ -401,29 +427,51 @@ serve(async (req) => {
     
     console.log("Received Stripe event:", event.type, event.id);
     
-    switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
-      case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
-      case "invoice.payment_failed":
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
-      case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
-      default:
-        console.log("Unhandled event type:", event.type);
+    // Extract customer email for logging
+    let customerEmail: string | null = null;
+    const eventData = event.data.object as Record<string, unknown>;
+    if (eventData.customer_email) {
+      customerEmail = eventData.customer_email as string;
+    } else if (eventData.customer_details && (eventData.customer_details as Record<string, unknown>).email) {
+      customerEmail = (eventData.customer_details as Record<string, unknown>).email as string;
+    }
+    
+    try {
+      switch (event.type) {
+        case "checkout.session.completed":
+          await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+          break;
+        case "invoice.payment_succeeded":
+          await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+          break;
+        case "invoice.payment_failed":
+          await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+          break;
+        case "customer.subscription.deleted":
+          await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+          break;
+        default:
+          console.log("Unhandled event type:", event.type);
+      }
+      
+      // Log successful processing
+      await logWebhookEvent(event.type, event.id, customerEmail, "success", undefined, { 
+        customer_id: eventData.customer,
+      });
+    } catch (handlerError: unknown) {
+      const errorMessage = handlerError instanceof Error ? handlerError.message : "Unknown error";
+      console.error("Handler error:", errorMessage);
+      await logWebhookEvent(event.type, event.id, customerEmail, "error", errorMessage);
+      throw handlerError;
     }
     
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("Webhook error:", err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    console.error("Webhook error:", errorMessage);
+    return new Response(`Webhook Error: ${errorMessage}`, { status: 400 });
   }
 });

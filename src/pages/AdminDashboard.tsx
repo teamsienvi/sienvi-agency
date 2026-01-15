@@ -12,14 +12,13 @@ import {
   TrendingUp,
   CheckCircle2,
   Clock,
-  XCircle,
   ExternalLink,
   RefreshCw,
   Sparkles,
   ArrowRight,
-  BarChart3
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { WebhookHealthPanel } from "@/components/admin/WebhookHealthPanel";
 
 interface Client {
   id: string;
@@ -290,7 +289,10 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Stats */}
+        {/* Webhook Health Panel */}
+        <div className="mb-8">
+          <WebhookHealthPanel />
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="bg-[#1a1f2e] border-[#2a3142]">
             <CardContent className="p-5">
