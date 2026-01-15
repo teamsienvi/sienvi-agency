@@ -42,6 +42,8 @@ import {
   Loader2,
   Mail,
   ClipboardList,
+  CreditCard,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EditClientModal } from "@/components/admin/EditClientModal";
@@ -86,6 +88,8 @@ const AdminClients = () => {
   const [deleteClient, setDeleteClient] = useState<Client | null>(null);
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [emailingCheckoutLink, setEmailingCheckoutLink] = useState<string | null>(null);
+  const [migratingToStripe, setMigratingToStripe] = useState<string | null>(null);
   const [onboardingViewClient, setOnboardingViewClient] = useState<Client | null>(null);
 
   useEffect(() => {
@@ -219,6 +223,96 @@ const AdminClients = () => {
       toast.error(error.message || "Failed to generate checkout link");
     } finally {
       setGeneratingLink(null);
+    }
+  };
+
+  const handleEmailCheckoutLink = async (client: Client) => {
+    if (emailingCheckoutLink) return;
+    
+    setEmailingCheckoutLink(client.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      // First generate the checkout link
+      const linkResponse = await supabase.functions.invoke("generate-checkout-link", {
+        body: {
+          clientId: client.id,
+          clientEmail: client.email,
+          plan: client.plan,
+          customPrice: client.customPrice,
+          selectedServices: client.selectedServices,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (linkResponse.error) throw new Error(linkResponse.error.message);
+      if (linkResponse.data.error) throw new Error(linkResponse.data.error);
+
+      const checkoutUrl = linkResponse.data.checkoutUrl;
+
+      // Then send the email with the checkout link
+      const emailResponse = await supabase.functions.invoke("send-checkout-email", {
+        body: {
+          clientId: client.id,
+          clientEmail: client.email,
+          clientName: client.clientName,
+          checkoutUrl: checkoutUrl,
+          plan: client.plan,
+          price: client.customPrice,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (emailResponse.error) throw new Error(emailResponse.error.message);
+      if (emailResponse.data.error) throw new Error(emailResponse.data.error);
+
+      toast.success("Checkout link emailed to " + client.email);
+    } catch (error: any) {
+      console.error("Error emailing checkout link:", error);
+      toast.error(error.message || "Failed to email checkout link");
+    } finally {
+      setEmailingCheckoutLink(null);
+    }
+  };
+
+  const handleMigrateToStripe = async (client: Client) => {
+    if (migratingToStripe) return;
+    
+    setMigratingToStripe(client.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      // Generate a checkout link for migration (creates Stripe customer/subscription)
+      const response = await supabase.functions.invoke("generate-checkout-link", {
+        body: {
+          clientId: client.id,
+          clientEmail: client.email,
+          plan: client.plan,
+          customPrice: client.customPrice,
+          selectedServices: client.selectedServices,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+
+      const checkoutUrl = response.data.checkoutUrl;
+      await navigator.clipboard.writeText(checkoutUrl);
+      toast.success("Migration checkout link copied! Send to client to complete Stripe setup.");
+    } catch (error: any) {
+      console.error("Error generating migration link:", error);
+      toast.error(error.message || "Failed to generate migration link");
+    } finally {
+      setMigratingToStripe(null);
     }
   };
 
@@ -523,18 +617,52 @@ const AdminClients = () => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                         {client.subscriptionStatus === "pending_payment" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleGenerateCheckoutLink(client)}
+                              title="Copy Checkout Link"
+                              className="text-blue-600 hover:text-blue-700"
+                              disabled={generatingLink === client.id}
+                            >
+                              {generatingLink === client.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Link className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEmailCheckoutLink(client)}
+                              title="Email Checkout Link"
+                              className="text-cyan-600 hover:text-cyan-700"
+                              disabled={emailingCheckoutLink === client.id}
+                            >
+                              {emailingCheckoutLink === client.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Send className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </>
+                        )}
+                        {/* Migrate to Stripe for active clients without proper Stripe subscription */}
+                        {client.subscriptionStatus === "active" && 
+                         (!client.stripeSubscriptionId || client.stripeCustomerId?.startsWith("pending_")) && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleGenerateCheckoutLink(client)}
-                            title="Generate Checkout Link"
-                            className="text-blue-600 hover:text-blue-700"
-                            disabled={generatingLink === client.id}
+                            onClick={() => handleMigrateToStripe(client)}
+                            title="Migrate to Stripe"
+                            className="text-orange-600 hover:text-orange-700"
+                            disabled={migratingToStripe === client.id}
                           >
-                            {generatingLink === client.id ? (
+                            {migratingToStripe === client.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              <Link className="w-4 h-4" />
+                              <CreditCard className="w-4 h-4" />
                             )}
                           </Button>
                         )}
@@ -709,17 +837,46 @@ const AdminClients = () => {
 
                 <div className="flex gap-2 flex-wrap">
                   {selectedClient.subscriptionStatus === "pending_payment" ? (
+                    <>
+                      <Button
+                        onClick={() => handleGenerateCheckoutLink(selectedClient)}
+                        variant="outline"
+                        disabled={generatingLink === selectedClient.id}
+                      >
+                        {generatingLink === selectedClient.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Link className="w-4 h-4 mr-2" />
+                        )}
+                        Copy Checkout Link
+                      </Button>
+                      <Button
+                        onClick={() => handleEmailCheckoutLink(selectedClient)}
+                        className="flex-1"
+                        disabled={emailingCheckoutLink === selectedClient.id}
+                      >
+                        {emailingCheckoutLink === selectedClient.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-2" />
+                        )}
+                        Email Checkout Link
+                      </Button>
+                    </>
+                  ) : selectedClient.subscriptionStatus === "active" && 
+                     (!selectedClient.stripeSubscriptionId || selectedClient.stripeCustomerId?.startsWith("pending_")) ? (
                     <Button
-                      onClick={() => handleGenerateCheckoutLink(selectedClient)}
+                      onClick={() => handleMigrateToStripe(selectedClient)}
                       className="flex-1"
-                      disabled={generatingLink === selectedClient.id}
+                      variant="outline"
+                      disabled={migratingToStripe === selectedClient.id}
                     >
-                      {generatingLink === selectedClient.id ? (
+                      {migratingToStripe === selectedClient.id ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <Link className="w-4 h-4 mr-2" />
+                        <CreditCard className="w-4 h-4 mr-2" />
                       )}
-                      Generate Checkout Link
+                      Migrate to Stripe
                     </Button>
                   ) : selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") ? (
                     <Button
