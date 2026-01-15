@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminCustomBundles from "./pages/AdminCustomBundles";
 import AdminClients from "./pages/AdminClients";
 import AdminCreateClient from "./pages/AdminCreateClient";
 import Success from "./pages/Success";
@@ -37,7 +36,6 @@ const App = () => (
             <Route path="/contract" element={<Contract />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/custom-bundles" element={<AdminCustomBundles />} />
             <Route path="/admin/clients" element={<AdminClients />} />
             <Route path="/admin/create-client" element={<AdminCreateClient />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

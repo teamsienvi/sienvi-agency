@@ -252,25 +252,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card 
-            className="bg-gradient-to-br from-cyan-500/20 to-[#1a1f2e] border-cyan-500/30 cursor-pointer hover:border-cyan-500/50 transition-colors"
-            onClick={() => navigate("/admin/custom-bundles")}
-          >
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-cyan-500/20">
-                  <Package className="h-6 w-6 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Create Custom Bundle</h3>
-                  <p className="text-gray-400 text-sm">Generate custom pricing for clients</p>
-                </div>
-              </div>
-              <ArrowRight className="h-5 w-5 text-cyan-400" />
-            </CardContent>
-          </Card>
-
-          <Card 
+          <Card
             className="bg-gradient-to-br from-purple-500/20 to-[#1a1f2e] border-purple-500/30 cursor-pointer hover:border-purple-500/50 transition-colors"
             onClick={() => window.open("https://dashboard.stripe.com", "_blank")}
           >
