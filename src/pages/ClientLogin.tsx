@@ -41,24 +41,25 @@ const ClientLogin = () => {
           navigate("/dashboard");
         }
       }
+      // Note: We do NOT auto-redirect logged-in users here
+      // Users must actively log in to access the dashboard
     };
     
     checkForPasswordReset();
 
     // Listen for auth state changes (for password reset/magic link flow)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         setViewMode("reset-confirm");
       } else if (event === "SIGNED_IN" && searchParams.get("setup") === "password") {
         setViewMode("set-password");
-      } else if (event === "SIGNED_IN" && viewMode === "login") {
-        // User just signed in normally
-        navigate("/dashboard");
       }
+      // Note: We removed auto-redirect on SIGNED_IN to prevent unwanted navigation
+      // The login form will handle navigation after explicit login
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, searchParams, viewMode]);
+  }, [navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

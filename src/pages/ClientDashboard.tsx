@@ -20,9 +20,7 @@ import {
   User,
   Package,
   Calendar,
-  DollarSign,
   Settings,
-  ExternalLink,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -77,14 +75,16 @@ const ClientDashboard = () => {
   const [managingBilling, setManagingBilling] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
+    checkAuthAndFetchProfile();
   }, []);
 
-  const fetchProfile = async () => {
+  const checkAuthAndFetchProfile = async () => {
     try {
+      // Check for existing session - don't auto-login
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        // User is not logged in - redirect to login
         navigate("/login");
         return;
       }
@@ -99,16 +99,30 @@ const ClientDashboard = () => {
         throw new Error(response.error.message);
       }
 
+      // Handle admin without client profile
+      if (response.data.isAdmin && !response.data.profile) {
+        navigate("/admin/dashboard");
+        return;
+      }
+
       if (response.data.error) {
-        if (response.data.isAdmin) {
-          navigate("/admin/dashboard");
-          return;
-        }
         throw new Error(response.data.error);
       }
 
-      setProfile(response.data.profile);
+      const clientProfile = response.data.profile;
+      setProfile(clientProfile);
       setIsAdmin(response.data.isAdmin);
+
+      // Route users based on their status - enforce step completion
+      if (clientProfile.subscriptionStatus === "pending_payment") {
+        // User needs to complete payment - stay on dashboard to show payment CTA
+        // They can see their status but can't proceed without payment
+      } else if (clientProfile.subscriptionStatus === "active" && clientProfile.contractStatus === "not_signed") {
+        // User paid but hasn't signed contract - they can stay here or go to contract
+      } else if (clientProfile.contractStatus === "signed" && clientProfile.onboardingStatus !== "completed") {
+        // User signed contract but hasn't completed onboarding - they can stay or go to onboarding
+      }
+      // If all complete, just show the dashboard
     } catch (error: any) {
       console.error("Error fetching profile:", error);
       toast.error("Failed to load profile");
@@ -175,10 +189,15 @@ const ClientDashboard = () => {
     
     if (profile.subscriptionStatus === "pending_payment") {
       return (
-        <Button size="lg" className="w-full" disabled>
-          <CreditCard className="w-5 h-5 mr-2" />
-          Complete Payment (Check Email for Link)
-        </Button>
+        <div className="space-y-3">
+          <Button size="lg" className="w-full" disabled>
+            <CreditCard className="w-5 h-5 mr-2" />
+            Complete Payment (Check Email for Link)
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            An admin will send you a payment link via email. Contact support if you haven't received it.
+          </p>
+        </div>
       );
     }
     
@@ -212,7 +231,7 @@ const ClientDashboard = () => {
   };
 
   const getPlanName = () => {
-    if (!profile?.plan) return "No Plan";
+    if (!profile?.plan) return "No Plan Selected";
     if (profile.plan === "custom") {
       return `Custom Plan`;
     }
@@ -238,14 +257,17 @@ const ClientDashboard = () => {
         <main className="flex-1 flex items-center justify-center">
           <Card className="max-w-md w-full mx-4">
             <CardHeader>
-              <CardTitle>No Profile Found</CardTitle>
+              <CardTitle>Setting Up Your Account</CardTitle>
               <CardDescription>
-                Your account doesn't have a client profile yet.
+                We're creating your client profile. Please wait a moment...
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => navigate("/")} className="w-full">
-                Go to Home
+              <div className="flex justify-center mb-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
               </Button>
             </CardContent>
           </Card>
@@ -393,20 +415,22 @@ const ClientDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-lg font-semibold">{getPlanName()}</p>
-                    <p className="text-2xl font-bold text-primary">
-                      ${getPlanPrice().toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mo</span>
-                    </p>
+                    {profile.plan && (
+                      <p className="text-2xl font-bold text-primary">
+                        ${getPlanPrice().toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                      </p>
+                    )}
                   </div>
                   <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
-                    {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus}
+                    {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus.replace("_", " ")}
                   </Badge>
                 </div>
 
                 <Separator />
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Services Included ({profile.maxServices})</p>
-                  {profile.selectedServices.length > 0 ? (
+                  <p className="text-sm font-medium mb-2">Services Included ({profile.maxServices || 0})</p>
+                  {profile.selectedServices && profile.selectedServices.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {profile.selectedServices.map((service) => (
                         <Badge key={service} variant="outline" className="text-xs">
@@ -460,10 +484,12 @@ const ClientDashboard = () => {
                   </div>
                   {profile.contractStatus === "signed" ? (
                     <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  ) : (
+                  ) : profile.subscriptionStatus === "active" ? (
                     <Button size="sm" onClick={() => navigate("/contract")}>
                       Sign Now
                     </Button>
+                  ) : (
+                    <Badge variant="outline">Complete payment first</Badge>
                   )}
                 </div>
               </CardContent>
@@ -488,34 +514,22 @@ const ClientDashboard = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Account Status</span>
-                  <Badge variant="outline" className="capitalize">{profile.accountStatus}</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {profile.accountStatus}
+                  </Badge>
                 </div>
-                {profile.stripeSubscriptionId && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subscription ID</span>
-                    <span className="font-mono text-xs">{profile.stripeSubscriptionId.slice(-8)}</span>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Help Section */}
-          <Card className="bg-muted/50">
+          <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold">Need Help?</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Contact our support team at teamsienvi@gmail.com
-                  </p>
-                </div>
-                <Button variant="outline" asChild>
-                  <a href="mailto:teamsienvi@gmail.com">
-                    Contact Support
-                    <ExternalLink className="w-4 h-4 ml-2" />
-                  </a>
-                </Button>
+              <div className="text-center space-y-2">
+                <p className="font-medium">Need Help?</p>
+                <p className="text-sm text-muted-foreground">
+                  Contact us at <a href="mailto:support@sienvi.com" className="text-primary hover:underline">support@sienvi.com</a>
+                </p>
               </div>
             </CardContent>
           </Card>

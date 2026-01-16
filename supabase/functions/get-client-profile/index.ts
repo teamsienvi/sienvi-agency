@@ -34,6 +34,16 @@ serve(async (req) => {
       );
     }
 
+    // Check if user is admin first
+    const { data: roleData } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .single();
+
+    const isAdmin = !!roleData;
+
     // Get client profile by user_id first, then by email
     let { data: profile, error: profileError } = await supabaseAdmin
       .from("client_profiles")
@@ -60,20 +70,51 @@ serve(async (req) => {
       }
     }
 
+    // If no profile found, auto-create one for regular users
     if (!profile) {
-      return new Response(
-        JSON.stringify({ error: "Client profile not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      // Admins don't need client profiles - return success with admin flag
+      if (isAdmin) {
+        return new Response(
+          JSON.stringify({ 
+            profile: null,
+            isAdmin: true,
+            message: "Admin user without client profile"
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    // Check if user is admin
-    const { data: roleData } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .single();
+      // Auto-create a client profile with safe defaults
+      console.log(`Auto-creating client profile for user: ${user.email}`);
+      
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from("client_profiles")
+        .insert({
+          email: user.email?.toLowerCase() || "",
+          user_id: user.id,
+          subscription_status: "pending_payment",
+          contract_status: "not_signed",
+          onboarding_status: "not_started",
+          account_status: "pending",
+          role: "client",
+          plan: null,
+          max_services: 0,
+          selected_services: [],
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating profile:", createError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create client profile" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      profile = newProfile;
+      console.log(`Successfully created client profile for: ${user.email}`);
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -93,12 +134,13 @@ serve(async (req) => {
           onboardingStatus: profile.onboarding_status,
           onboardingCompletedAt: profile.onboarding_completed_at,
           maxServices: profile.max_services,
-          selectedServices: profile.selected_services,
+          selectedServices: profile.selected_services || [],
           customPrice: profile.custom_price,
           createdAt: profile.created_at,
           updatedAt: profile.updated_at,
+          notes: profile.notes,
         },
-        isAdmin: !!roleData,
+        isAdmin,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
