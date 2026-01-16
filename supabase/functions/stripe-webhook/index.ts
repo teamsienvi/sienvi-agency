@@ -204,52 +204,65 @@ async function sendPaymentConfirmationEmail(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; background-color: #f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.7; background-color: #f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 48px 20px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+          <!-- Logo -->
           <tr>
-            <td align="center" style="padding-bottom: 24px;">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #667eea;">Sienvi</h1>
+            <td align="center" style="padding-bottom: 32px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 24px; border-radius: 8px;">
+                    <span style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">SIENVI</span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
+          <!-- Main Card -->
           <tr>
-            <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;">
-              <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 40px; text-align: center;">
-                <div style="font-size: 48px; margin-bottom: 12px;">✓</div>
-                <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff;">Payment Successful!</h2>
-                <p style="margin: 8px 0 0 0; font-size: 16px; color: rgba(255,255,255,0.9);">Thank you for your subscription</p>
+            <td style="background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+              <!-- Success Header -->
+              <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center;">
+                <div style="width: 72px; height: 72px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                  <span style="font-size: 36px; line-height: 72px;">✓</span>
+                </div>
+                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">Payment Successful!</h1>
+                <p style="margin: 12px 0 0 0; font-size: 16px; color: rgba(255,255,255,0.9);">Welcome to the Sienvi family</p>
               </div>
               
-              <div style="padding: 32px 40px;">
-                <p style="margin: 0 0 20px 0; font-size: 16px; color: #1f2937;">Hi ${displayName},</p>
+              <!-- Content -->
+              <div style="padding: 40px 48px;">
+                <p style="margin: 0 0 24px 0; font-size: 17px; color: #374151;">Hi ${displayName},</p>
                 
-                <p style="margin: 0 0 24px 0; font-size: 16px; color: #1f2937;">
-                  Great news! Your payment has been processed successfully. Welcome to the Sienvi family! 🚀
+                <p style="margin: 0 0 28px 0; font-size: 17px; color: #374151;">
+                  Great news! Your payment has been processed successfully. We're thrilled to have you on board! 🚀
                 </p>
                 
-                <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #e5e7eb;">
+                <!-- Receipt Card -->
+                <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 12px; padding: 24px; margin: 28px 0; border-left: 4px solid #10b981;">
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
-                        <span style="font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Payment Receipt</span>
+                      <td style="padding-bottom: 16px;">
+                        <span style="font-size: 13px; color: #059669; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Receipt</span>
                       </td>
                     </tr>
                     <tr>
-                      <td style="padding-top: 16px;">
+                      <td>
                         <table width="100%" cellpadding="0" cellspacing="0">
                           <tr>
-                            <td style="padding: 8px 0;"><span style="color: #6b7280; font-size: 14px;">Plan</span></td>
-                            <td align="right" style="padding: 8px 0;"><span style="color: #1f2937; font-size: 14px; font-weight: 600;">${planLabel}</span></td>
+                            <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Plan</span></td>
+                            <td align="right" style="padding: 10px 0;"><span style="color: #1f2937; font-size: 15px; font-weight: 600;">${planLabel}</span></td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0;"><span style="color: #6b7280; font-size: 14px;">Amount</span></td>
-                            <td align="right" style="padding: 8px 0;"><span style="color: #10b981; font-size: 18px; font-weight: 700;">${formattedAmount}/month</span></td>
+                            <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Amount</span></td>
+                            <td align="right" style="padding: 10px 0;"><span style="color: #10b981; font-size: 20px; font-weight: 700;">${formattedAmount}/mo</span></td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0;"><span style="color: #6b7280; font-size: 14px;">Status</span></td>
-                            <td align="right" style="padding: 8px 0;"><span style="background: #ecfdf5; color: #065f46; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 9999px;">Active</span></td>
+                            <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Status</span></td>
+                            <td align="right" style="padding: 10px 0;"><span style="background: #10b981; color: #ffffff; font-size: 12px; font-weight: 600; padding: 6px 16px; border-radius: 20px;">Active</span></td>
                           </tr>
                         </table>
                       </td>
@@ -257,50 +270,66 @@ async function sendPaymentConfirmationEmail(
                   </table>
                 </div>
                 
-                <h3 style="margin: 32px 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">What's Next?</h3>
+                <!-- Next Steps -->
+                <h3 style="margin: 36px 0 20px 0; font-size: 18px; font-weight: 700; color: #1f2937;">What's Next?</h3>
                 
-                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
                   <tr>
-                    <td style="padding: 8px 0; vertical-align: top; width: 40px;"><div style="width: 28px; height: 28px; background: #10b981; border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 14px;">✓</div></td>
-                    <td style="padding: 8px 0; color: #9ca3af; text-decoration: line-through;">Complete payment</td>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                      <div style="width: 28px; height: 28px; background: #10b981; border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 14px;">✓</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #9ca3af; font-size: 15px; text-decoration: line-through;">Complete payment</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; vertical-align: top;"><div style="width: 28px; height: 28px; background: #667eea; border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 14px;">2</div></td>
-                    <td style="padding: 8px 0; color: #1f2937;">Sign the service agreement</td>
+                    <td style="padding: 10px 0; vertical-align: top;">
+                      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 13px; font-weight: 600;">2</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #374151; font-size: 15px;">Sign the service agreement</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; vertical-align: top;"><div style="width: 28px; height: 28px; background: #667eea; border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 14px;">3</div></td>
-                    <td style="padding: 8px 0; color: #1f2937;">Complete your onboarding questionnaires</td>
+                    <td style="padding: 10px 0; vertical-align: top;">
+                      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 13px; font-weight: 600;">3</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #374151; font-size: 15px;">Complete onboarding questionnaires</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; vertical-align: top;"><div style="width: 28px; height: 28px; background: #667eea; border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 14px;">4</div></td>
-                    <td style="padding: 8px 0; color: #1f2937;">We start building your automations!</td>
+                    <td style="padding: 10px 0; vertical-align: top;">
+                      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 13px; font-weight: 600;">4</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #374151; font-size: 15px;">We start building your automations!</td>
                   </tr>
                 </table>
                 
+                <!-- CTA Button -->
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td align="center" style="padding: 24px 0;">
-                      <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    <td align="center" style="padding: 28px 0;">
+                      <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 18px 56px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);">
                         Go to Dashboard
                       </a>
                     </td>
                   </tr>
                 </table>
                 
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <!-- Tip -->
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
                   <p style="margin: 0; font-size: 14px; color: #1e40af;">
-                    <strong>💡 Tip:</strong> Log in to your dashboard to sign your contract and complete onboarding.
+                    <strong>💡 Tip:</strong> Log in to your dashboard to sign your contract and complete onboarding so we can start building!
                   </p>
                 </div>
               </div>
             </td>
           </tr>
+          <!-- Footer -->
           <tr>
-            <td style="padding-top: 32px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #9ca3af;">Questions? Contact us at</p>
-              <a href="mailto:teamsienvi@gmail.com" style="color: #667eea; text-decoration: none; font-size: 14px;">teamsienvi@gmail.com</a>
-              <p style="margin: 24px 0 0 0; font-size: 12px; color: #9ca3af;">© ${new Date().getFullYear()} Sienvi. All rights reserved.</p>
+            <td style="padding-top: 40px; text-align: center;">
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: #9ca3af;">
+                Questions? Contact us at
+              </p>
+              <a href="mailto:teamsienvi@gmail.com" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">teamsienvi@gmail.com</a>
+              <p style="margin: 32px 0 0 0; font-size: 13px; color: #d1d5db;">
+                © 2015 Sienvi. All rights reserved.
+              </p>
             </td>
           </tr>
         </table>

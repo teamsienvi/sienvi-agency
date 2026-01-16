@@ -97,6 +97,8 @@ serve(async (req) => {
     let redirectPath = "/dashboard";
     let actionMessage = "Access Your Dashboard";
     let emailSubject = "Welcome to Sienvi - Your Login Link";
+    let headerTitle = "Welcome to Sienvi";
+    let headerSubtitle = "Your login link is ready";
     let emailIntro = "Your account has been created! Click the button below to access your dashboard:";
     let statusNote = "";
 
@@ -109,6 +111,8 @@ serve(async (req) => {
       redirectPath = "/login?setup=password";
       actionMessage = "Set Your Password";
       emailSubject = "Welcome to Sienvi - Set Up Your Account";
+      headerTitle = "Welcome to Sienvi";
+      headerSubtitle = "Let's set up your account";
       emailIntro = "Your client account has been created! Click the button below to set your password and access your dashboard:";
       statusNote = "After clicking the link, you'll be able to set a password for easier future logins.";
     } else if (clientStatus.subscriptionStatus === "pending_payment") {
@@ -118,10 +122,12 @@ serve(async (req) => {
     } else if (clientStatus.subscriptionStatus === "active" && clientStatus.contractStatus === "not_signed") {
       redirectPath = "/contract";
       actionMessage = "Sign Your Contract";
+      headerSubtitle = "Your next step awaits";
       statusNote = "Your next step is to review and sign the service agreement.";
     } else if (clientStatus.contractStatus === "signed" && clientStatus.onboardingStatus !== "completed") {
       redirectPath = "/onboarding";
       actionMessage = "Complete Onboarding";
+      headerSubtitle = "Almost there!";
       statusNote = "Complete your onboarding questionnaires so we can get started.";
     }
 
@@ -142,7 +148,6 @@ serve(async (req) => {
     const loginUrl = linkData.properties?.action_link || "";
     const displayName = clientName || clientEmail.split("@")[0];
 
-    // Send email via Resend with improved template
     const emailResponse = await resend.emails.send({
       from: "Sienvi <noreply@sienvi.com>",
       to: [clientEmail],
@@ -154,39 +159,45 @@ serve(async (req) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; background-color: #f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.7; background-color: #f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 48px 20px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
           <!-- Logo -->
           <tr>
-            <td align="center" style="padding-bottom: 24px;">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #667eea;">Sienvi</h1>
+            <td align="center" style="padding-bottom: 32px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 24px; border-radius: 8px;">
+                    <span style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">SIENVI</span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <!-- Main Card -->
           <tr>
-            <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;">
+            <td style="background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
               <!-- Header -->
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 40px; text-align: center;">
-                <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff;">Welcome to Sienvi</h2>
-                <p style="margin: 8px 0 0 0; font-size: 16px; color: rgba(255,255,255,0.9);">Your login link is ready</p>
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
+                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">${headerTitle}</h1>
+                <p style="margin: 12px 0 0 0; font-size: 16px; color: rgba(255,255,255,0.9);">${headerSubtitle}</p>
               </div>
               
               <!-- Content -->
-              <div style="padding: 32px 40px;">
-                <p style="margin: 0 0 20px 0; font-size: 16px; color: #1f2937;">Hi ${displayName},</p>
+              <div style="padding: 40px 48px;">
+                <p style="margin: 0 0 24px 0; font-size: 17px; color: #374151;">Hi ${displayName},</p>
                 
-                <p style="margin: 0 0 24px 0; font-size: 16px; color: #1f2937;">
+                <p style="margin: 0 0 28px 0; font-size: 17px; color: #374151;">
                   ${emailIntro}
                 </p>
                 
                 <!-- CTA Button -->
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td align="center" style="padding: 24px 0;">
-                      <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.39);">
+                    <td align="center" style="padding: 28px 0;">
+                      <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 18px 56px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);">
                         ${actionMessage}
                       </a>
                     </td>
@@ -195,7 +206,7 @@ serve(async (req) => {
                 
                 ${statusNote ? `
                 <!-- Status Note -->
-                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
                   <p style="margin: 0; font-size: 14px; color: #1e40af;">
                     <strong>💡 Tip:</strong> ${statusNote}
                   </p>
@@ -203,7 +214,7 @@ serve(async (req) => {
                 ` : ""}
                 
                 <!-- Expiry Note -->
-                <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+                <p style="font-size: 14px; color: #94a3b8; margin-top: 28px; text-align: center;">
                   This link will expire in 24 hours. If you didn't request this, please ignore this email.
                 </p>
               </div>
@@ -211,13 +222,13 @@ serve(async (req) => {
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="padding-top: 32px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #9ca3af;">
-                Need help? Reply to this email or contact us at
+            <td style="padding-top: 40px; text-align: center;">
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: #9ca3af;">
+                Need help? Contact us at
               </p>
-              <a href="mailto:teamsienvi@gmail.com" style="color: #667eea; text-decoration: none; font-size: 14px;">teamsienvi@gmail.com</a>
-              <p style="margin: 24px 0 0 0; font-size: 12px; color: #9ca3af;">
-                © ${new Date().getFullYear()} Sienvi. All rights reserved.
+              <a href="mailto:teamsienvi@gmail.com" style="color: #667eea; text-decoration: none; font-size: 14px; font-weight: 500;">teamsienvi@gmail.com</a>
+              <p style="margin: 32px 0 0 0; font-size: 13px; color: #d1d5db;">
+                © 2015 Sienvi. All rights reserved.
               </p>
             </td>
           </tr>
