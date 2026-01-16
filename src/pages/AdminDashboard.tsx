@@ -271,10 +271,8 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Webhook Health Panel */}
-        <div className="mb-8">
-          <WebhookHealthPanel />
-        </div>
+        {/* Webhook Health - Discreet Collapsible */}
+        <WebhookHealthPanel className="mb-4" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="bg-[#1a1f2e] border-[#2a3142]">
             <CardContent className="p-5">
