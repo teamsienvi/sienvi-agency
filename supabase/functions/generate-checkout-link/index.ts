@@ -77,6 +77,28 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
+    // First, check if customer already exists or create a new one
+    // This is required for Stripe Accounts V2 testmode
+    let customerId: string;
+    const existingCustomers = await stripe.customers.list({
+      email: clientEmail,
+      limit: 1,
+    });
+
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id;
+      console.log("Using existing Stripe customer:", customerId);
+    } else {
+      const newCustomer = await stripe.customers.create({
+        email: clientEmail,
+        metadata: {
+          client_id: clientId,
+        },
+      });
+      customerId = newCustomer.id;
+      console.log("Created new Stripe customer:", customerId);
+    }
+
     let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
     if (plan === "custom" && customPrice) {
@@ -101,10 +123,10 @@ serve(async (req) => {
       lineItems = [{ price: priceId, quantity: 1 }];
     }
 
-    // Create checkout session
+    // Create checkout session with customer ID (required for Stripe Accounts V2)
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer_email: clientEmail,
+      customer: customerId,
       line_items: lineItems,
       success_url: `${req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app"}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app"}/`,
