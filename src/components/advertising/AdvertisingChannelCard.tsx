@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Check, ArrowRight } from "lucide-react";
+import { ChevronDown, Check, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AdvertisingChannel } from "./advertisingData";
 
 interface AdvertisingChannelCardProps {
   channel: AdvertisingChannel;
   isExpanded: boolean;
+  isSelected: boolean;
   onToggle: () => void;
+  onSelect: () => void;
   index: number;
 }
 
@@ -15,12 +17,19 @@ const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 const AdvertisingChannelCard = ({
   channel,
   isExpanded,
+  isSelected,
   onToggle,
+  onSelect,
   index,
 }: AdvertisingChannelCardProps) => {
-  const handleGetStarted = (e: React.MouseEvent) => {
+  const handleDiscuss = (e: React.MouseEvent) => {
     e.stopPropagation();
     window.location.href = CALENDAR_BOOKING_URL;
+  };
+
+  const handleSelect = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect();
   };
 
   return (
@@ -29,28 +38,52 @@ const AdvertisingChannelCard = ({
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
       viewport={{ once: true }}
-      className="border border-border rounded-xl overflow-hidden bg-card shadow-sm hover:shadow-md transition-shadow"
+      className={`border rounded-xl overflow-hidden bg-card shadow-sm hover:shadow-md transition-all ${
+        isSelected 
+          ? "border-primary ring-2 ring-primary/20" 
+          : "border-border"
+      }`}
     >
       {/* Header - Always visible */}
       <button
         onClick={onToggle}
         className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-muted/50 transition-colors"
       >
-        <div className="flex-1 pr-4">
-          <h3 className="text-lg font-semibold text-foreground mb-1">
-            {channel.name}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {channel.shortDescription}
-          </p>
+        <div className="flex items-center gap-4 flex-1 pr-4">
+          {/* Selection indicator */}
+          <div
+            onClick={handleSelect}
+            className={`w-6 h-6 rounded-md border-2 flex items-center justify-center cursor-pointer transition-colors ${
+              isSelected 
+                ? "bg-primary border-primary" 
+                : "border-muted-foreground/30 hover:border-primary/50"
+            }`}
+          >
+            {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+          </div>
+          
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-foreground mb-1">
+              {channel.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {channel.shortDescription}
+            </p>
+          </div>
         </div>
-        <motion.div
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex-shrink-0"
-        >
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-        </motion.div>
+        
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-primary hidden sm:block">
+            $888/mo
+          </span>
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex-shrink-0"
+          >
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          </motion.div>
+        </div>
       </button>
 
       {/* Expanded Content */}
@@ -94,13 +127,35 @@ const AdvertisingChannelCard = ({
                   </p>
                   <p className="text-sm text-muted-foreground">Per channel</p>
                 </div>
-                <Button
-                  onClick={handleGetStarted}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  Get Started
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleDiscuss}
+                    className="border-border hover:bg-muted"
+                  >
+                    Discuss This Channel
+                  </Button>
+                  <Button
+                    onClick={handleSelect}
+                    variant={isSelected ? "outline" : "default"}
+                    className={isSelected 
+                      ? "border-primary text-primary hover:bg-primary/10" 
+                      : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                    }
+                  >
+                    {isSelected ? (
+                      <>
+                        <Minus className="w-4 h-4 mr-2" />
+                        Remove from Package
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add to Package
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>
