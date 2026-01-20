@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, ArrowRight, Sparkles, ArrowLeft, Check, Package } from "lucide-react";
+import { Loader2, ArrowRight, Sparkles, ArrowLeft, Check, Package, Megaphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import {
   getAvailableServicesForPlan,
   getFullAutomationServiceIds,
 } from "@/data/onboardingServices";
+import { advertisingChannels } from "@/components/advertising/advertisingData";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -27,6 +28,7 @@ const SelectServices = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedAdChannels, setSelectedAdChannels] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   const plan = searchParams.get("plan") || "single";
@@ -49,7 +51,25 @@ const SelectServices = () => {
     if (isFullPlan) {
       setSelectedServices(getFullAutomationServiceIds());
     }
+    
+    // Load any selected advertising channels from sessionStorage
+    const storedAdChannels = sessionStorage.getItem('selectedAdvertisingChannels');
+    if (storedAdChannels) {
+      try {
+        const channels = JSON.parse(storedAdChannels);
+        setSelectedAdChannels(channels);
+      } catch (e) {
+        console.error('Failed to parse advertising channels:', e);
+      }
+    }
   }, [plan, navigate, isFullPlan]);
+
+  const handleRemoveAdChannel = (channelId: string) => {
+    setSelectedAdChannels(prev => prev.filter(id => id !== channelId));
+    // Update sessionStorage
+    const updatedChannels = selectedAdChannels.filter(id => id !== channelId);
+    sessionStorage.setItem('selectedAdvertisingChannels', JSON.stringify(updatedChannels));
+  };
 
   const handleToggleService = (serviceId: string) => {
     // Don't allow toggling for full plan
@@ -82,11 +102,13 @@ const SelectServices = () => {
       // Store selected services in session storage for after checkout
       sessionStorage.setItem("pending_services", JSON.stringify(servicesToCheckout));
       sessionStorage.setItem("pending_plan", plan);
+      sessionStorage.setItem("pending_ad_channels", JSON.stringify(selectedAdChannels));
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { 
           priceId,
           selectedServices: servicesToCheckout,
+          advertisingChannels: selectedAdChannels,
           plan,
         },
       });
@@ -108,6 +130,14 @@ const SelectServices = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Calculate total for display
+  const adChannelsCost = selectedAdChannels.length * 888;
+  const getSelectedAdChannelNames = () => {
+    return selectedAdChannels.map(id => 
+      advertisingChannels.find(c => c.id === id)?.name || id
+    );
   };
 
   // Full Automation plan - show all services with confirmation
@@ -181,6 +211,47 @@ const SelectServices = () => {
               </div>
             </motion.div>
 
+            {/* Advertising Channels Bundle (if any selected) */}
+            {selectedAdChannels.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="bg-card border border-border rounded-2xl p-8 mb-8 shadow-sm"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">Advertising Add-ons</h2>
+                    <p className="text-sm text-muted-foreground">
+                      +${adChannelsCost.toLocaleString()}/month
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {getSelectedAdChannelNames().map((name, index) => (
+                    <motion.div
+                      key={selectedAdChannels[index]}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-full text-sm"
+                    >
+                      <span>{name}</span>
+                      <button
+                        onClick={() => handleRemoveAdChannel(selectedAdChannels[index])}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Proceed to checkout button */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -209,6 +280,9 @@ const SelectServices = () => {
               
               <p className="text-muted-foreground text-sm">
                 $3,996.00/month • All 6 services included
+                {selectedAdChannels.length > 0 && (
+                  <span> + ${adChannelsCost.toLocaleString()}/month advertising</span>
+                )}
               </p>
             </motion.div>
           </div>
@@ -295,6 +369,45 @@ const SelectServices = () => {
             ))}
           </motion.div>
 
+          {/* Advertising Channels Bundle (if any selected) */}
+          {selectedAdChannels.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="bg-card border border-primary/20 rounded-2xl p-6 mb-8 shadow-sm max-w-2xl mx-auto"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Megaphone className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Advertising Add-ons</h3>
+                  <p className="text-sm text-muted-foreground">
+                    +${adChannelsCost.toLocaleString()}/month
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {getSelectedAdChannelNames().map((name, index) => (
+                  <div
+                    key={selectedAdChannels[index]}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full text-sm"
+                  >
+                    <span>{name}</span>
+                    <button
+                      onClick={() => handleRemoveAdChannel(selectedAdChannels[index])}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Proceed to checkout button */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -321,11 +434,15 @@ const SelectServices = () => {
               )}
             </Button>
 
-            {selectedServices.length === 0 && (
+            {selectedServices.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 Please select at least one service to continue
               </p>
-            )}
+            ) : selectedAdChannels.length > 0 ? (
+              <p className="text-muted-foreground text-sm">
+                {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} + {selectedAdChannels.length} advertising channel{selectedAdChannels.length !== 1 ? 's' : ''}
+              </p>
+            ) : null}
           </motion.div>
         </div>
       </main>
