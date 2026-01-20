@@ -5,6 +5,7 @@ export interface OnboardingService {
   title: string;
   description: string;
   icon: LucideIcon;
+  isPremium?: boolean; // $2450 services
 }
 
 export const onboardingServices: OnboardingService[] = [
@@ -13,6 +14,7 @@ export const onboardingServices: OnboardingService[] = [
     title: "Social Media Suite",
     description: "Complete social media management and automation across all major platforms",
     icon: PenTool,
+    isPremium: true, // $2450
   },
   {
     id: "ecommerce-operations",
@@ -37,6 +39,7 @@ export const onboardingServices: OnboardingService[] = [
     title: "Custom LMS Package",
     description: "Tailored learning management system for your business",
     icon: BookOpen,
+    isPremium: true, // $2450
   },
   {
     id: "custom-gpt",
@@ -45,6 +48,24 @@ export const onboardingServices: OnboardingService[] = [
     icon: Bot,
   },
 ];
+
+// Premium services that cost $2450 (excluded from single/triple bundles)
+export const premiumServiceIds = ["social-media-suite", "custom-lms"];
+
+// Get services available for a specific plan
+export const getAvailableServicesForPlan = (plan: string) => {
+  if (plan === "full") {
+    // Full automation includes all services
+    return onboardingServices;
+  }
+  // Single and Triple exclude premium services
+  return onboardingServices.filter(s => !s.isPremium);
+};
+
+// Get all service IDs for full automation
+export const getFullAutomationServiceIds = () => {
+  return onboardingServices.map(s => s.id);
+};
 
 export const planLimits: Record<string, number> = {
   single: 1,
