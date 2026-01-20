@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, ArrowRight, Sparkles, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowRight, Sparkles, ArrowLeft, Check, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ import {
   onboardingServices,
   planLimits,
   planDisplayNames,
+  getAvailableServicesForPlan,
+  getFullAutomationServiceIds,
 } from "@/data/onboardingServices";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -31,6 +33,10 @@ const SelectServices = () => {
   const maxServices = planLimits[plan] || 1;
   const planName = planDisplayNames[plan] || "Single Service";
   const priceId = PLAN_PRICE_IDS[plan];
+  const isFullPlan = plan === "full";
+  
+  // Get available services based on plan
+  const availableServices = getAvailableServicesForPlan(plan);
 
   useEffect(() => {
     // Validate plan parameter
@@ -38,9 +44,17 @@ const SelectServices = () => {
       toast.error("Invalid plan selected");
       navigate("/#pricing");
     }
-  }, [plan, navigate]);
+    
+    // For full plan, pre-select all services
+    if (isFullPlan) {
+      setSelectedServices(getFullAutomationServiceIds());
+    }
+  }, [plan, navigate, isFullPlan]);
 
   const handleToggleService = (serviceId: string) => {
+    // Don't allow toggling for full plan
+    if (isFullPlan) return;
+    
     setSelectedServices((prev) => {
       if (prev.includes(serviceId)) {
         return prev.filter((id) => id !== serviceId);
@@ -56,7 +70,9 @@ const SelectServices = () => {
   };
 
   const handleProceedToCheckout = async () => {
-    if (selectedServices.length === 0) {
+    const servicesToCheckout = isFullPlan ? getFullAutomationServiceIds() : selectedServices;
+    
+    if (servicesToCheckout.length === 0) {
       toast.error("Please select at least one service");
       return;
     }
@@ -64,13 +80,13 @@ const SelectServices = () => {
     setIsLoading(true);
     try {
       // Store selected services in session storage for after checkout
-      sessionStorage.setItem("pending_services", JSON.stringify(selectedServices));
+      sessionStorage.setItem("pending_services", JSON.stringify(servicesToCheckout));
       sessionStorage.setItem("pending_plan", plan);
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { 
           priceId,
-          selectedServices,
+          selectedServices: servicesToCheckout,
           plan,
         },
       });
@@ -94,6 +110,115 @@ const SelectServices = () => {
     }
   };
 
+  // Full Automation plan - show all services with confirmation
+  if (isFullPlan) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 py-12 md:py-20">
+          <div className="container-custom max-w-4xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/#pricing")}
+                className="mb-6"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Pricing
+              </Button>
+              
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-6">
+                <Package className="w-4 h-4" />
+                <span>{planName}</span>
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Complete Automation Suite
+              </h1>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                Your plan includes access to <span className="font-semibold text-primary">all 6 core services</span>. 
+                Review your package below and proceed to checkout.
+              </p>
+            </motion.div>
+
+            {/* All services included card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="bg-card border border-border rounded-2xl p-8 mb-8 shadow-sm"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Check className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold text-foreground">Included Services</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {onboardingServices.map((service, index) => (
+                  <motion.div
+                    key={service.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="flex items-start gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <service.icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground">{service.title}</h3>
+                      <p className="text-sm text-muted-foreground">{service.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Proceed to checkout button */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-col items-center gap-4"
+            >
+              <Button
+                size="lg"
+                onClick={handleProceedToCheckout}
+                disabled={isLoading}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg font-semibold rounded-xl shadow-lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Proceed to Checkout
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </Button>
+              
+              <p className="text-muted-foreground text-sm">
+                $3,996.00/month • All 6 services included
+              </p>
+            </motion.div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Single/Triple plans - show selectable services (excluding premium)
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
@@ -143,14 +268,14 @@ const SelectServices = () => {
             </div>
           </motion.div>
 
-          {/* Services grid */}
+          {/* Services grid - only showing available (non-premium) services */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-12"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-12"
           >
-            {onboardingServices.map((service, index) => (
+            {availableServices.map((service, index) => (
               <motion.div
                 key={service.id}
                 initial={{ opacity: 0, y: 20 }}
