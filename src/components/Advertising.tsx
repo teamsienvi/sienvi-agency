@@ -36,7 +36,7 @@ const Advertising = () => {
   const handleProceedToCheckout = () => {
     sessionStorage.setItem("selectedAdvertisingChannels", JSON.stringify(selectedChannels));
     sessionStorage.setItem("advertising_only_checkout", "true");
-    navigate("/select-services?plan=advertising");
+    navigate("/checkout-summary?plan=advertising");
   };
 
   const handleBundleWithPlan = (plan: string) => {
