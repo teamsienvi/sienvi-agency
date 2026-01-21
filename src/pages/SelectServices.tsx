@@ -428,21 +428,10 @@ const SelectServices = () => {
                     </div>
                   ))}
                   
-                  {/* Subtotal */}
+                  {/* Plan total */}
                   <div className="flex justify-between text-sm pt-2 border-t border-border/50">
-                    <span className="text-muted-foreground">Subtotal (6 services)</span>
-                    <span className="text-foreground">
-                      ${(4 * PRICE_PER_SERVICE + 2 * PRICE_PREMIUM_SERVICE).toLocaleString()}/mo
-                    </span>
-                  </div>
-                  
-                  {/* Bundle discount */}
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span className="flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Full Suite Bundle Discount
-                    </span>
-                    <span>-${((4 * PRICE_PER_SERVICE + 2 * PRICE_PREMIUM_SERVICE) - FULL_PLAN_PRICE).toLocaleString()}/mo</span>
+                    <span className="text-muted-foreground">Full Suite (6 services)</span>
+                    <span className="text-foreground">${FULL_PLAN_PRICE.toLocaleString()}/mo</span>
                   </div>
                   
                   {/* Advertising add-on if selected */}
