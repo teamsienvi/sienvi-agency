@@ -16,8 +16,9 @@ const PRICE_TO_PLAN: Record<string, string> = {
 // Advertising pricing constants
 const PRICE_PER_CHANNEL = 888;
 const TOTAL_CHANNELS = 7;
-const AD_BUNDLE_SAVINGS = 3450;
+const ALL_CHANNELS_PRICE = 3450; // Total price for all 7 channels
 const AD_BUNDLE_THRESHOLD = 3;
+const PRICE_PER_CHANNEL_BUNDLED = ALL_CHANNELS_PRICE / TOTAL_CHANNELS; // ~$492.86
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -47,12 +48,15 @@ serve(async (req) => {
         );
       }
 
-      // Calculate advertising price with potential savings
+      // Calculate advertising price with bundle pricing
+      // All 7 channels = $3,450 total, 3+ channels = proportional bundle rate
       const channelCount = advertisingChannels.length;
       const baseTotal = channelCount * PRICE_PER_CHANNEL;
-      const hasSavings = channelCount === TOTAL_CHANNELS || channelCount >= AD_BUNDLE_THRESHOLD;
-      const savings = hasSavings ? AD_BUNDLE_SAVINGS : 0;
-      const finalTotal = baseTotal - savings;
+      const hasSavings = channelCount >= AD_BUNDLE_THRESHOLD;
+      const finalTotal = hasSavings 
+        ? Math.round(channelCount * PRICE_PER_CHANNEL_BUNDLED) 
+        : baseTotal;
+      const savings = hasSavings ? baseTotal - finalTotal : 0;
 
       console.log(`Creating advertising-only checkout: ${channelCount} channels, base: $${baseTotal}, savings: $${savings}, final: $${finalTotal}`);
 
@@ -141,9 +145,11 @@ serve(async (req) => {
     if (advertisingChannels && advertisingChannels.length > 0) {
       const channelCount = advertisingChannels.length;
       const baseTotal = channelCount * PRICE_PER_CHANNEL;
-      const hasSavings = channelCount === TOTAL_CHANNELS || channelCount >= AD_BUNDLE_THRESHOLD;
-      const savings = hasSavings ? AD_BUNDLE_SAVINGS : 0;
-      const finalTotal = baseTotal - savings;
+      const hasSavings = channelCount >= AD_BUNDLE_THRESHOLD;
+      const finalTotal = hasSavings 
+        ? Math.round(channelCount * PRICE_PER_CHANNEL_BUNDLED) 
+        : baseTotal;
+      const savings = hasSavings ? baseTotal - finalTotal : 0;
 
       console.log(`Adding advertising channels: ${channelCount} channels, savings: $${savings}, total: $${finalTotal}`);
 
