@@ -29,6 +29,18 @@ const PRICE_PER_CHANNEL = 888;
 const TOTAL_CHANNELS = 7;
 const ALL_CHANNELS_PRICE = 3450;
 const AD_BUNDLE_THRESHOLD = 3;
+
+// Automation service pricing
+const PRICE_PER_SERVICE = 888;
+const PRICE_PREMIUM_SERVICE = 2450;
+const FULL_PLAN_PRICE = 3996;
+
+// Plan pricing
+const PLAN_PRICES: Record<string, number> = {
+  single: 888,
+  triple: 2664,
+  full: 3996,
+};
 const PRICE_PER_CHANNEL_BUNDLED = ALL_CHANNELS_PRICE / TOTAL_CHANNELS;
 
 const SelectServices = () => {
@@ -381,7 +393,7 @@ const SelectServices = () => {
                 <h2 className="text-xl font-semibold text-foreground">Included Services</h2>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {onboardingServices.map((service, index) => (
                   <motion.div
                     key={service.id}
@@ -399,6 +411,63 @@ const SelectServices = () => {
                     </div>
                   </motion.div>
                 ))}
+              </div>
+
+              {/* Order Summary */}
+              <div className="border-t border-border pt-6">
+                <h3 className="text-lg font-semibold text-foreground mb-4">Order Summary</h3>
+                
+                <div className="space-y-3">
+                  {/* Line items */}
+                  {onboardingServices.map((service) => (
+                    <div key={service.id} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{service.title}</span>
+                      <span className="text-foreground">
+                        ${service.isPremium ? PRICE_PREMIUM_SERVICE.toLocaleString() : PRICE_PER_SERVICE}/mo
+                      </span>
+                    </div>
+                  ))}
+                  
+                  {/* Subtotal */}
+                  <div className="flex justify-between text-sm pt-2 border-t border-border/50">
+                    <span className="text-muted-foreground">Subtotal (6 services)</span>
+                    <span className="text-foreground">
+                      ${(4 * PRICE_PER_SERVICE + 2 * PRICE_PREMIUM_SERVICE).toLocaleString()}/mo
+                    </span>
+                  </div>
+                  
+                  {/* Bundle discount */}
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Full Suite Bundle Discount
+                    </span>
+                    <span>-${((4 * PRICE_PER_SERVICE + 2 * PRICE_PREMIUM_SERVICE) - FULL_PLAN_PRICE).toLocaleString()}/mo</span>
+                  </div>
+                  
+                  {/* Advertising add-on if selected */}
+                  {selectedAdChannels.length > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm pt-2 border-t border-border/50">
+                        <span className="text-muted-foreground">
+                          Advertising ({adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''})
+                        </span>
+                        <span className="text-foreground">+${adChannelsCost.toLocaleString()}/mo</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Total */}
+                  <div className="flex justify-between items-baseline pt-3 border-t border-border">
+                    <span className="font-semibold text-foreground">Total</span>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-foreground">
+                        ${(FULL_PLAN_PRICE + adChannelsCost).toLocaleString()}
+                      </span>
+                      <span className="text-sm text-muted-foreground">/month</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
 
@@ -560,41 +629,87 @@ const SelectServices = () => {
             ))}
           </motion.div>
 
-          {/* Advertising Channels Bundle (if any selected) */}
-          {selectedAdChannels.length > 0 && (
+          {/* Order Summary */}
+          {selectedServices.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="bg-card border border-primary/20 rounded-2xl p-6 mb-8 shadow-sm max-w-2xl mx-auto"
+              className="bg-card border border-border rounded-2xl p-8 mb-8 shadow-sm max-w-2xl mx-auto"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Megaphone className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">Advertising Add-ons</h3>
-                  <p className="text-sm text-muted-foreground">
-                    +${adChannelsCost.toLocaleString()}/month
-                  </p>
-                </div>
-              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Order Summary</h3>
               
-              <div className="flex flex-wrap gap-2">
-                {getSelectedAdChannelNames().map((name, index) => (
-                  <div
-                    key={selectedAdChannels[index]}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full text-sm"
-                  >
-                    <span>{name}</span>
-                    <button
-                      onClick={() => handleRemoveAdChannel(selectedAdChannels[index])}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+              <div className="space-y-3">
+                {/* Selected services line items */}
+                {selectedServices.map((serviceId) => {
+                  const service = availableServices.find(s => s.id === serviceId);
+                  if (!service) return null;
+                  return (
+                    <div key={serviceId} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{service.title}</span>
+                      <span className="text-foreground">
+                        ${service.isPremium ? PRICE_PREMIUM_SERVICE.toLocaleString() : PRICE_PER_SERVICE}/mo
+                      </span>
+                    </div>
+                  );
+                })}
+                
+                {/* Advertising channels if selected */}
+                {selectedAdChannels.length > 0 && (
+                  <>
+                    <div className="pt-2 border-t border-border/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Megaphone className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">Advertising Channels</span>
+                      </div>
+                      {getSelectedAdChannelNames().map((name, index) => (
+                        <div key={selectedAdChannels[index]} className="flex justify-between text-sm pl-6">
+                          <span className="text-muted-foreground">{name}</span>
+                          <span className="text-foreground">${PRICE_PER_CHANNEL}/mo</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Bundle discount for advertising */}
+                    {hasAdSavings && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Ad Bundle Discount (3+ channels)
+                        </span>
+                        <span>-${adSavings.toLocaleString()}/mo</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* Subtotal */}
+                <div className="flex justify-between text-sm pt-2 border-t border-border/50">
+                  <span className="text-muted-foreground">
+                    Automation ({selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''})
+                  </span>
+                  <span className="text-foreground">${PLAN_PRICES[plan]?.toLocaleString()}/mo</span>
+                </div>
+                
+                {selectedAdChannels.length > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Advertising ({adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''})
+                    </span>
+                    <span className="text-foreground">+${adChannelsCost.toLocaleString()}/mo</span>
                   </div>
-                ))}
+                )}
+                
+                {/* Total */}
+                <div className="flex justify-between items-baseline pt-3 border-t border-border">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-foreground">
+                      ${((PLAN_PRICES[plan] || 0) + adChannelsCost).toLocaleString()}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/month</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -625,15 +740,11 @@ const SelectServices = () => {
               )}
             </Button>
 
-            {selectedServices.length === 0 ? (
+            {selectedServices.length === 0 && (
               <p className="text-muted-foreground text-sm">
                 Please select at least one service to continue
               </p>
-            ) : selectedAdChannels.length > 0 ? (
-              <p className="text-muted-foreground text-sm">
-                {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} + {selectedAdChannels.length} advertising channel{selectedAdChannels.length !== 1 ? 's' : ''}
-              </p>
-            ) : null}
+            )}
           </motion.div>
         </div>
       </main>
