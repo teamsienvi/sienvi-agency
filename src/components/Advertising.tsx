@@ -46,7 +46,7 @@ const Advertising = () => {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Advertising Package (Per Channel)</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Advertising Services</h2>
           <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
             Add professional advertising management to any automation package. Select the channels you need — each
             operates independently.
@@ -72,7 +72,7 @@ const Advertising = () => {
                   <Megaphone className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-foreground">Advertising (Per Channel)</h3>
+                  <h3 className="text-xl font-bold text-foreground">Advertising Package (Per Channel)</h3>
                   <p className="text-muted-foreground text-sm mt-1">
                     Full-service management for major advertising platforms
                   </p>
