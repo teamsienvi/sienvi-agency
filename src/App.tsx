@@ -12,6 +12,7 @@ import AdminClients from "./pages/AdminClients";
 import AdminCreateClient from "./pages/AdminCreateClient";
 import Success from "./pages/Success";
 import SelectServices from "./pages/SelectServices";
+import CheckoutSummary from "./pages/CheckoutSummary";
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientLogin from "./pages/ClientLogin";
 import Onboarding from "./pages/Onboarding";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/success" element={<Success />} />
             <Route path="/select-services" element={<SelectServices />} />
+            <Route path="/checkout-summary" element={<CheckoutSummary />} />
             <Route path="/dashboard" element={<ClientDashboard />} />
             <Route path="/login" element={<ClientLogin />} />
             <Route path="/onboarding" element={<Onboarding />} />

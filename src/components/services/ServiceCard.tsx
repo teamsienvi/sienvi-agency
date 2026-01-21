@@ -53,11 +53,12 @@ const ServiceCard = ({
   const bundleFeature = features.find(f => f.startsWith("💡"));
 
   const handleGetStarted = () => {
-    // Store the selected service and navigate to select-services
+    // Store the selected service and navigate to checkout summary
     if (serviceId) {
       sessionStorage.setItem("preselected_service", serviceId);
     }
-    navigate("/select-services?plan=single");
+    // Navigate to checkout summary page with service pre-selected
+    navigate(`/checkout-summary?plan=single&service=${serviceId || ''}`);
   };
 
   return (
