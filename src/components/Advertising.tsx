@@ -50,13 +50,8 @@ const Advertising = () => {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-6">
-            <Megaphone className="w-4 h-4" />
-            <span>Modular Add-On</span>
-          </div>
-          
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-            Advertising Services
+            Advertising Package (Per Channel)
           </h2>
           <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
             Add professional advertising management to any automation package.
@@ -310,21 +305,6 @@ const Advertising = () => {
             </AnimatePresence>
           </motion.div>
 
-          {/* Bundle Info Note */}
-          <motion.div
-            className="mt-6 flex items-start gap-3 p-4 bg-muted/30 rounded-lg"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <Package className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Modular & Stackable:</span>{" "}
-              Advertising channels are optional add-ons to your automation package. 
-              Select as many or as few channels as you need — each operates independently at $888/month.
-            </div>
-          </motion.div>
         </div>
       </div>
     </section>
