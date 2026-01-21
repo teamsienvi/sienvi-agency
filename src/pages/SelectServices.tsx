@@ -24,6 +24,12 @@ const PLAN_PRICE_IDS: Record<string, string> = {
   full: "price_1SpboRDnw1azoLSpG07N2lA0",
 };
 
+// Advertising pricing constants
+const PRICE_PER_CHANNEL = 888;
+const TOTAL_CHANNELS = 7;
+const AD_BUNDLE_SAVINGS = 3450;
+const AD_BUNDLE_THRESHOLD = 3;
+
 const SelectServices = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -32,8 +38,9 @@ const SelectServices = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const plan = searchParams.get("plan") || "single";
+  const isAdvertisingOnly = plan === "advertising";
   const maxServices = planLimits[plan] || 1;
-  const planName = planDisplayNames[plan] || "Single Service";
+  const planName = isAdvertisingOnly ? "Advertising Package" : (planDisplayNames[plan] || "Single Service");
   const priceId = PLAN_PRICE_IDS[plan];
   const isFullPlan = plan === "full";
   
@@ -41,8 +48,8 @@ const SelectServices = () => {
   const availableServices = getAvailableServicesForPlan(plan);
 
   useEffect(() => {
-    // Validate plan parameter
-    if (!PLAN_PRICE_IDS[plan]) {
+    // Validate plan parameter (allow advertising)
+    if (!PLAN_PRICE_IDS[plan] && plan !== "advertising") {
       toast.error("Invalid plan selected");
       navigate("/#pricing");
     }
@@ -50,6 +57,13 @@ const SelectServices = () => {
     // For full plan, pre-select all services
     if (isFullPlan) {
       setSelectedServices(getFullAutomationServiceIds());
+    }
+
+    // Load preselected service from session storage (from service card "Get Started")
+    const preselectedService = sessionStorage.getItem("preselected_service");
+    if (preselectedService && !isFullPlan && !isAdvertisingOnly) {
+      setSelectedServices([preselectedService]);
+      sessionStorage.removeItem("preselected_service");
     }
     
     // Load any selected advertising channels from sessionStorage
@@ -62,7 +76,7 @@ const SelectServices = () => {
         console.error('Failed to parse advertising channels:', e);
       }
     }
-  }, [plan, navigate, isFullPlan]);
+  }, [plan, navigate, isFullPlan, isAdvertisingOnly]);
 
   const handleRemoveAdChannel = (channelId: string) => {
     setSelectedAdChannels(prev => prev.filter(id => id !== channelId));
@@ -92,7 +106,14 @@ const SelectServices = () => {
   const handleProceedToCheckout = async () => {
     const servicesToCheckout = isFullPlan ? getFullAutomationServiceIds() : selectedServices;
     
-    if (servicesToCheckout.length === 0) {
+    // For advertising-only, we need at least one ad channel
+    if (isAdvertisingOnly && selectedAdChannels.length === 0) {
+      toast.error("Please select at least one advertising channel");
+      return;
+    }
+    
+    // For other plans, we need at least one service (unless advertising-only)
+    if (!isAdvertisingOnly && servicesToCheckout.length === 0) {
       toast.error("Please select at least one service");
       return;
     }
@@ -106,10 +127,11 @@ const SelectServices = () => {
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { 
-          priceId,
+          priceId: isAdvertisingOnly ? null : priceId,
           selectedServices: servicesToCheckout,
           advertisingChannels: selectedAdChannels,
           plan,
+          isAdvertisingOnly,
         },
       });
 
@@ -132,13 +154,165 @@ const SelectServices = () => {
     }
   };
 
-  // Calculate total for display
-  const adChannelsCost = selectedAdChannels.length * 888;
+  // Calculate advertising costs with potential savings
+  const adChannelsCount = selectedAdChannels.length;
+  const adChannelsBaseTotal = adChannelsCount * PRICE_PER_CHANNEL;
+  const hasAdSavings = adChannelsCount === TOTAL_CHANNELS || adChannelsCount >= AD_BUNDLE_THRESHOLD;
+  const adSavings = hasAdSavings ? AD_BUNDLE_SAVINGS : 0;
+  const adChannelsCost = adChannelsBaseTotal - adSavings;
+  
   const getSelectedAdChannelNames = () => {
     return selectedAdChannels.map(id => 
       advertisingChannels.find(c => c.id === id)?.name || id
     );
   };
+
+  // Advertising-only checkout
+  if (isAdvertisingOnly) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 py-12 md:py-20">
+          <div className="container-custom max-w-4xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/#advertising")}
+                className="mb-6"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Advertising
+              </Button>
+              
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-6">
+                <Megaphone className="w-4 h-4" />
+                <span>Advertising Package</span>
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Confirm Your Advertising Channels
+              </h1>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                Review your selected advertising channels and proceed to checkout.
+              </p>
+            </motion.div>
+
+            {/* Selected channels card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="bg-card border border-border rounded-2xl p-8 mb-8 shadow-sm"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Megaphone className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold text-foreground">Selected Channels</h2>
+              </div>
+              
+              {selectedAdChannels.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No channels selected. Go back to select advertising channels.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {getSelectedAdChannelNames().map((name, index) => (
+                    <motion.div
+                      key={selectedAdChannels[index]}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm border border-primary/20"
+                    >
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-medium">{name}</span>
+                      <button
+                        onClick={() => handleRemoveAdChannel(selectedAdChannels[index])}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pricing summary */}
+              {selectedAdChannels.length > 0 && (
+                <div className="border-t border-border pt-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''} × $888/month
+                      </p>
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-2xl font-bold text-foreground">
+                          ${adChannelsCost.toLocaleString()}/month
+                        </span>
+                        {hasAdSavings && (
+                          <span className="text-sm text-muted-foreground line-through">
+                            ${adChannelsBaseTotal.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {hasAdSavings && (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <Sparkles className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-semibold text-green-600">
+                          Save ${adSavings.toLocaleString()}/month
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Proceed to checkout button */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-col items-center gap-4"
+            >
+              <Button
+                size="lg"
+                onClick={handleProceedToCheckout}
+                disabled={selectedAdChannels.length === 0 || isLoading}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg font-semibold rounded-xl shadow-lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Proceed to Checkout
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </Button>
+              
+              {selectedAdChannels.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  Please select at least one channel to continue
+                </p>
+              )}
+            </motion.div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   // Full Automation plan - show all services with confirmation
   if (isFullPlan) {

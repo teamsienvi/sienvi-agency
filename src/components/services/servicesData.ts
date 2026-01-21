@@ -12,6 +12,7 @@ const BotIcon2 = (props: any) => React.createElement(BotIcon, props);
 
 export const services = [
   {
+    id: "social-media-suite",
     icon: PenToolIcon2,
     title: "Social Media Suite",
     subtitle: "Complete social media management and automation",
@@ -27,6 +28,7 @@ export const services = [
     price: "$2450"
   },
   {
+    id: "ecommerce-operations",
     icon: ShoppingCartIcon2,
     title: "E-Commerce Operations Automation",
     subtitle: "For Multi-Channel Inventory & Process Optimization",
@@ -40,6 +42,7 @@ export const services = [
     price: "$888"
   },
   {
+    id: "custom-website",
     icon: GlobeIcon2,
     title: "Custom Website Development",
     subtitle: "Custom website development",
@@ -53,6 +56,7 @@ export const services = [
     price: "$888"
   },
   {
+    id: "seo-aeo",
     icon: SearchIcon2,
     title: "SEO/AEO Package",
     subtitle: "Search and answer engine optimization for lasting visibility",
@@ -67,6 +71,7 @@ export const services = [
     price: "$888"
   },
   {
+    id: "custom-lms",
     icon: BookOpenIcon2,
     title: "Custom LMS Package",
     subtitle: "Tailored learning management system for your business",
@@ -80,6 +85,7 @@ export const services = [
     price: "$2450"
   },
   {
+    id: "custom-gpt",
     icon: BotIcon2,
     title: "Custom GPT Product",
     subtitle: "AI-powered chatbot tailored to your business needs",

@@ -33,6 +33,7 @@ const Services = () => {
               features={service.features}
               price={service.price}
               index={index}
+              serviceId={service.id}
             />
           ))}
         </div>

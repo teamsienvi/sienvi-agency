@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Megaphone, ChevronDown, Check, Plus, Minus, Package } from "lucide-react";
+import { Megaphone, ChevronDown, Check, Plus, Minus, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { advertisingChannels } from "./advertising/advertisingData";
 import { Button } from "@/components/ui/button";
 
-const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
+const PRICE_PER_CHANNEL = 888;
+const TOTAL_CHANNELS = 7;
+const ALL_CHANNELS_SAVINGS = 3450;
+const BUNDLE_THRESHOLD = 3;
 
 const Advertising = () => {
   const navigate = useNavigate();
@@ -22,18 +25,33 @@ const Advertising = () => {
     setSelectedChannels((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
+  const handleSelectAllChannels = () => {
+    if (selectedChannels.length === TOTAL_CHANNELS) {
+      setSelectedChannels([]);
+    } else {
+      setSelectedChannels(advertisingChannels.map(c => c.id));
+    }
+  };
+
+  const handleProceedToCheckout = () => {
+    sessionStorage.setItem("selectedAdvertisingChannels", JSON.stringify(selectedChannels));
+    sessionStorage.setItem("advertising_only_checkout", "true");
+    navigate("/select-services?plan=advertising");
+  };
+
   const handleBundleWithPlan = (plan: string) => {
     sessionStorage.setItem("selectedAdvertisingChannels", JSON.stringify(selectedChannels));
+    sessionStorage.removeItem("advertising_only_checkout");
     navigate(`/select-services?plan=${plan}`);
   };
 
-  const handleDiscuss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.location.href = CALENDAR_BOOKING_URL;
-  };
-
   const selectedCount = selectedChannels.length;
-  const totalMonthly = selectedCount * 888;
+  const baseTotal = selectedCount * PRICE_PER_CHANNEL;
+  
+  // Calculate savings: $3450 for all channels OR 3+ channels
+  const hasSavings = selectedCount === TOTAL_CHANNELS || selectedCount >= BUNDLE_THRESHOLD;
+  const savings = hasSavings ? ALL_CHANNELS_SAVINGS : 0;
+  const finalTotal = baseTotal - savings;
 
   return (
     <section id="advertising" className="section-padding bg-background overflow-hidden">
@@ -190,42 +208,29 @@ const Advertising = () => {
                                   </div>
 
                                   {/* Channel CTA */}
-                                  <div className="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-                                    <p className="text-sm text-muted-foreground">
-                                      Have questions about {channel.name.replace(" Management", "")}?
-                                    </p>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleDiscuss}
-                                        className="border-border hover:bg-muted"
-                                      >
-                                        Discuss This Channel
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={(e) => handleSelectChannel(channel.id, e)}
-                                        variant={selectedChannels.includes(channel.id) ? "outline" : "default"}
-                                        className={
-                                          selectedChannels.includes(channel.id)
-                                            ? "border-primary text-primary hover:bg-primary/10"
-                                            : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                                        }
-                                      >
-                                        {selectedChannels.includes(channel.id) ? (
-                                          <>
-                                            <Minus className="w-3.5 h-3.5 mr-1" />
-                                            Remove
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Plus className="w-3.5 h-3.5 mr-1" />
-                                            Add Channel
-                                          </>
-                                        )}
-                                      </Button>
-                                    </div>
+                                  <div className="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-end gap-3">
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => handleSelectChannel(channel.id, e)}
+                                      variant={selectedChannels.includes(channel.id) ? "outline" : "default"}
+                                      className={
+                                        selectedChannels.includes(channel.id)
+                                          ? "border-primary text-primary hover:bg-primary/10"
+                                          : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                      }
+                                    >
+                                      {selectedChannels.includes(channel.id) ? (
+                                        <>
+                                          <Minus className="w-3.5 h-3.5 mr-1" />
+                                          Remove Channel
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Plus className="w-3.5 h-3.5 mr-1" />
+                                          Add Channel
+                                        </>
+                                      )}
+                                    </Button>
                                   </div>
                                 </div>
                               </motion.div>
@@ -242,43 +247,93 @@ const Advertising = () => {
                         animate={{ opacity: 1 }}
                         className="px-6 py-5 bg-primary/5 border-t border-primary/20"
                       >
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedCount} channel{selectedCount !== 1 ? "s" : ""} selected
-                              {selectedCount >= 3 && (
-                                <span className="ml-2 text-primary font-medium">• Bundle eligible</span>
-                              )}
-                            </p>
-                            <p className="text-xl font-bold text-foreground">
-                              ${totalMonthly.toLocaleString()}
-                              <span className="text-sm font-normal text-muted-foreground">/month</span>
-                            </p>
+                        <div className="flex flex-col gap-4">
+                          {/* Pricing Summary */}
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                {selectedCount} channel{selectedCount !== 1 ? "s" : ""} selected
+                              </p>
+                              <div className="flex items-baseline gap-2">
+                                {hasSavings ? (
+                                  <>
+                                    <p className="text-xl font-bold text-foreground">
+                                      ${finalTotal.toLocaleString()}
+                                      <span className="text-sm font-normal text-muted-foreground">/month</span>
+                                    </p>
+                                    <span className="text-sm text-muted-foreground line-through">
+                                      ${baseTotal.toLocaleString()}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <p className="text-xl font-bold text-foreground">
+                                    ${baseTotal.toLocaleString()}
+                                    <span className="text-sm font-normal text-muted-foreground">/month</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Savings Badge */}
+                            {hasSavings && (
+                              <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-green-600" />
+                                <span className="text-sm font-semibold text-green-600">
+                                  Save ${savings.toLocaleString()}/month
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex flex-wrap gap-2">
+
+                          {/* Select All Channels Button */}
+                          {selectedCount < TOTAL_CHANNELS && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleBundleWithPlan("single")}
-                              className="border-border hover:bg-muted"
+                              onClick={handleSelectAllChannels}
+                              className="w-full sm:w-auto border-primary/50 text-primary hover:bg-primary/10"
                             >
-                              + Single Plan
+                              <Plus className="w-3.5 h-3.5 mr-1" />
+                              Select All Channels (Save ${ALL_CHANNELS_SAVINGS.toLocaleString()})
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleBundleWithPlan("triple")}
-                              className="border-primary/50 text-primary hover:bg-primary/10"
-                            >
-                              + Triple Plan
-                            </Button>
+                          )}
+                          
+                          {/* CTA Buttons */}
+                          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
                             <Button
                               size="sm"
-                              onClick={() => handleBundleWithPlan("full")}
+                              onClick={handleProceedToCheckout}
                               className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
-                              + Full Automation
+                              Get Started
                             </Button>
+                            <span className="text-sm text-muted-foreground self-center hidden sm:inline">or bundle with:</span>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleBundleWithPlan("single")}
+                                className="border-border hover:bg-muted"
+                              >
+                                + Single Plan
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleBundleWithPlan("triple")}
+                                className="border-primary/50 text-primary hover:bg-primary/10"
+                              >
+                                + Triple Plan
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleBundleWithPlan("full")}
+                                className="border-primary text-primary hover:bg-primary/10"
+                              >
+                                + Full Automation
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </motion.div>

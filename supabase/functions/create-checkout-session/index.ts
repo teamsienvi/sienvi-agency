@@ -13,6 +13,12 @@ const PRICE_TO_PLAN: Record<string, string> = {
   "price_1SpboRDnw1azoLSpG07N2lA0": "full",
 };
 
+// Advertising pricing constants
+const PRICE_PER_CHANNEL = 888;
+const TOTAL_CHANNELS = 7;
+const AD_BUNDLE_SAVINGS = 3450;
+const AD_BUNDLE_THRESHOLD = 3;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -30,16 +36,76 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    const { priceId, selectedServices, plan } = await req.json();
+    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly } = await req.json();
 
+    // For advertising-only checkout, we need advertising channels
+    if (isAdvertisingOnly) {
+      if (!advertisingChannels || advertisingChannels.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "At least one advertising channel is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Calculate advertising price with potential savings
+      const channelCount = advertisingChannels.length;
+      const baseTotal = channelCount * PRICE_PER_CHANNEL;
+      const hasSavings = channelCount === TOTAL_CHANNELS || channelCount >= AD_BUNDLE_THRESHOLD;
+      const savings = hasSavings ? AD_BUNDLE_SAVINGS : 0;
+      const finalTotal = baseTotal - savings;
+
+      console.log(`Creating advertising-only checkout: ${channelCount} channels, base: $${baseTotal}, savings: $${savings}, final: $${finalTotal}`);
+
+      const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
+
+      // Create customer
+      const customer = await stripe.customers.create({
+        metadata: {
+          source: "checkout_session",
+          plan: "advertising",
+        },
+      });
+
+      // Create a dynamic price for advertising
+      const price = await stripe.prices.create({
+        unit_amount: finalTotal * 100, // Convert to cents
+        currency: "usd",
+        recurring: { interval: "month" },
+        product_data: {
+          name: `Advertising Package (${channelCount} Channel${channelCount > 1 ? 's' : ''})${hasSavings ? ' - Bundle Savings Applied' : ''}`,
+        },
+      });
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        payment_method_types: ["card"],
+        customer: customer.id,
+        line_items: [{ price: price.id, quantity: 1 }],
+        metadata: {
+          product: "sienvi_advertising",
+          plan: "advertising",
+          advertising_channels: JSON.stringify(advertisingChannels),
+          channel_count: channelCount.toString(),
+          savings_applied: savings.toString(),
+        },
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/#advertising`,
+      });
+
+      console.log(`Advertising checkout session created: ${session.id}`);
+
+      return new Response(
+        JSON.stringify({ url: session.url }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Standard plan checkout
     if (!priceId) {
       console.error("Missing priceId in request body");
       return new Response(
         JSON.stringify({ error: "priceId is required" }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -49,16 +115,12 @@ serve(async (req) => {
       console.error(`Invalid priceId: ${priceId}`);
       return new Response(
         JSON.stringify({ error: "Invalid priceId" }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Creating checkout session for plan: ${planFromPrice}, priceId: ${priceId}, services: ${selectedServices?.join(', ')}`);
 
-    // Get the origin from the request or use a default
     const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
 
     // Create a customer first (required for Stripe Accounts V2 in testmode)
@@ -71,22 +133,43 @@ serve(async (req) => {
 
     console.log(`Created Stripe customer: ${customer.id}`);
 
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      { price: priceId, quantity: 1 },
+    ];
+
+    // If advertising channels are selected, add them as a separate line item
+    if (advertisingChannels && advertisingChannels.length > 0) {
+      const channelCount = advertisingChannels.length;
+      const baseTotal = channelCount * PRICE_PER_CHANNEL;
+      const hasSavings = channelCount === TOTAL_CHANNELS || channelCount >= AD_BUNDLE_THRESHOLD;
+      const savings = hasSavings ? AD_BUNDLE_SAVINGS : 0;
+      const finalTotal = baseTotal - savings;
+
+      console.log(`Adding advertising channels: ${channelCount} channels, savings: $${savings}, total: $${finalTotal}`);
+
+      const adPrice = await stripe.prices.create({
+        unit_amount: finalTotal * 100,
+        currency: "usd",
+        recurring: { interval: "month" },
+        product_data: {
+          name: `Advertising Package (${channelCount} Channel${channelCount > 1 ? 's' : ''})${hasSavings ? ' - Bundle Savings Applied' : ''}`,
+        },
+      });
+
+      lineItems.push({ price: adPrice.id, quantity: 1 });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
       customer: customer.id,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       metadata: {
         product: "sienvi_automation",
         plan: plan || planFromPrice,
         selected_services: selectedServices ? JSON.stringify(selectedServices) : "",
+        advertising_channels: advertisingChannels ? JSON.stringify(advertisingChannels) : "",
       },
-      // Use {CHECKOUT_SESSION_ID} placeholder - Stripe replaces this with actual session ID
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/select-services?plan=${plan || planFromPrice}`,
     });
@@ -95,19 +178,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ url: session.url }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error creating checkout session:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

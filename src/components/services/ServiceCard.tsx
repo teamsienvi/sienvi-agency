@@ -1,5 +1,7 @@
 
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import ServiceFeature from "./ServiceFeature";
 
 interface ServiceCardProps {
@@ -9,6 +11,7 @@ interface ServiceCardProps {
   features: string[];
   price: string;
   index: number;
+  serviceId?: string;
 }
 
 const cardVariants = {
@@ -40,11 +43,22 @@ const ServiceCard = ({
   subtitle, 
   features, 
   price,
-  index
+  index,
+  serviceId
 }: ServiceCardProps) => {
+  const navigate = useNavigate();
+  
   // Separate regular features from bundle suggestion
   const regularFeatures = features.filter(f => !f.startsWith("💡"));
   const bundleFeature = features.find(f => f.startsWith("💡"));
+
+  const handleGetStarted = () => {
+    // Store the selected service and navigate to select-services
+    if (serviceId) {
+      sessionStorage.setItem("preselected_service", serviceId);
+    }
+    navigate("/select-services?plan=single");
+  };
 
   return (
     <motion.div 
@@ -74,17 +88,28 @@ const ServiceCard = ({
       </ul>
       
       {/* Bundle suggestion and price at bottom */}
-      <div className="mt-auto">
+      <div className="mt-auto space-y-4">
         {bundleFeature && (
-          <div className="mb-4">
+          <div>
             <ServiceFeature feature={bundleFeature} index={regularFeatures.length} />
           </div>
         )}
         <motion.div 
           className="text-primary font-bold text-xl"
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.05 }}
         >
           {price}/month
+        </motion.div>
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Button 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            onClick={handleGetStarted}
+          >
+            Get Started
+          </Button>
         </motion.div>
       </div>
     </motion.div>
