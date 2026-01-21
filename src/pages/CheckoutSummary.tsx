@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, ArrowRight, ArrowLeft, Check, Package, Megaphone, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Check, Package, Megaphone, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   onboardingServices,
   planDisplayNames,
-  getAvailableServicesForPlan,
 } from "@/data/onboardingServices";
 import { advertisingChannels } from "@/components/advertising/advertisingData";
 import Navbar from "@/components/Navbar";
@@ -45,24 +44,19 @@ const CheckoutSummary = () => {
   
   const plan = searchParams.get("plan") || "single";
   const serviceId = searchParams.get("service");
-  const planName = planDisplayNames[plan] || "Single Service";
+  const isAdvertisingOnly = plan === "advertising";
+  const planName = isAdvertisingOnly ? "Advertising Package" : (planDisplayNames[plan] || "Single Service");
   const priceId = PLAN_PRICE_IDS[plan];
   
-  // Get the selected service
+  // Get the selected service (for single automation plan)
   const selectedService = onboardingServices.find(s => s.id === serviceId);
-  const availableServices = getAvailableServicesForPlan(plan);
   
-  // For single plan, use the service from URL; for other plans, load from session
-  const [selectedServices, setSelectedServices] = useState<string[]>(() => {
-    if (serviceId && plan === "single") {
-      return [serviceId];
-    }
-    return [];
-  });
+  // For single plan, use the service from URL
+  const selectedServices = serviceId && plan === "single" ? [serviceId] : [];
 
   useEffect(() => {
-    // Validate plan
-    if (!PLAN_PRICE_IDS[plan]) {
+    // Validate plan (allow advertising)
+    if (!PLAN_PRICE_IDS[plan] && plan !== "advertising") {
       toast.error("Invalid plan selected");
       navigate("/#pricing");
       return;
@@ -86,14 +80,44 @@ const CheckoutSummary = () => {
     const storedAdChannels = sessionStorage.getItem('selectedAdvertisingChannels');
     if (storedAdChannels) {
       try {
-        setSelectedAdChannels(JSON.parse(storedAdChannels));
+        const channels = JSON.parse(storedAdChannels);
+        setSelectedAdChannels(channels);
+        
+        // For advertising-only, validate we have channels
+        if (isAdvertisingOnly && channels.length === 0) {
+          toast.error("Please select at least one advertising channel");
+          navigate("/#advertising");
+        }
       } catch (e) {
         console.error('Failed to parse advertising channels:', e);
+        if (isAdvertisingOnly) {
+          navigate("/#advertising");
+        }
       }
+    } else if (isAdvertisingOnly) {
+      toast.error("Please select advertising channels first");
+      navigate("/#advertising");
     }
-  }, [plan, serviceId, selectedService, navigate]);
+  }, [plan, serviceId, selectedService, navigate, isAdvertisingOnly]);
+
+  const handleRemoveAdChannel = (channelId: string) => {
+    const updatedChannels = selectedAdChannels.filter(id => id !== channelId);
+    setSelectedAdChannels(updatedChannels);
+    sessionStorage.setItem('selectedAdvertisingChannels', JSON.stringify(updatedChannels));
+    
+    // If removing the last channel in advertising-only mode, go back
+    if (isAdvertisingOnly && updatedChannels.length === 0) {
+      navigate("/#advertising");
+    }
+  };
 
   const handleProceedToCheckout = async () => {
+    // Validate before checkout
+    if (isAdvertisingOnly && selectedAdChannels.length === 0) {
+      toast.error("Please select at least one advertising channel");
+      return;
+    }
+    
     setIsLoading(true);
     try {
       // Store selections for after checkout
@@ -103,11 +127,11 @@ const CheckoutSummary = () => {
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { 
-          priceId,
+          priceId: isAdvertisingOnly ? null : priceId,
           selectedServices,
           advertisingChannels: selectedAdChannels,
           plan,
-          isAdvertisingOnly: false,
+          isAdvertisingOnly,
         },
       });
 
@@ -145,12 +169,17 @@ const CheckoutSummary = () => {
     );
   };
 
-  const planPrice = PLAN_PRICES[plan] || PRICE_PER_SERVICE;
-  const totalPrice = planPrice + adChannelsCost;
+  // Calculate totals
+  const automationPrice = isAdvertisingOnly ? 0 : (PLAN_PRICES[plan] || PRICE_PER_SERVICE);
+  const totalPrice = automationPrice + adChannelsCost;
 
-  if (!selectedService && plan === "single") {
-    return null; // Will redirect in useEffect
+  // Early return if invalid state
+  if (!isAdvertisingOnly && plan === "single" && !selectedService) {
+    return null;
   }
+
+  const backLink = isAdvertisingOnly ? "/#advertising" : "/#services";
+  const backLabel = isAdvertisingOnly ? "Back to Advertising" : "Back to Services";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -165,15 +194,19 @@ const CheckoutSummary = () => {
           >
             <Button
               variant="ghost"
-              onClick={() => navigate("/#services")}
+              onClick={() => navigate(backLink)}
               className="mb-6"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Services
+              {backLabel}
             </Button>
             
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-6">
-              <Package className="w-4 h-4" />
+              {isAdvertisingOnly ? (
+                <Megaphone className="w-4 h-4" />
+              ) : (
+                <Package className="w-4 h-4" />
+              )}
               <span>{planName}</span>
             </div>
             
@@ -192,24 +225,60 @@ const CheckoutSummary = () => {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="bg-card border border-border rounded-2xl p-8 mb-8 shadow-sm"
           >
-            {/* Selected Service */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Check className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold text-foreground">Your Selection</h2>
-            </div>
+            {/* Selected Service (for automation plans) */}
+            {!isAdvertisingOnly && selectedService && (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-foreground">Your Selection</h2>
+                </div>
 
-            {selectedService && (
-              <div className="flex items-start gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <selectedService.icon className="w-5 h-5 text-primary" />
+                <div className="flex items-start gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <selectedService.icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">{selectedService.title}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">{selectedService.title}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+              </>
+            )}
+
+            {/* Selected Channels (for advertising) */}
+            {(isAdvertisingOnly || selectedAdChannels.length > 0) && selectedAdChannels.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-foreground">
+                    {isAdvertisingOnly ? "Selected Channels" : "Advertising Add-ons"}
+                  </h2>
                 </div>
-              </div>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {getSelectedAdChannelNames().map((name, index) => (
+                    <motion.div
+                      key={selectedAdChannels[index]}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm border border-primary/20"
+                    >
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-medium">{name}</span>
+                      <button
+                        onClick={() => handleRemoveAdChannel(selectedAdChannels[index])}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Order Summary Details */}
@@ -217,8 +286,8 @@ const CheckoutSummary = () => {
               <h3 className="text-lg font-semibold text-foreground mb-4">Pricing Breakdown</h3>
               
               <div className="space-y-3">
-                {/* Service line item */}
-                {selectedService && (
+                {/* Automation service line item */}
+                {!isAdvertisingOnly && selectedService && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{selectedService.title}</span>
                     <span className="text-foreground">
@@ -227,26 +296,29 @@ const CheckoutSummary = () => {
                   </div>
                 )}
                 
-                {/* Advertising channels if selected */}
+                {/* Advertising channels line items */}
                 {selectedAdChannels.length > 0 && (
                   <>
-                    <div className="pt-2 border-t border-border/50">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Megaphone className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">Advertising Channels</span>
-                      </div>
-                      {getSelectedAdChannelNames().map((name, index) => (
-                        <div key={selectedAdChannels[index]} className="flex justify-between text-sm pl-6">
-                          <span className="text-muted-foreground">{name}</span>
-                          <span className="text-foreground">${PRICE_PER_CHANNEL}/mo</span>
+                    {!isAdvertisingOnly && (
+                      <div className="pt-2 border-t border-border/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Megaphone className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-medium text-foreground">Advertising Channels</span>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+                    
+                    {getSelectedAdChannelNames().map((name, index) => (
+                      <div key={selectedAdChannels[index]} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{name}</span>
+                        <span className="text-foreground">${PRICE_PER_CHANNEL}/mo</span>
+                      </div>
+                    ))}
                     
                     {/* Subtotal for ads */}
                     <div className="flex justify-between text-sm pt-2 border-t border-border/50">
                       <span className="text-muted-foreground">
-                        Advertising Subtotal ({adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''})
+                        {isAdvertisingOnly ? "Subtotal" : "Advertising Subtotal"} ({adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''})
                       </span>
                       <span className="text-foreground">${adChannelsBaseTotal.toLocaleString()}/mo</span>
                     </div>
@@ -288,7 +360,7 @@ const CheckoutSummary = () => {
             <Button
               size="lg"
               onClick={handleProceedToCheckout}
-              disabled={isLoading}
+              disabled={isLoading || (isAdvertisingOnly && selectedAdChannels.length === 0)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg font-semibold rounded-xl shadow-lg"
             >
               {isLoading ? (
