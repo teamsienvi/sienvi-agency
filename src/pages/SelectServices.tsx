@@ -27,8 +27,9 @@ const PLAN_PRICE_IDS: Record<string, string> = {
 // Advertising pricing constants
 const PRICE_PER_CHANNEL = 888;
 const TOTAL_CHANNELS = 7;
-const AD_BUNDLE_SAVINGS = 3450;
+const ALL_CHANNELS_PRICE = 3450;
 const AD_BUNDLE_THRESHOLD = 3;
+const PRICE_PER_CHANNEL_BUNDLED = ALL_CHANNELS_PRICE / TOTAL_CHANNELS;
 
 const SelectServices = () => {
   const navigate = useNavigate();
@@ -154,12 +155,15 @@ const SelectServices = () => {
     }
   };
 
-  // Calculate advertising costs with potential savings
+  // Calculate advertising costs with new bundle pricing
+  // All 7 channels = $3,450, 3+ channels = proportional bundle rate
   const adChannelsCount = selectedAdChannels.length;
   const adChannelsBaseTotal = adChannelsCount * PRICE_PER_CHANNEL;
-  const hasAdSavings = adChannelsCount === TOTAL_CHANNELS || adChannelsCount >= AD_BUNDLE_THRESHOLD;
-  const adSavings = hasAdSavings ? AD_BUNDLE_SAVINGS : 0;
-  const adChannelsCost = adChannelsBaseTotal - adSavings;
+  const hasAdSavings = adChannelsCount >= AD_BUNDLE_THRESHOLD;
+  const adChannelsCost = hasAdSavings 
+    ? Math.round(adChannelsCount * PRICE_PER_CHANNEL_BUNDLED) 
+    : adChannelsBaseTotal;
+  const adSavings = hasAdSavings ? adChannelsBaseTotal - adChannelsCost : 0;
   
   const getSelectedAdChannelNames = () => {
     return selectedAdChannels.map(id => 
@@ -242,34 +246,47 @@ const SelectServices = () => {
                 </div>
               )}
 
-              {/* Pricing summary */}
+              {/* Order Summary */}
               {selectedAdChannels.length > 0 && (
-                <div className="border-t border-border pt-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''} × $888/month
-                      </p>
-                      <div className="flex items-baseline gap-3">
-                        <span className="text-2xl font-bold text-foreground">
-                          ${adChannelsCost.toLocaleString()}/month
-                        </span>
-                        {hasAdSavings && (
-                          <span className="text-sm text-muted-foreground line-through">
-                            ${adChannelsBaseTotal.toLocaleString()}
-                          </span>
-                        )}
+                <div className="border-t border-border pt-6 mt-6">
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Order Summary</h3>
+                  
+                  <div className="space-y-3">
+                    {/* Line items */}
+                    {getSelectedAdChannelNames().map((name, index) => (
+                      <div key={selectedAdChannels[index]} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{name}</span>
+                        <span className="text-foreground">${PRICE_PER_CHANNEL}/mo</span>
                       </div>
+                    ))}
+                    
+                    {/* Subtotal */}
+                    <div className="flex justify-between text-sm pt-2 border-t border-border/50">
+                      <span className="text-muted-foreground">Subtotal ({adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''})</span>
+                      <span className="text-foreground">${adChannelsBaseTotal.toLocaleString()}/mo</span>
                     </div>
                     
+                    {/* Bundle discount */}
                     {hasAdSavings && (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <Sparkles className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-semibold text-green-600">
-                          Save ${adSavings.toLocaleString()}/month
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Bundle Discount (3+ channels)
                         </span>
+                        <span>-${adSavings.toLocaleString()}/mo</span>
                       </div>
                     )}
+                    
+                    {/* Total */}
+                    <div className="flex justify-between items-baseline pt-3 border-t border-border">
+                      <span className="font-semibold text-foreground">Total</span>
+                      <div className="text-right">
+                        <span className="text-2xl font-bold text-foreground">
+                          ${adChannelsCost.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/month</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
