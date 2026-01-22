@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ArrowRight, ArrowLeft, Check, Package, Megaphone, Sparkles, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Check, Package, Megaphone, Sparkles, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -167,6 +167,12 @@ const CheckoutSummary = () => {
     }
   };
 
+  const handleBundleWithPlan = (bundlePlan: string) => {
+    // Store advertising selections and navigate to plan selection with advertising
+    sessionStorage.setItem('selectedAdvertisingChannels', JSON.stringify(selectedAdChannels));
+    navigate(`/select-services?plan=${bundlePlan}&includeAds=true`);
+  };
+
   // Calculate advertising costs
   const adChannelsCount = selectedAdChannels.length;
   const adChannelsBaseTotal = adChannelsCount * PRICE_PER_CHANNEL;
@@ -175,12 +181,6 @@ const CheckoutSummary = () => {
     ? Math.round(adChannelsCount * PRICE_PER_CHANNEL_BUNDLED) 
     : adChannelsBaseTotal;
   const adSavings = hasAdSavings ? adChannelsBaseTotal - adChannelsCost : 0;
-
-  const getSelectedAdChannelNames = () => {
-    return selectedAdChannels.map(id => 
-      advertisingChannels.find(c => c.id === id)?.name || id
-    );
-  };
 
   // Calculate totals
   const automationPrice = isAdvertisingOnly ? 0 : (PLAN_PRICES[plan] || PRICE_PER_SERVICE);
@@ -198,7 +198,7 @@ const CheckoutSummary = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-1 py-12 md:py-20">
-        <div className="container-custom max-w-4xl">
+        <div className="container-custom max-w-5xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,26 +245,16 @@ const CheckoutSummary = () => {
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-semibold text-foreground">Available Channels</h2>
-                    <div className="flex gap-2">
+                    {selectedAdChannels.length > 0 && (
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm"
-                        onClick={selectAllChannels}
-                        className="text-xs"
+                        onClick={clearAllChannels}
+                        className="text-xs text-muted-foreground"
                       >
-                        Select All
+                        Clear
                       </Button>
-                      {selectedAdChannels.length > 0 && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={clearAllChannels}
-                          className="text-xs text-muted-foreground"
-                        >
-                          Clear
-                        </Button>
-                      )}
-                    </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -319,12 +309,21 @@ const CheckoutSummary = () => {
                             </div>
                             
                             <CollapsibleContent>
-                              <div className="px-4 pb-4 pt-2 border-t border-border/50">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div className="px-6 pb-6 pt-4 border-t border-border/50">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                   {channel.sections.map((section, idx) => (
-                                    <div key={idx} className="flex items-start gap-2 text-sm">
-                                      <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                                      <span className="text-muted-foreground">{section.title}</span>
+                                    <div key={idx}>
+                                      <h4 className="font-semibold text-foreground text-sm uppercase tracking-wide mb-3">
+                                        {section.title}
+                                      </h4>
+                                      <ul className="space-y-2">
+                                        {section.items.map((item, itemIdx) => (
+                                          <li key={itemIdx} className="flex items-start gap-2 text-sm">
+                                            <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                            <span className="text-muted-foreground">{item}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
                                     </div>
                                   ))}
                                 </div>
@@ -343,9 +342,9 @@ const CheckoutSummary = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+                        className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl"
                       >
-                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                           <Sparkles className="w-5 h-5" />
                           <span className="font-medium">
                             Bundle discount applied! You save ${adSavings.toLocaleString()}/mo
@@ -372,77 +371,66 @@ const CheckoutSummary = () => {
               className={`${isAdvertisingOnly ? "lg:col-span-1" : "lg:col-span-3 max-w-2xl mx-auto w-full"}`}
             >
               <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24">
-                <h2 className="text-xl font-semibold text-foreground mb-6">Order Summary</h2>
+                {/* Channel count and price header for advertising */}
+                {isAdvertisingOnly && (
+                  <div className="mb-6">
+                    <p className="text-primary text-sm font-medium mb-1">
+                      {adChannelsCount} channel{adChannelsCount !== 1 ? 's' : ''} selected
+                    </p>
+                    <div className="flex items-baseline">
+                      <span className="text-3xl font-bold text-foreground">
+                        ${adChannelsCost.toLocaleString()}
+                      </span>
+                      <span className="text-muted-foreground ml-1">/month</span>
+                    </div>
+                    {hasAdSavings && (
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+                        Save ${adSavings.toLocaleString()}/mo with bundle
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Select All Channels button */}
+                {isAdvertisingOnly && selectedAdChannels.length < TOTAL_CHANNELS && (
+                  <Button
+                    variant="outline"
+                    onClick={selectAllChannels}
+                    className="w-full mb-4 border-primary/30 text-primary hover:bg-primary/5"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Select All Channels — ${ALL_CHANNELS_PRICE.toLocaleString()}/mo
+                  </Button>
+                )}
 
                 {/* Selected Service (for automation plans) */}
                 {!isAdvertisingOnly && selectedService && (
-                  <div className="flex items-start gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10 mb-6">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <selectedService.icon className="w-5 h-5 text-primary" />
+                  <>
+                    <h2 className="text-xl font-semibold text-foreground mb-6">Order Summary</h2>
+                    <div className="flex items-start gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10 mb-6">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <selectedService.icon className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground">{selectedService.title}</h3>
+                        <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{selectedService.title}</h3>
-                      <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+                    
+                    {/* Total for non-advertising */}
+                    <div className="flex justify-between items-baseline pt-4 border-t border-border mb-6">
+                      <span className="font-semibold text-foreground">Monthly Total</span>
+                      <div className="text-right">
+                        <span className="text-2xl font-bold text-foreground">
+                          ${totalPrice.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/month</span>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
-                {/* Pricing Breakdown */}
-                <div className="space-y-3 mb-6">
-                  {/* Automation service line item */}
-                  {!isAdvertisingOnly && selectedService && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{selectedService.title}</span>
-                      <span className="text-foreground">
-                        ${selectedService.isPremium ? PRICE_PREMIUM_SERVICE.toLocaleString() : PRICE_PER_SERVICE}/mo
-                      </span>
-                    </div>
-                  )}
-                  
-                  {/* Advertising channels */}
-                  {selectedAdChannels.length > 0 && (
-                    <>
-                      {getSelectedAdChannelNames().map((name, index) => (
-                        <div key={selectedAdChannels[index]} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{name}</span>
-                          <span className="text-foreground">${PRICE_PER_CHANNEL}/mo</span>
-                        </div>
-                      ))}
-                      
-                      {/* Bundle discount */}
-                      {hasAdSavings && (
-                        <div className="flex justify-between text-sm text-green-600 pt-2 border-t border-border/50">
-                          <span className="flex items-center gap-1">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Bundle Discount
-                          </span>
-                          <span>-${adSavings.toLocaleString()}/mo</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {isAdvertisingOnly && selectedAdChannels.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Select channels to see pricing
-                    </p>
-                  )}
-                </div>
-                
-                {/* Total */}
-                {(selectedAdChannels.length > 0 || !isAdvertisingOnly) && (
-                  <div className="flex justify-between items-baseline pt-4 border-t border-border mb-6">
-                    <span className="font-semibold text-foreground">Monthly Total</span>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-foreground">
-                        ${totalPrice.toLocaleString()}
-                      </span>
-                      <span className="text-sm text-muted-foreground">/month</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Proceed to checkout button */}
+                {/* Get Started button */}
                 <Button
                   size="lg"
                   onClick={handleProceedToCheckout}
@@ -455,12 +443,47 @@ const CheckoutSummary = () => {
                       Processing...
                     </>
                   ) : (
-                    <>
-                      Proceed to Payment
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </>
+                    "Get Started"
                   )}
                 </Button>
+
+                {/* Bundle with plan options */}
+                {isAdvertisingOnly && selectedAdChannels.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm text-muted-foreground text-center mb-3">
+                      or bundle with:
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBundleWithPlan('single')}
+                        className="text-xs border-primary/30 hover:bg-primary/5"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Single Plan
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBundleWithPlan('triple')}
+                        className="text-xs border-primary/30 hover:bg-primary/5"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Triple Plan
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBundleWithPlan('full')}
+                        className="text-xs border-primary/30 hover:bg-primary/5"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Full Automation
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 
                 <p className="text-muted-foreground text-xs text-center mt-4">
                   Secure checkout powered by Stripe
