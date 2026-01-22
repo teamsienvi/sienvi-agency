@@ -45,7 +45,7 @@ export const services = [
   {
     id: "advertising-package",
     icon: MegaphoneIcon2,
-    title: "Advertising Management",
+    title: "Advertising Package (Per Channel)",
     subtitle: "Multi-channel advertising across major platforms",
     features: [
       "Amazon, Google, Meta, TikTok, YouTube, Reddit, LinkedIn",
