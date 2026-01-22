@@ -107,7 +107,7 @@ const ServiceCard = ({
           className="text-primary font-bold text-xl"
           whileHover={{ scale: 1.05 }}
         >
-          {price}/month
+          {price}{!isAdvertising && '/month'}
         </motion.div>
         <motion.div
           whileHover={{ scale: 1.02 }}

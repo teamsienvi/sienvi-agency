@@ -321,18 +321,13 @@ const CheckoutSummary = () => {
                             <CollapsibleContent>
                               <div className="px-4 pb-4 pt-2 border-t border-border/50">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {channel.sections.slice(0, 4).map((section, idx) => (
+                                  {channel.sections.map((section, idx) => (
                                     <div key={idx} className="flex items-start gap-2 text-sm">
                                       <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                                       <span className="text-muted-foreground">{section.title}</span>
                                     </div>
                                   ))}
                                 </div>
-                                {channel.sections.length > 4 && (
-                                  <p className="text-xs text-muted-foreground mt-2">
-                                    +{channel.sections.length - 4} more service areas included
-                                  </p>
-                                )}
                               </div>
                             </CollapsibleContent>
                           </div>
