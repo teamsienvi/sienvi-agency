@@ -42,9 +42,9 @@ export const onboardingServices: OnboardingService[] = [
     isPremium: true, // $2450
   },
   {
-    id: "custom-gpt",
-    title: "Custom GPT Product",
-    description: "AI-powered chatbot tailored to your business needs",
+    id: "custom-ai-assistant",
+    title: "Custom AI Assistant",
+    description: "AI-powered assistant tailored to your business needs",
     icon: Bot,
   },
 ];
