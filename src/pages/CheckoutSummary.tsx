@@ -9,6 +9,13 @@ import {
   onboardingServices,
   planDisplayNames,
 } from "@/data/onboardingServices";
+import {
+  BUNDLE_PRICE_IDS,
+  SERVICE_PRICE_IDS,
+  PRICING,
+  calculateAdvertisingCost,
+  getServicePrice,
+} from "@/data/stripePrices";
 import { advertisingChannels } from "@/components/advertising/advertisingData";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -19,35 +26,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Price ID mapping (Test Mode)
-const PLAN_PRICE_IDS: Record<string, string> = {
-  single: "price_1SpbnaDnw1azoLSpAmnnUwMX",
-  triple: "price_1Spbo0Dnw1azoLSpUgAdICKR",
-  full: "price_1SpboRDnw1azoLSpG07N2lA0",
-};
-
-// Pricing constants
-const PRICE_PER_SERVICE = 888;
-const PRICE_PREMIUM_SERVICE = 2450;
-const PRICE_AMAZON_DESIGN = 999;
-const PRICE_PER_CHANNEL = 888;
-const ALL_CHANNELS_PRICE = 3450;
-const TOTAL_CHANNELS = 7;
-const AD_BUNDLE_THRESHOLD = 3;
-const PRICE_PER_CHANNEL_BUNDLED = ALL_CHANNELS_PRICE / TOTAL_CHANNELS;
-
-// Plan pricing
+// Plan pricing for display
 const PLAN_PRICES: Record<string, number> = {
-  single: 888,
-  triple: 2664,
-  full: 3996,
-};
-
-// Service-specific pricing overrides
-const SERVICE_PRICES: Record<string, number> = {
-  "amazon-design": PRICE_AMAZON_DESIGN,
-  "social-media-suite": PRICE_PREMIUM_SERVICE,
-  "custom-lms": PRICE_PREMIUM_SERVICE,
+  single: PRICING.SINGLE_SERVICE,
+  triple: PRICING.TRIPLE_BUNDLE,
+  full: PRICING.FULL_SUITE,
 };
 
 const CheckoutSummary = () => {
@@ -61,7 +44,7 @@ const CheckoutSummary = () => {
   const serviceId = searchParams.get("service");
   const isAdvertisingOnly = plan === "advertising";
   const planName = isAdvertisingOnly ? "Advertising Package" : (planDisplayNames[plan] || "Single Service");
-  const priceId = PLAN_PRICE_IDS[plan];
+  const priceId = BUNDLE_PRICE_IDS[plan as keyof typeof BUNDLE_PRICE_IDS];
   
   // Get the selected service (for single automation plan)
   const selectedService = onboardingServices.find(s => s.id === serviceId);
@@ -71,7 +54,7 @@ const CheckoutSummary = () => {
 
   useEffect(() => {
     // Validate plan (allow advertising)
-    if (!PLAN_PRICE_IDS[plan] && plan !== "advertising") {
+    if (!BUNDLE_PRICE_IDS[plan as keyof typeof BUNDLE_PRICE_IDS] && plan !== "advertising") {
       toast.error("Invalid plan selected");
       navigate("/#pricing");
       return;
@@ -85,7 +68,7 @@ const CheckoutSummary = () => {
     }
     
     // Check if service is premium (not allowed for single plan - but amazon-design and special services are ok)
-    if (plan === "single" && selectedService?.isPremium && !SERVICE_PRICES[serviceId || '']) {
+    if (plan === "single" && selectedService?.isPremium && !SERVICE_PRICE_IDS[serviceId as keyof typeof SERVICE_PRICE_IDS]) {
       toast.error("Premium services require the Full Automation plan");
       navigate("/#pricing");
       return;
@@ -152,9 +135,9 @@ const CheckoutSummary = () => {
       sessionStorage.setItem("pending_plan", plan);
       sessionStorage.setItem("pending_ad_channels", JSON.stringify(selectedAdChannels));
 
-      // For single service purchases with specific service, use dynamic pricing (no priceId)
+      // For single service purchases with specific service, use service-specific pricing
       // For bundle plans (triple, full), use the hardcoded priceId
-      const useDynamicPricing = plan === "single" && serviceId && SERVICE_PRICES[serviceId];
+      const useDynamicPricing = plan === "single" && serviceId && SERVICE_PRICE_IDS[serviceId as keyof typeof SERVICE_PRICE_IDS];
       
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { 
@@ -201,25 +184,21 @@ const CheckoutSummary = () => {
     }
   };
 
-  // Calculate advertising costs
+  // Calculate advertising costs using centralized helper
   const adChannelsCount = selectedAdChannels.length;
-  const adChannelsBaseTotal = adChannelsCount * PRICE_PER_CHANNEL;
-  const hasAdSavings = adChannelsCount >= AD_BUNDLE_THRESHOLD;
-  const adChannelsCost = hasAdSavings 
-    ? Math.round(adChannelsCount * PRICE_PER_CHANNEL_BUNDLED) 
-    : adChannelsBaseTotal;
-  const adSavings = hasAdSavings ? adChannelsBaseTotal - adChannelsCost : 0;
+  const { total: adChannelsCost, savings: adSavings } = calculateAdvertisingCost(adChannelsCount);
+  const hasAdSavings = adChannelsCount >= PRICING.BUNDLE_THRESHOLD;
 
   // Calculate totals - use service-specific price if available
-  const getServicePrice = () => {
+  const getDisplayServicePrice = () => {
     if (isAdvertisingOnly) return 0;
-    if (plan === "single" && serviceId && SERVICE_PRICES[serviceId]) {
-      return SERVICE_PRICES[serviceId];
+    if (plan === "single" && serviceId) {
+      return getServicePrice(serviceId);
     }
-    return PLAN_PRICES[plan] || PRICE_PER_SERVICE;
+    return PLAN_PRICES[plan] || PRICING.SINGLE_SERVICE;
   };
   
-  const automationPrice = getServicePrice();
+  const automationPrice = getDisplayServicePrice();
   const totalPrice = automationPrice + adChannelsCost;
 
   // Early return if invalid state
@@ -326,7 +305,7 @@ const CheckoutSummary = () => {
                                 </p>
                               </div>
                               <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                                ${PRICE_PER_CHANNEL}/mo
+                                ${PRICING.PER_CHANNEL}/mo
                               </span>
                               <CollapsibleTrigger asChild>
                                 <Button
@@ -392,7 +371,7 @@ const CheckoutSummary = () => {
 
                   {!hasAdSavings && selectedAdChannels.length > 0 && (
                     <p className="mt-4 text-sm text-muted-foreground text-center">
-                      Select {AD_BUNDLE_THRESHOLD - selectedAdChannels.length} more channel{AD_BUNDLE_THRESHOLD - selectedAdChannels.length !== 1 ? 's' : ''} to unlock bundle pricing
+                      Select {PRICING.BUNDLE_THRESHOLD - selectedAdChannels.length} more channel{PRICING.BUNDLE_THRESHOLD - selectedAdChannels.length !== 1 ? 's' : ''} to unlock bundle pricing
                     </p>
                   )}
                 </div>
@@ -428,14 +407,14 @@ const CheckoutSummary = () => {
                 )}
 
                 {/* Select All Channels button */}
-                {isAdvertisingOnly && selectedAdChannels.length < TOTAL_CHANNELS && (
+                {isAdvertisingOnly && selectedAdChannels.length < PRICING.CHANNEL_COUNT && (
                   <Button
                     variant="outline"
                     onClick={selectAllChannels}
                     className="w-full mb-4 border-primary/30 text-primary hover:bg-primary/5"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Select All Channels — ${ALL_CHANNELS_PRICE.toLocaleString()}/mo
+                    Select All Channels — ${PRICING.ALL_CHANNELS.toLocaleString()}/mo
                   </Button>
                 )}
 

@@ -14,6 +14,13 @@ const PLAN_PRICE_IDS: Record<string, string> = {
   full: "price_1SpboRDnw1azoLSpG07N2lA0",
 };
 
+// Individual service prices
+const SERVICE_PRICE_IDS: Record<string, string> = {
+  "amazon-design": "price_1Sq8qQDnw1azoLSpNJgw6Lzd",        // $999/mo
+  "social-media-suite": "price_1Sq8qrDnw1azoLSpFzRt8BWN",   // $2,450/mo
+  "custom-lms": "price_1Sq8r5Dnw1azoLSpQF19zfYf",           // $2,450/mo
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
