@@ -40,8 +40,9 @@ const Onboarding = () => {
   const [clientProfileId, setClientProfileId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [stepData, setStepData] = useState<StepData>({ goals: null, avatars: null, questionnaire: null, amazon: null, advertising: null });
-  const [completedSteps, setCompletedSteps] = useState<boolean[]>([false, false, false]);
+  const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
   const [onboardingType, setOnboardingType] = useState<OnboardingType>("standard");
+  const [totalSteps, setTotalSteps] = useState(3);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   useEffect(() => {
@@ -86,12 +87,16 @@ const Onboarding = () => {
       // Determine onboarding type based on selected services
       const services = profile.selectedServices || [];
       let type: OnboardingType = "standard";
+      let numSteps = 3;
+      
       if (services.includes("amazon-design")) {
         type = "amazon";
+        numSteps = 1; // Amazon only has 1 step - the Amazon questionnaire
       } else if (services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising"))) {
         type = "advertising";
       }
       setOnboardingType(type);
+      setTotalSteps(numSteps);
 
       // Load existing onboarding data based on type
       const [goalsRes, avatarsRes, questionnaireRes, amazonRes, advertisingRes] = await Promise.all([
@@ -105,11 +110,8 @@ const Onboarding = () => {
       // Determine completed steps based on onboarding type
       let completed: boolean[];
       if (type === "amazon") {
-        completed = [
-          !!goalsRes.data?.completed_at,
-          !!avatarsRes.data?.completed_at,
-          !!amazonRes.data?.completed_at,
-        ];
+        // Amazon only has 1 step
+        completed = [!!amazonRes.data?.completed_at];
       } else if (type === "advertising") {
         completed = [
           !!goalsRes.data?.completed_at,
@@ -165,20 +167,23 @@ const Onboarding = () => {
       }
       toast.success("Onboarding completed!");
       navigate("/dashboard");
-    } else if (stepIndex < 2) {
+    } else if (stepIndex < totalSteps - 1) {
       setCurrentStep(stepIndex + 1);
     }
   };
 
   const getSteps = () => {
+    // Amazon Design only has 1 step - the Amazon questionnaire
+    if (onboardingType === "amazon") {
+      return [{ id: "amazon-questionnaire", title: "Amazon Questionnaire", icon: <ShoppingBag className="w-6 h-6" /> }];
+    }
+
     const baseSteps = [
       { id: "goal-sheet", title: "Goal Sheet", icon: <Target className="w-6 h-6" /> },
       { id: "avatar-profile", title: "Avatar Profile", icon: <User className="w-6 h-6" /> },
     ];
 
-    if (onboardingType === "amazon") {
-      return [...baseSteps, { id: "amazon-questionnaire", title: "Amazon Questionnaire", icon: <ShoppingBag className="w-6 h-6" /> }];
-    } else if (onboardingType === "advertising") {
+    if (onboardingType === "advertising") {
       return [...baseSteps, { id: "advertising-questionnaire", title: "Advertising Questionnaire", icon: <Megaphone className="w-6 h-6" /> }];
     }
     return [...baseSteps, { id: "questionnaire", title: "Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
@@ -211,9 +216,9 @@ const Onboarding = () => {
           </div>
 
           <div className="text-center space-y-2">
-            <Badge className="bg-purple-500">Onboarding</Badge>
+            <Badge className="bg-primary">Onboarding</Badge>
             <h1 className="text-3xl font-bold">Complete Your Onboarding</h1>
-            <p className="text-muted-foreground">Step {currentStep + 1} of 3</p>
+            <p className="text-muted-foreground">Step {currentStep + 1} of {totalSteps}</p>
           </div>
 
           <div className="flex justify-center gap-4">
@@ -238,25 +243,28 @@ const Onboarding = () => {
 
           {clientProfileId && (
             <div className="mt-8">
-              {currentStep === 0 && (
+              {/* Amazon Design has only 1 step - the Amazon questionnaire */}
+              {onboardingType === "amazon" && currentStep === 0 && (
+                <AmazonOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(0)}
+                  initialData={stepData.amazon}
+                />
+              )}
+              
+              {/* Standard and Advertising flows have 3 steps */}
+              {onboardingType !== "amazon" && currentStep === 0 && (
                 <GoalSheetForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(0)}
                   initialData={stepData.goals}
                 />
               )}
-              {currentStep === 1 && (
+              {onboardingType !== "amazon" && currentStep === 1 && (
                 <AvatarProfileForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(1)}
                   initialData={stepData.avatars}
-                />
-              )}
-              {currentStep === 2 && onboardingType === "amazon" && (
-                <AmazonOnboardingForm
-                  clientProfileId={clientProfileId}
-                  onComplete={() => handleStepComplete(2)}
-                  initialData={stepData.amazon}
                 />
               )}
               {currentStep === 2 && onboardingType === "advertising" && (
