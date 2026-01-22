@@ -72,6 +72,17 @@ const planPrices: Record<string, number> = {
   single: 888,
   triple: 2398.20,
   full: 3996,
+  amazon: 999,
+};
+
+// Service-specific prices for when plan is "single" but service is amazon-design
+const servicePrices: Record<string, number> = {
+  "amazon-design": 999,
+  "social-media-suite": 2450,
+  "custom-lms": 2450,
+  "custom-website": 888,
+  "seo-aeo": 888,
+  "custom-ai-assistant": 888,
 };
 
 const AdminClients = () => {
@@ -163,10 +174,22 @@ const AdminClients = () => {
     return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
   };
 
-  const getPlanDisplay = (plan: string | null, customPrice: number | null) => {
+  const getPlanDisplay = (plan: string | null, customPrice: number | null, selectedServices: string[] = []) => {
     if (plan === "custom" && customPrice) {
       return `Custom ($${customPrice}/mo)`;
     }
+    
+    // Check if it's Amazon Design (either by plan or selected service)
+    if (plan === "amazon" || selectedServices.includes("amazon-design")) {
+      return "Amazon Design Package";
+    }
+    
+    // Check if it's Advertising
+    if (plan === "advertising" || selectedServices.includes("advertising-package")) {
+      const channelCount = selectedServices.filter(s => s.startsWith("channel-")).length;
+      return channelCount ? `Advertising (${channelCount} ch)` : "Advertising Package";
+    }
+    
     const planLabels: Record<string, string> = {
       single: "Single Service",
       triple: "Triple Automation",
@@ -175,8 +198,34 @@ const AdminClients = () => {
     return planLabels[plan || ""] || plan || "Unknown";
   };
 
-  const getMonthlyPrice = (plan: string | null, customPrice: number | null) => {
+  const getMonthlyPrice = (plan: string | null, customPrice: number | null, selectedServices: string[] = []) => {
     if (plan === "custom" && customPrice) return customPrice;
+    
+    // Amazon Design Package
+    if (plan === "amazon" || selectedServices.includes("amazon-design")) {
+      return 999;
+    }
+    
+    // Advertising Package - calculate based on channel count
+    if (plan === "advertising" || selectedServices.includes("advertising-package")) {
+      const channelCount = selectedServices.filter(s => s.startsWith("channel-")).length;
+      if (channelCount === 0) return 888;
+      if (channelCount === 1) return 888;
+      if (channelCount === 2) return 1776;
+      if (channelCount >= 3) {
+        // Bundle pricing: $493/channel, capped at $3,450 for all 7
+        const bundlePrice = channelCount * 493;
+        return Math.min(bundlePrice, 3450);
+      }
+      return 888;
+    }
+    
+    // For single plan, check the actual service
+    if (plan === "single" && selectedServices.length > 0) {
+      const service = selectedServices[0];
+      return servicePrices[service] || planPrices[plan] || 0;
+    }
+    
     return planPrices[plan || ""] || 0;
   };
 
@@ -369,7 +418,7 @@ const AdminClients = () => {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
       if (sortBy === "highest_value") {
-        return getMonthlyPrice(b.plan, b.customPrice) - getMonthlyPrice(a.plan, a.customPrice);
+        return getMonthlyPrice(b.plan, b.customPrice, b.selectedServices) - getMonthlyPrice(a.plan, a.customPrice, a.selectedServices);
       }
       return 0;
     });
@@ -451,7 +500,7 @@ const AdminClients = () => {
             <p className="text-2xl font-bold">
               ${clients
                 .filter((c) => c.isActive && c.subscriptionStatus === "active")
-                .reduce((sum, c) => sum + getMonthlyPrice(c.plan, c.customPrice), 0)
+                .reduce((sum, c) => sum + getMonthlyPrice(c.plan, c.customPrice, c.selectedServices), 0)
                 .toLocaleString()}
             </p>
           </div>
@@ -558,10 +607,10 @@ const AdminClients = () => {
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {getPlanDisplay(client.plan, client.customPrice)}
+                          {getPlanDisplay(client.plan, client.customPrice, client.selectedServices)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          ${getMonthlyPrice(client.plan, client.customPrice).toLocaleString()}/mo
+                          ${getMonthlyPrice(client.plan, client.customPrice, client.selectedServices).toLocaleString()}/mo
                         </p>
                       </div>
                     </TableCell>
@@ -744,13 +793,13 @@ const AdminClients = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Plan</p>
                     <p className="font-medium">
-                      {getPlanDisplay(selectedClient.plan, selectedClient.customPrice)}
+                      {getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Monthly Price</p>
                     <p className="font-medium">
-                      ${getMonthlyPrice(selectedClient.plan, selectedClient.customPrice).toLocaleString()}
+                      ${getMonthlyPrice(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices).toLocaleString()}
                     </p>
                   </div>
                   <div>
