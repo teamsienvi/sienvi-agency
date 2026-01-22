@@ -1,4 +1,4 @@
-import { PenTool, ShoppingCart, Globe, Search, BookOpen, Bot, LucideIcon } from "lucide-react";
+import { PenTool, Globe, Search, BookOpen, Bot, LucideIcon } from "lucide-react";
 
 export interface OnboardingService {
   id: string;
@@ -15,12 +15,6 @@ export const onboardingServices: OnboardingService[] = [
     description: "Complete social media management and automation across all major platforms",
     icon: PenTool,
     isPremium: true, // $2450
-  },
-  {
-    id: "ecommerce-operations",
-    title: "E-Commerce Operations Automation",
-    description: "Multi-channel inventory tracking and process optimization",
-    icon: ShoppingCart,
   },
   {
     id: "custom-website",
@@ -70,8 +64,8 @@ export const getFullAutomationServiceIds = () => {
 export const planLimits: Record<string, number> = {
   single: 1,
   triple: 3,
-  full: 6,
-  custom: 6, // Default for custom, will be overridden by metadata
+  full: 5,
+  custom: 5, // Default for custom, will be overridden by metadata
 };
 
 export const planDisplayNames: Record<string, string> = {

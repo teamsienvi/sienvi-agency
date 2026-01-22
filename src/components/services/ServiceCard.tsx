@@ -12,6 +12,7 @@ interface ServiceCardProps {
   price: string;
   index: number;
   serviceId?: string;
+  isAdvertising?: boolean;
 }
 
 const cardVariants = {
@@ -44,7 +45,8 @@ const ServiceCard = ({
   features, 
   price,
   index,
-  serviceId
+  serviceId,
+  isAdvertising
 }: ServiceCardProps) => {
   const navigate = useNavigate();
   
@@ -53,6 +55,15 @@ const ServiceCard = ({
   const bundleFeature = features.find(f => f.startsWith("💡"));
 
   const handleGetStarted = () => {
+    if (isAdvertising) {
+      // For advertising, scroll to the advertising section
+      const advertisingSection = document.getElementById('advertising');
+      if (advertisingSection) {
+        advertisingSection.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
+    
     // Store the selected service and navigate to checkout summary
     if (serviceId) {
       sessionStorage.setItem("preselected_service", serviceId);
