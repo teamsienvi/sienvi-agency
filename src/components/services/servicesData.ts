@@ -128,7 +128,7 @@ export const services = [
       "Competitor analysis and positioning",
       "💡 Perfect for Amazon sellers looking to stand out"
     ],
-    price: "$1,888",
+    price: "$999",
     isAmazon: true
   }
 ];
