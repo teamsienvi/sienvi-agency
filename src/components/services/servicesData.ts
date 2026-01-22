@@ -1,5 +1,4 @@
-
-import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon } from "lucide-react";
+import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon, ShoppingBagIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
@@ -9,6 +8,7 @@ const SearchIcon2 = (props: any) => React.createElement(SearchIcon, props);
 const BookOpenIcon2 = (props: any) => React.createElement(BookOpenIcon, props);
 const BotIcon2 = (props: any) => React.createElement(BotIcon, props);
 const MegaphoneIcon2 = (props: any) => React.createElement(MegaphoneIcon, props);
+const ShoppingBagIcon2 = (props: any) => React.createElement(ShoppingBagIcon, props);
 
 export const services = [
   // Row 1: Custom LMS, Social Media Suite, Advertising
@@ -112,5 +112,23 @@ export const services = [
       "💡 Bundle with Custom Website or Custom AI Assistant — Inquire for details"
     ],
     price: "$888"
+  },
+  {
+    id: "amazon-design",
+    icon: ShoppingBagIcon2,
+    title: "Amazon Design Package",
+    subtitle: "Professional Amazon listing design and optimization",
+    features: [
+      "A+ Content / Premium A+ design",
+      "Main image and infographic creation",
+      "Lifestyle and product photography guidance",
+      "Brand Story design",
+      "Storefront design and optimization",
+      "Video ad creative development",
+      "Competitor analysis and positioning",
+      "💡 Perfect for Amazon sellers looking to stand out"
+    ],
+    price: "$1,888",
+    isAmazon: true
   }
 ];

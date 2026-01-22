@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { 
   ArrowLeft,
@@ -14,26 +13,36 @@ import {
   Lock,
   CheckCircle2,
   Loader2,
+  ShoppingBag,
+  Megaphone,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { GoalSheetForm } from "@/components/onboarding/GoalSheetForm";
 import { AvatarProfileForm } from "@/components/onboarding/AvatarProfileForm";
 import { QuestionnaireForm } from "@/components/onboarding/QuestionnaireForm";
+import { AmazonOnboardingForm } from "@/components/onboarding/AmazonOnboardingForm";
+import { AdvertisingOnboardingForm } from "@/components/onboarding/AdvertisingOnboardingForm";
 
 interface StepData {
   goals: any;
   avatars: any;
   questionnaire: any;
+  amazon: any;
+  advertising: any;
 }
+
+type OnboardingType = "standard" | "amazon" | "advertising";
 
 const Onboarding = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [clientProfileId, setClientProfileId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [stepData, setStepData] = useState<StepData>({ goals: null, avatars: null, questionnaire: null });
+  const [stepData, setStepData] = useState<StepData>({ goals: null, avatars: null, questionnaire: null, amazon: null, advertising: null });
   const [completedSteps, setCompletedSteps] = useState<boolean[]>([false, false, false]);
+  const [onboardingType, setOnboardingType] = useState<OnboardingType>("standard");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   useEffect(() => {
     checkAccessAndLoadData();
@@ -72,28 +81,58 @@ const Onboarding = () => {
       }
 
       setClientProfileId(profile.id);
+      setSelectedServices(profile.selectedServices || []);
 
-      // Load existing onboarding data
-      const [goalsRes, avatarsRes, questionnaireRes] = await Promise.all([
-        supabase.from("onboarding_goals").select("*").eq("client_profile_id", profile.id).single(),
-        supabase.from("onboarding_avatars").select("*").eq("client_profile_id", profile.id).single(),
-        supabase.from("onboarding_questionnaire").select("*").eq("client_profile_id", profile.id).single(),
+      // Determine onboarding type based on selected services
+      const services = profile.selectedServices || [];
+      let type: OnboardingType = "standard";
+      if (services.includes("amazon-design")) {
+        type = "amazon";
+      } else if (services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising"))) {
+        type = "advertising";
+      }
+      setOnboardingType(type);
+
+      // Load existing onboarding data based on type
+      const [goalsRes, avatarsRes, questionnaireRes, amazonRes, advertisingRes] = await Promise.all([
+        supabase.from("onboarding_goals").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabase.from("onboarding_avatars").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabase.from("onboarding_questionnaire").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabase.from("onboarding_amazon").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabase.from("onboarding_advertising").select("*").eq("client_profile_id", profile.id).maybeSingle(),
       ]);
 
-      const completed = [
-        !!goalsRes.data?.completed_at,
-        !!avatarsRes.data?.completed_at,
-        !!questionnaireRes.data?.completed_at,
-      ];
+      // Determine completed steps based on onboarding type
+      let completed: boolean[];
+      if (type === "amazon") {
+        completed = [
+          !!goalsRes.data?.completed_at,
+          !!avatarsRes.data?.completed_at,
+          !!amazonRes.data?.completed_at,
+        ];
+      } else if (type === "advertising") {
+        completed = [
+          !!goalsRes.data?.completed_at,
+          !!avatarsRes.data?.completed_at,
+          !!advertisingRes.data?.completed_at,
+        ];
+      } else {
+        completed = [
+          !!goalsRes.data?.completed_at,
+          !!avatarsRes.data?.completed_at,
+          !!questionnaireRes.data?.completed_at,
+        ];
+      }
       
       setCompletedSteps(completed);
       setStepData({
         goals: goalsRes.data,
         avatars: avatarsRes.data,
         questionnaire: questionnaireRes.data,
+        amazon: amazonRes.data,
+        advertising: advertisingRes.data,
       });
 
-      // Set current step to first incomplete
       const firstIncomplete = completed.findIndex(c => !c);
       setCurrentStep(firstIncomplete === -1 ? 0 : firstIncomplete);
 
@@ -117,7 +156,6 @@ const Onboarding = () => {
     setCompletedSteps(newCompleted);
 
     if (newCompleted.every(c => c)) {
-      // All steps complete
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await supabase.functions.invoke("update-client-status", {
@@ -132,11 +170,21 @@ const Onboarding = () => {
     }
   };
 
-  const steps = [
-    { id: "goal-sheet", title: "Goal Sheet", icon: <Target className="w-6 h-6" /> },
-    { id: "avatar-profile", title: "Avatar Profile", icon: <User className="w-6 h-6" /> },
-    { id: "questionnaire", title: "Questionnaire", icon: <ClipboardList className="w-6 h-6" /> },
-  ];
+  const getSteps = () => {
+    const baseSteps = [
+      { id: "goal-sheet", title: "Goal Sheet", icon: <Target className="w-6 h-6" /> },
+      { id: "avatar-profile", title: "Avatar Profile", icon: <User className="w-6 h-6" /> },
+    ];
+
+    if (onboardingType === "amazon") {
+      return [...baseSteps, { id: "amazon-questionnaire", title: "Amazon Questionnaire", icon: <ShoppingBag className="w-6 h-6" /> }];
+    } else if (onboardingType === "advertising") {
+      return [...baseSteps, { id: "advertising-questionnaire", title: "Advertising Questionnaire", icon: <Megaphone className="w-6 h-6" /> }];
+    }
+    return [...baseSteps, { id: "questionnaire", title: "Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
+  };
+
+  const steps = getSteps();
 
   if (loading) {
     return (
@@ -168,7 +216,6 @@ const Onboarding = () => {
             <p className="text-muted-foreground">Step {currentStep + 1} of 3</p>
           </div>
 
-          {/* Progress Steps */}
           <div className="flex justify-center gap-4">
             {steps.map((step, index) => (
               <button
@@ -189,7 +236,6 @@ const Onboarding = () => {
             ))}
           </div>
 
-          {/* Form Content */}
           {clientProfileId && (
             <div className="mt-8">
               {currentStep === 0 && (
@@ -206,7 +252,22 @@ const Onboarding = () => {
                   initialData={stepData.avatars}
                 />
               )}
-              {currentStep === 2 && (
+              {currentStep === 2 && onboardingType === "amazon" && (
+                <AmazonOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(2)}
+                  initialData={stepData.amazon}
+                />
+              )}
+              {currentStep === 2 && onboardingType === "advertising" && (
+                <AdvertisingOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(2)}
+                  initialData={stepData.advertising}
+                  selectedChannels={selectedServices.filter(s => s.startsWith("channel-"))}
+                />
+              )}
+              {currentStep === 2 && onboardingType === "standard" && (
                 <QuestionnaireForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(2)}

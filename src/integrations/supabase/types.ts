@@ -677,6 +677,325 @@ export type Database = {
           },
         ]
       }
+      onboarding_advertising: {
+        Row: {
+          ad_account_access_details: string | null
+          additional_notes: string | null
+          audience_personas: string | null
+          brand_voice: string | null
+          business_name: string | null
+          campaign_duration: string | null
+          campaign_start_date: string | null
+          client_profile_id: string
+          competitor_ad_examples: string | null
+          completed_at: string | null
+          confirmed_accurate: boolean | null
+          conversion_actions: string | null
+          conversion_tracking_setup: boolean | null
+          created_at: string
+          creative_assets_available: string | null
+          current_ad_accounts: string | null
+          differentiation_strategy: string | null
+          email_address: string | null
+          existing_ad_creatives: boolean | null
+          expected_results_timeline: string | null
+          has_ad_accounts: boolean | null
+          historical_performance: string | null
+          id: string
+          industry_niche: string | null
+          key_messaging_points: string | null
+          landing_page_urls: string | null
+          main_competitors: string | null
+          monthly_budget_range: string | null
+          previous_advertising_experience: string | null
+          primary_campaign_goal: string | null
+          primary_contact_name: string | null
+          promotional_offers: string | null
+          reporting_preferences: string | null
+          retargeting_audiences: string | null
+          secondary_goals: string[] | null
+          selected_channels: string[] | null
+          target_demographics: string | null
+          target_interests: string | null
+          target_kpis: string | null
+          target_locations: string | null
+          unique_selling_propositions: string | null
+          updated_at: string
+          what_didnt_work: string | null
+          what_worked: string | null
+        }
+        Insert: {
+          ad_account_access_details?: string | null
+          additional_notes?: string | null
+          audience_personas?: string | null
+          brand_voice?: string | null
+          business_name?: string | null
+          campaign_duration?: string | null
+          campaign_start_date?: string | null
+          client_profile_id: string
+          competitor_ad_examples?: string | null
+          completed_at?: string | null
+          confirmed_accurate?: boolean | null
+          conversion_actions?: string | null
+          conversion_tracking_setup?: boolean | null
+          created_at?: string
+          creative_assets_available?: string | null
+          current_ad_accounts?: string | null
+          differentiation_strategy?: string | null
+          email_address?: string | null
+          existing_ad_creatives?: boolean | null
+          expected_results_timeline?: string | null
+          has_ad_accounts?: boolean | null
+          historical_performance?: string | null
+          id?: string
+          industry_niche?: string | null
+          key_messaging_points?: string | null
+          landing_page_urls?: string | null
+          main_competitors?: string | null
+          monthly_budget_range?: string | null
+          previous_advertising_experience?: string | null
+          primary_campaign_goal?: string | null
+          primary_contact_name?: string | null
+          promotional_offers?: string | null
+          reporting_preferences?: string | null
+          retargeting_audiences?: string | null
+          secondary_goals?: string[] | null
+          selected_channels?: string[] | null
+          target_demographics?: string | null
+          target_interests?: string | null
+          target_kpis?: string | null
+          target_locations?: string | null
+          unique_selling_propositions?: string | null
+          updated_at?: string
+          what_didnt_work?: string | null
+          what_worked?: string | null
+        }
+        Update: {
+          ad_account_access_details?: string | null
+          additional_notes?: string | null
+          audience_personas?: string | null
+          brand_voice?: string | null
+          business_name?: string | null
+          campaign_duration?: string | null
+          campaign_start_date?: string | null
+          client_profile_id?: string
+          competitor_ad_examples?: string | null
+          completed_at?: string | null
+          confirmed_accurate?: boolean | null
+          conversion_actions?: string | null
+          conversion_tracking_setup?: boolean | null
+          created_at?: string
+          creative_assets_available?: string | null
+          current_ad_accounts?: string | null
+          differentiation_strategy?: string | null
+          email_address?: string | null
+          existing_ad_creatives?: boolean | null
+          expected_results_timeline?: string | null
+          has_ad_accounts?: boolean | null
+          historical_performance?: string | null
+          id?: string
+          industry_niche?: string | null
+          key_messaging_points?: string | null
+          landing_page_urls?: string | null
+          main_competitors?: string | null
+          monthly_budget_range?: string | null
+          previous_advertising_experience?: string | null
+          primary_campaign_goal?: string | null
+          primary_contact_name?: string | null
+          promotional_offers?: string | null
+          reporting_preferences?: string | null
+          retargeting_audiences?: string | null
+          secondary_goals?: string[] | null
+          selected_channels?: string[] | null
+          target_demographics?: string | null
+          target_interests?: string | null
+          target_kpis?: string | null
+          target_locations?: string | null
+          unique_selling_propositions?: string | null
+          updated_at?: string
+          what_didnt_work?: string | null
+          what_worked?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_advertising_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: true
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_amazon: {
+        Row: {
+          additional_notes: string | null
+          asin: string | null
+          brand_voice: string | null
+          brand_voice_other: string | null
+          brands_admired: string | null
+          business_name: string | null
+          client_profile_id: string
+          competitor_asins: string | null
+          competitor_dislikes: string | null
+          competitor_likes: string | null
+          completed_at: string | null
+          compliance_restrictions: string | null
+          confirmed_accurate: boolean | null
+          created_at: string
+          customer_objections: string | null
+          customer_pain_points: string | null
+          desired_outcome: string | null
+          dimensions_weight: string | null
+          email_address: string | null
+          example_listings: string | null
+          features_to_highlight: string | null
+          has_brand_guidelines: boolean | null
+          id: string
+          ideal_customer: string | null
+          image_styles_to_avoid: string | null
+          key_features: string | null
+          mandatory_claims: string | null
+          materials_specs: string | null
+          preferred_colors: string | null
+          preferred_fonts: string | null
+          primary_contact_name: string | null
+          problem_solved: string | null
+          product_category: string | null
+          product_description: string | null
+          product_name: string | null
+          product_status: string | null
+          product_variations: string | null
+          seller_account_type: string | null
+          style_preference: string | null
+          target_marketplaces: string[] | null
+          top_3_benefits: string | null
+          turnaround_preference: string | null
+          updated_at: string
+          uploaded_assets: Json | null
+          video_examples: string | null
+          video_messaging: string | null
+          video_primary_goal: string | null
+          video_tone: string | null
+          words_to_associate: string | null
+          words_to_avoid: string | null
+          work_approver: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          asin?: string | null
+          brand_voice?: string | null
+          brand_voice_other?: string | null
+          brands_admired?: string | null
+          business_name?: string | null
+          client_profile_id: string
+          competitor_asins?: string | null
+          competitor_dislikes?: string | null
+          competitor_likes?: string | null
+          completed_at?: string | null
+          compliance_restrictions?: string | null
+          confirmed_accurate?: boolean | null
+          created_at?: string
+          customer_objections?: string | null
+          customer_pain_points?: string | null
+          desired_outcome?: string | null
+          dimensions_weight?: string | null
+          email_address?: string | null
+          example_listings?: string | null
+          features_to_highlight?: string | null
+          has_brand_guidelines?: boolean | null
+          id?: string
+          ideal_customer?: string | null
+          image_styles_to_avoid?: string | null
+          key_features?: string | null
+          mandatory_claims?: string | null
+          materials_specs?: string | null
+          preferred_colors?: string | null
+          preferred_fonts?: string | null
+          primary_contact_name?: string | null
+          problem_solved?: string | null
+          product_category?: string | null
+          product_description?: string | null
+          product_name?: string | null
+          product_status?: string | null
+          product_variations?: string | null
+          seller_account_type?: string | null
+          style_preference?: string | null
+          target_marketplaces?: string[] | null
+          top_3_benefits?: string | null
+          turnaround_preference?: string | null
+          updated_at?: string
+          uploaded_assets?: Json | null
+          video_examples?: string | null
+          video_messaging?: string | null
+          video_primary_goal?: string | null
+          video_tone?: string | null
+          words_to_associate?: string | null
+          words_to_avoid?: string | null
+          work_approver?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          asin?: string | null
+          brand_voice?: string | null
+          brand_voice_other?: string | null
+          brands_admired?: string | null
+          business_name?: string | null
+          client_profile_id?: string
+          competitor_asins?: string | null
+          competitor_dislikes?: string | null
+          competitor_likes?: string | null
+          completed_at?: string | null
+          compliance_restrictions?: string | null
+          confirmed_accurate?: boolean | null
+          created_at?: string
+          customer_objections?: string | null
+          customer_pain_points?: string | null
+          desired_outcome?: string | null
+          dimensions_weight?: string | null
+          email_address?: string | null
+          example_listings?: string | null
+          features_to_highlight?: string | null
+          has_brand_guidelines?: boolean | null
+          id?: string
+          ideal_customer?: string | null
+          image_styles_to_avoid?: string | null
+          key_features?: string | null
+          mandatory_claims?: string | null
+          materials_specs?: string | null
+          preferred_colors?: string | null
+          preferred_fonts?: string | null
+          primary_contact_name?: string | null
+          problem_solved?: string | null
+          product_category?: string | null
+          product_description?: string | null
+          product_name?: string | null
+          product_status?: string | null
+          product_variations?: string | null
+          seller_account_type?: string | null
+          style_preference?: string | null
+          target_marketplaces?: string[] | null
+          top_3_benefits?: string | null
+          turnaround_preference?: string | null
+          updated_at?: string
+          uploaded_assets?: Json | null
+          video_examples?: string | null
+          video_messaging?: string | null
+          video_primary_goal?: string | null
+          video_tone?: string | null
+          words_to_associate?: string | null
+          words_to_avoid?: string | null
+          work_approver?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_amazon_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: true
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_avatars: {
         Row: {
           avatars: Json | null
