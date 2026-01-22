@@ -29,6 +29,7 @@ const PLAN_PRICE_IDS: Record<string, string> = {
 // Pricing constants
 const PRICE_PER_SERVICE = 888;
 const PRICE_PREMIUM_SERVICE = 2450;
+const PRICE_AMAZON_DESIGN = 999;
 const PRICE_PER_CHANNEL = 888;
 const ALL_CHANNELS_PRICE = 3450;
 const TOTAL_CHANNELS = 7;
@@ -40,6 +41,13 @@ const PLAN_PRICES: Record<string, number> = {
   single: 888,
   triple: 2664,
   full: 3996,
+};
+
+// Service-specific pricing overrides
+const SERVICE_PRICES: Record<string, number> = {
+  "amazon-design": PRICE_AMAZON_DESIGN,
+  "social-media-suite": PRICE_PREMIUM_SERVICE,
+  "custom-lms": PRICE_PREMIUM_SERVICE,
 };
 
 const CheckoutSummary = () => {
@@ -76,14 +84,20 @@ const CheckoutSummary = () => {
       return;
     }
     
-    // Check if service is premium (not allowed for single plan)
-    if (plan === "single" && selectedService?.isPremium) {
+    // Check if service is premium (not allowed for single plan - but amazon-design and special services are ok)
+    if (plan === "single" && selectedService?.isPremium && !SERVICE_PRICES[serviceId || '']) {
       toast.error("Premium services require the Full Automation plan");
       navigate("/#pricing");
       return;
     }
     
-    // Load advertising channels from session (if any pre-selected)
+    // For non-advertising plans, don't load stored advertising channels
+    if (!isAdvertisingOnly) {
+      setSelectedAdChannels([]);
+      return;
+    }
+    
+    // Load advertising channels from session (only for advertising plan)
     const storedAdChannels = sessionStorage.getItem('selectedAdvertisingChannels');
     if (storedAdChannels) {
       try {
@@ -93,7 +107,7 @@ const CheckoutSummary = () => {
         console.error('Failed to parse advertising channels:', e);
       }
     }
-  }, [plan, serviceId, selectedService, navigate]);
+  }, [plan, serviceId, selectedService, navigate, isAdvertisingOnly]);
 
   const toggleChannel = (channelId: string) => {
     setSelectedAdChannels(prev => {
@@ -192,8 +206,16 @@ const CheckoutSummary = () => {
     : adChannelsBaseTotal;
   const adSavings = hasAdSavings ? adChannelsBaseTotal - adChannelsCost : 0;
 
-  // Calculate totals
-  const automationPrice = isAdvertisingOnly ? 0 : (PLAN_PRICES[plan] || PRICE_PER_SERVICE);
+  // Calculate totals - use service-specific price if available
+  const getServicePrice = () => {
+    if (isAdvertisingOnly) return 0;
+    if (plan === "single" && serviceId && SERVICE_PRICES[serviceId]) {
+      return SERVICE_PRICES[serviceId];
+    }
+    return PLAN_PRICES[plan] || PRICE_PER_SERVICE;
+  };
+  
+  const automationPrice = getServicePrice();
   const totalPrice = automationPrice + adChannelsCost;
 
   // Early return if invalid state
