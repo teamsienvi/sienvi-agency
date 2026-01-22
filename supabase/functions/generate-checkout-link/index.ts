@@ -7,18 +7,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Standard price IDs for plans (Test Mode)
+// ============================================
+// STRIPE PRICE IDS (Live - Created via API)
+// ============================================
+
+// Bundle plans
 const PLAN_PRICE_IDS: Record<string, string> = {
-  single: "price_1SpbnaDnw1azoLSpAmnnUwMX",
-  triple: "price_1Spbo0Dnw1azoLSpUgAdICKR",
-  full: "price_1SpboRDnw1azoLSpG07N2lA0",
+  single: "price_1SsCemDnw1azoLSpvfY7B30Y",
+  triple: "price_1SsCenDnw1azoLSp613lo4Ye",
+  full: "price_1SsCeoDnw1azoLSpO7KUsTYp",
 };
 
 // Individual service prices
 const SERVICE_PRICE_IDS: Record<string, string> = {
-  "amazon-design": "price_1Sq8qQDnw1azoLSpNJgw6Lzd",        // $999/mo
-  "social-media-suite": "price_1Sq8qrDnw1azoLSpFzRt8BWN",   // $2,450/mo
-  "custom-lms": "price_1Sq8r5Dnw1azoLSpQF19zfYf",           // $2,450/mo
+  "custom-website": "price_1SsCelDnw1azoLSpQEQ0YSAB",
+  "seo-aeo": "price_1SsCelDnw1azoLSpQEQ0YSAB",
+  "custom-ai-assistant": "price_1SsCelDnw1azoLSpQEQ0YSAB",
+  "amazon-design": "price_1SsCeiDnw1azoLSpWtUULskR",        // $999/mo
+  "social-media-suite": "price_1SsCelDnw1azoLSpROO7m3P1",   // $2,450/mo
+  "custom-lms": "price_1SsCemDnw1azoLSpSuyocfHZ",           // $2,450/mo
+};
+
+// Advertising pricing by channel count
+const ADVERTISING_PRICE_IDS: Record<number, string> = {
+  1: "price_1SsCeiDnw1azoLSpdKorTBU8",  // 1 channel = $888
+  2: "price_1SsCejDnw1azoLSpKGej9Ksg",  // 2 channels = $1,776
+  3: "price_1SsCejDnw1azoLSpheqeYG3a",  // 3 channels = $1,479 (bundle)
+  4: "price_1SsCejDnw1azoLSpWC515bsb",  // 4 channels = $1,971 (bundle)
+  5: "price_1SsCekDnw1azoLSpH2i8JsLM",  // 5 channels = $2,464 (bundle)
+  6: "price_1SsCekDnw1azoLSpKL6oHsDB",  // 6 channels = $2,957 (bundle)
+  7: "price_1SsCekDnw1azoLSpFwnEh8a2",  // 7 channels = $3,450 (all)
 };
 
 serve(async (req) => {
