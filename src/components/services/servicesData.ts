@@ -1,16 +1,31 @@
 
-import { ShoppingCartIcon, GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon } from "lucide-react";
+import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
-const ShoppingCartIcon2 = (props: any) => React.createElement(ShoppingCartIcon, props);
 const GlobeIcon2 = (props: any) => React.createElement(GlobeIcon, props);
 const PenToolIcon2 = (props: any) => React.createElement(PenToolIcon, props);
 const SearchIcon2 = (props: any) => React.createElement(SearchIcon, props);
 const BookOpenIcon2 = (props: any) => React.createElement(BookOpenIcon, props);
 const BotIcon2 = (props: any) => React.createElement(BotIcon, props);
+const MegaphoneIcon2 = (props: any) => React.createElement(MegaphoneIcon, props);
 
 export const services = [
+  // Row 1: Custom LMS, Social Media Suite, Advertising
+  {
+    id: "custom-lms",
+    icon: BookOpenIcon2,
+    title: "Custom LMS Package",
+    subtitle: "Tailored learning management system for your business",
+    features: [
+      "Custom course creation and content management",
+      "Student progress tracking and analytics",
+      "Interactive quizzes and assessments",
+      "Branded learning portal with user management",
+      "💡 Bundle with Custom AI Assistant or Social Media Suite — Inquire for details"
+    ],
+    price: "$2450"
+  },
   {
     id: "social-media-suite",
     icon: PenToolIcon2,
@@ -28,32 +43,21 @@ export const services = [
     price: "$2450"
   },
   {
-    id: "ecommerce-operations",
-    icon: ShoppingCartIcon2,
-    title: "E-Commerce Operations Automation",
-    subtitle: "For Multi-Channel Inventory & Process Optimization",
+    id: "advertising-package",
+    icon: MegaphoneIcon2,
+    title: "Advertising Management",
+    subtitle: "Multi-channel advertising across major platforms",
     features: [
-      "Automated inventory tracking across multiple platforms",
-      "AI-powered demand forecasting to prevent stockouts",
-      "Streamlined order fulfillment and shipping automation",
-      "AI-driven customer service chatbot integration",
-      "💡 Bundle with Custom Website or Custom AI Assistant — Inquire for details"
+      "Amazon, Google, Meta, TikTok, YouTube, Reddit, LinkedIn",
+      "Campaign strategy and planning",
+      "Ad creative development",
+      "Performance optimization",
+      "Detailed analytics and reporting",
+      "Budget management and allocation",
+      "💡 Select 3+ channels for bundle discount — $3,450/mo total"
     ],
-    price: "$888"
-  },
-  {
-    id: "custom-lms",
-    icon: BookOpenIcon2,
-    title: "Custom LMS Package",
-    subtitle: "Tailored learning management system for your business",
-    features: [
-      "Custom course creation and content management",
-      "Student progress tracking and analytics",
-      "Interactive quizzes and assessments",
-      "Branded learning portal with user management",
-      "💡 Bundle with Custom AI Assistant or Social Media Suite — Inquire for details"
-    ],
-    price: "$2450"
+    price: "$888/channel",
+    isAdvertising: true
   },
   // Row 2: Custom AI Assistant, Custom Website, SEO/AEO
   {
