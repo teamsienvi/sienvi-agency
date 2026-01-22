@@ -15,12 +15,20 @@ interface OnboardingCompleteEmailRequest {
 }
 
 const serviceLabels: Record<string, string> = {
-  "lead-gen": "Lead Generation",
-  "email-marketing": "Email Marketing",
-  "social-media": "Social Media",
-  "crm": "CRM Integration",
-  "analytics": "Analytics & Reporting",
-  "custom-workflows": "Custom Workflows",
+  "social-media-suite": "Social Media Suite",
+  "custom-website": "Custom Website Development",
+  "seo-aeo": "SEO/AEO Package",
+  "custom-lms": "Custom LMS Package",
+  "custom-ai-assistant": "Custom AI Assistant",
+  "amazon-design": "Amazon Design Package",
+  "advertising-package": "Advertising Package",
+  "channel-amazon": "Amazon Ads",
+  "channel-google": "Google Ads",
+  "channel-meta": "Meta Ads",
+  "channel-tiktok": "TikTok Ads",
+  "channel-youtube": "YouTube Ads",
+  "channel-reddit": "Reddit Ads",
+  "channel-linkedin": "LinkedIn Ads",
 };
 
 serve(async (req) => {
