@@ -152,9 +152,13 @@ const CheckoutSummary = () => {
       sessionStorage.setItem("pending_plan", plan);
       sessionStorage.setItem("pending_ad_channels", JSON.stringify(selectedAdChannels));
 
+      // For single service purchases with specific service, use dynamic pricing (no priceId)
+      // For bundle plans (triple, full), use the hardcoded priceId
+      const useDynamicPricing = plan === "single" && serviceId && SERVICE_PRICES[serviceId];
+      
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: { 
-          priceId: isAdvertisingOnly ? null : priceId,
+          priceId: useDynamicPricing ? null : priceId,
           selectedServices,
           advertisingChannels: selectedAdChannels,
           plan,
