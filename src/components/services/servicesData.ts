@@ -33,7 +33,7 @@ export const services = [
     subtitle: "Complete social media management and automation",
     features: [
       "Unlimited content creation",
-      "All major channels including Facebook, Instagram, LinkedIn, TikTok, YouTube, X",
+      "All major channels including Facebook, Instagram, LinkedIn, TikTok, YouTube",
       "AI-assisted content creation (text, images, video)",
       "Auto-scheduling and cross-posting to all major platforms",
       "Automated engagement and community management",
@@ -128,7 +128,7 @@ export const services = [
       "Competitor analysis and positioning",
       "💡 Perfect for Amazon sellers looking to stand out"
     ],
-    price: "$999",
+    price: "$999 one-time",
     isAmazon: true
   }
 ];
