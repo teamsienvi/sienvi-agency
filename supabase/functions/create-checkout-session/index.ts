@@ -165,34 +165,36 @@ serve(async (req) => {
     const singleServiceId = isSingleServicePurchase ? selectedServices[0] : null;
 
     if (isSingleServicePurchase && singleServiceId) {
-      const servicePriceId = SERVICE_PRICE_IDS[singleServiceId];
       const servicePrice = getServicePrice(singleServiceId);
+      const isOneTimePayment = singleServiceId === "amazon-design";
 
-      console.log(`Single service checkout: ${singleServiceId}, price: $${servicePrice}/mo`);
+      console.log(`Single service checkout: ${singleServiceId}, price: $${servicePrice}${isOneTimePayment ? ' (one-time)' : '/mo'}`);
 
       const customer = await stripe.customers.create({
         metadata: { source: "checkout_session", plan: "single", service: singleServiceId },
       });
 
-      let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+      // Create a price for this service
+      const priceConfig: any = {
+        unit_amount: servicePrice * 100,
+        currency: "usd",
+        product_data: { name: `${singleServiceId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Package` },
+      };
 
-      if (servicePriceId) {
-        console.log(`Using predefined service price ID: ${servicePriceId}`);
-        lineItems = [{ price: servicePriceId, quantity: 1 }];
-      } else {
-        // Fallback: create dynamic price
-        console.log(`Creating dynamic price for ${singleServiceId} at $${servicePrice}/mo`);
-        const dynamicPrice = await stripe.prices.create({
-          unit_amount: servicePrice * 100,
-          currency: "usd",
-          recurring: { interval: "month" },
-          product_data: { name: `${singleServiceId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Package` },
-        });
-        lineItems = [{ price: dynamicPrice.id, quantity: 1 }];
+      // Only add recurring for non-one-time payments
+      if (!isOneTimePayment) {
+        priceConfig.recurring = { interval: "month" };
       }
 
-      // Add advertising if selected
-      if (advertisingChannels && advertisingChannels.length > 0) {
+      console.log(`Creating ${isOneTimePayment ? 'one-time' : 'recurring'} price for ${singleServiceId} at $${servicePrice}`);
+      const dynamicPrice = await stripe.prices.create(priceConfig);
+      
+      let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        { price: dynamicPrice.id, quantity: 1 }
+      ];
+
+      // Add advertising if selected (only for subscription services)
+      if (!isOneTimePayment && advertisingChannels && advertisingChannels.length > 0) {
         const channelCount = Math.min(advertisingChannels.length, 7);
         const { total, savings } = calculateAdvertisingCost(channelCount);
         const adPriceId = ADVERTISING_PRICE_IDS[channelCount];
@@ -213,22 +215,23 @@ serve(async (req) => {
       }
 
       const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
+        mode: isOneTimePayment ? "payment" : "subscription",
         payment_method_types: ["card"],
         customer: customer.id,
         line_items: lineItems,
         metadata: {
           product: "sienvi_automation",
-          plan: "single",
+          plan: isOneTimePayment ? "amazon" : "single",
           service: singleServiceId,
           selected_services: JSON.stringify(selectedServices),
           advertising_channels: advertisingChannels ? JSON.stringify(advertisingChannels) : "",
+          is_one_time: isOneTimePayment ? "true" : "false",
         },
         success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/checkout-summary?plan=single&service=${singleServiceId}`,
       });
 
-      console.log(`Single service checkout session created: ${session.id}`);
+      console.log(`Single service checkout session created: ${session.id} (${isOneTimePayment ? 'one-time' : 'subscription'})`);
       return new Response(
         JSON.stringify({ url: session.url }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

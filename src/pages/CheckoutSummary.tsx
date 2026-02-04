@@ -434,12 +434,16 @@ const CheckoutSummary = () => {
                     
                     {/* Total for non-advertising */}
                     <div className="flex justify-between items-baseline pt-4 border-t border-border mb-6">
-                      <span className="font-semibold text-foreground">Monthly Total</span>
+                      <span className="font-semibold text-foreground">
+                        {serviceId === "amazon-design" ? "One-Time Total" : "Monthly Total"}
+                      </span>
                       <div className="text-right">
                         <span className="text-2xl font-bold text-foreground">
                           ${totalPrice.toLocaleString()}
                         </span>
-                        <span className="text-sm text-muted-foreground">/month</span>
+                        {serviceId !== "amazon-design" && (
+                          <span className="text-sm text-muted-foreground">/month</span>
+                        )}
                       </div>
                     </div>
                   </>
