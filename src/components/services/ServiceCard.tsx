@@ -13,6 +13,7 @@ interface ServiceCardProps {
   index: number;
   serviceId?: string;
   isAdvertising?: boolean;
+  isAmazon?: boolean;
 }
 
 const cardVariants = {
@@ -46,7 +47,8 @@ const ServiceCard = ({
   price,
   index,
   serviceId,
-  isAdvertising
+  isAdvertising,
+  isAmazon
 }: ServiceCardProps) => {
   const navigate = useNavigate();
   
@@ -107,7 +109,7 @@ const ServiceCard = ({
           className="text-primary font-bold text-xl"
           whileHover={{ scale: 1.05 }}
         >
-          {price}{!isAdvertising && '/month'}
+          {price}{!isAdvertising && !isAmazon && '/month'}
         </motion.div>
         <motion.div
           whileHover={{ scale: 1.02 }}
