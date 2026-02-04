@@ -35,6 +35,7 @@ const Services = () => {
               index={index}
               serviceId={service.id}
               isAdvertising={'isAdvertising' in service ? service.isAdvertising : false}
+              isAmazon={'isAmazon' in service ? service.isAmazon : false}
             />
           ))}
         </div>

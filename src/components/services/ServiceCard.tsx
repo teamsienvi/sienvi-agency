@@ -12,6 +12,7 @@ interface ServiceCardProps {
   index: number;
   serviceId?: string;
   isAdvertising?: boolean;
+  isAmazon?: boolean;
 }
 
 const cardVariants = {
@@ -46,6 +47,7 @@ const ServiceCard = ({
   index,
   serviceId,
   isAdvertising,
+  isAmazon,
 }: ServiceCardProps) => {
   const navigate = useNavigate();
 
@@ -100,8 +102,7 @@ const ServiceCard = ({
           </div>
         )}
         <motion.div className="text-primary font-bold text-xl" whileHover={{ scale: 1.05 }}>
-          {price}
-          {!isAdvertising}
+          {price}{!isAdvertising && !isAmazon && '/month'}
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleGetStarted}>
