@@ -59,8 +59,8 @@ export const PRICING = {
   TRIPLE_BUNDLE: 2664,
   FULL_SUITE: 3996,
   
-  // Special services
-  AMAZON_DESIGN: 999,
+  // Special services (one-time)
+  AMAZON_DESIGN: 999, // One-time fee, not recurring
   PREMIUM_SERVICE: 2450,
   
   // Advertising
