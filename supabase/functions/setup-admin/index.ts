@@ -28,11 +28,31 @@ Deno.serve(async (req) => {
     const existingAdmin = existingUsers?.users?.find(u => u.email === adminEmail);
 
     if (existingAdmin) {
-      console.log("Admin user already exists");
+      console.log("Admin user already exists, updating password...");
+      
+      // Update the password for existing user
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        existingAdmin.id,
+        { password: adminPassword }
+      );
+      
+      if (updateError) {
+        console.error("Error updating password:", updateError);
+        throw updateError;
+      }
+      
+      // Ensure admin role exists
+      await supabase
+        .from("user_roles")
+        .upsert({
+          user_id: existingAdmin.id,
+          role: "admin",
+        }, { onConflict: "user_id,role" });
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Admin user already exists",
+          message: "Admin password updated successfully",
           email: adminEmail 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
