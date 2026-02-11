@@ -491,6 +491,28 @@ async function sendPaymentConfirmationEmail(
                 <!-- Next Steps -->
                 <h3 style="margin: 36px 0 20px 0; font-size: 18px; font-weight: 700; color: #1f2937;">What's Next?</h3>
                 
+                \${plan === "advertising" ? \`
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
+                  <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                      <div style="width: 28px; height: 28px; background: #10b981; border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 14px;">✓</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #9ca3af; font-size: 15px; text-decoration: line-through;">Complete payment</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; vertical-align: top;">
+                      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 13px; font-weight: 600;">2</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #374151; font-size: 15px;">Our team will reach out to set up your ad accounts</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; vertical-align: top;">
+                      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; text-align: center; line-height: 28px; color: white; font-size: 13px; font-weight: 600;">3</div>
+                    </td>
+                    <td style="padding: 10px 0; color: #374151; font-size: 15px;">We launch your campaigns!</td>
+                  </tr>
+                </table>
+                \` : \`
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
                   <tr>
                     <td style="padding: 10px 0; vertical-align: top; width: 40px;">
@@ -517,6 +539,7 @@ async function sendPaymentConfirmationEmail(
                     <td style="padding: 10px 0; color: #374151; font-size: 15px;">We start building your automations!</td>
                   </tr>
                 </table>
+                \`}
                 
                 <!-- CTA Button -->
                 <table width="100%" cellpadding="0" cellspacing="0">
@@ -532,7 +555,9 @@ async function sendPaymentConfirmationEmail(
                 <!-- Tip -->
                 <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
                   <p style="margin: 0; font-size: 14px; color: #1e40af;">
-                    <strong>💡 Tip:</strong> Log in to your dashboard to sign your contract and complete onboarding so we can start building!
+                    \${plan === "advertising" 
+                      ? "<strong>💡 Tip:</strong> Your advertising account is all set! Our team will be in touch shortly to begin setting up your campaigns."
+                      : "<strong>💡 Tip:</strong> Log in to your dashboard to sign your contract and complete onboarding so we can start building!"}
                   </p>
                 </div>
               </div>
@@ -674,6 +699,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.log("Created new subscription:", subscriptionId);
   }
   
+  // Advertising plans skip contract and onboarding entirely
+  const isAdvertisingPlan = plan === "advertising";
+  
   // Sync to client_profiles (source of truth for the admin dashboard)
   await updateClientProfile(
     customerEmail,
@@ -689,8 +717,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       max_services: maxServicesForProfile,
       custom_price: customPrice,
       notes: notes,
-      contract_status: "not_signed",
-      onboarding_status: selectedServices.length > 0 ? "in_progress" : "not_started",
+      contract_status: isAdvertisingPlan ? "signed" : "not_signed",
+      onboarding_status: isAdvertisingPlan ? "completed" : (selectedServices.length > 0 ? "in_progress" : "not_started"),
     }
   );
 

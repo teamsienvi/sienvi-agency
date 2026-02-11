@@ -114,13 +114,15 @@ const ClientDashboard = () => {
       setIsAdmin(response.data.isAdmin);
 
       // Route users based on their status - enforce step completion
+      // Advertising clients skip contract and onboarding
+      const isAdvertising = clientProfile.plan === "advertising";
+      
       if (clientProfile.subscriptionStatus === "pending_payment") {
         // User needs to complete payment - stay on dashboard to show payment CTA
-        // They can see their status but can't proceed without payment
-      } else if (clientProfile.subscriptionStatus === "active" && clientProfile.contractStatus === "not_signed") {
+      } else if (!isAdvertising && clientProfile.subscriptionStatus === "active" && clientProfile.contractStatus === "not_signed") {
         // User paid but hasn't signed contract - they can stay here or go to contract
-      } else if (clientProfile.contractStatus === "signed" && clientProfile.onboardingStatus !== "completed") {
-        // User signed contract but hasn't completed onboarding - they can stay or go to onboarding
+      } else if (!isAdvertising && clientProfile.contractStatus === "signed" && clientProfile.onboardingStatus !== "completed") {
+        // User signed contract but hasn't completed onboarding
       }
       // If all complete, just show the dashboard
     } catch (error: any) {
@@ -159,17 +161,18 @@ const ClientDashboard = () => {
 
   const getStatusBadge = () => {
     if (!profile) return null;
+    const isAdvertising = profile.plan === "advertising";
     
     if (profile.subscriptionStatus === "pending_payment") {
       return <Badge className="bg-orange-500">Awaiting Payment</Badge>;
     }
-    if (profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
+    if (!isAdvertising && profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
       return <Badge className="bg-blue-500">Awaiting Contract</Badge>;
     }
-    if (profile.contractStatus === "signed" && profile.onboardingStatus !== "completed") {
+    if (!isAdvertising && profile.contractStatus === "signed" && profile.onboardingStatus !== "completed") {
       return <Badge className="bg-purple-500">Onboarding In Progress</Badge>;
     }
-    if (profile.onboardingStatus === "completed") {
+    if (isAdvertising || profile.onboardingStatus === "completed") {
       return <Badge className="bg-green-500">Active</Badge>;
     }
     return <Badge variant="outline">Unknown</Badge>;
@@ -177,6 +180,13 @@ const ClientDashboard = () => {
 
   const getProgress = () => {
     if (!profile) return 0;
+    const isAdvertising = profile.plan === "advertising";
+    if (isAdvertising) {
+      // Advertising: only 2 steps (account + payment)
+      let completed = 1;
+      if (profile.subscriptionStatus === "active") completed++;
+      return (completed / 2) * 100;
+    }
     let completed = 1;
     if (profile.subscriptionStatus === "active") completed++;
     if (profile.contractStatus === "signed") completed++;
@@ -186,6 +196,7 @@ const ClientDashboard = () => {
 
   const getPrimaryCTA = () => {
     if (!profile) return null;
+    const isAdvertising = profile.plan === "advertising";
     
     if (profile.subscriptionStatus === "pending_payment") {
       return (
@@ -200,6 +211,9 @@ const ClientDashboard = () => {
         </div>
       );
     }
+    
+    // Advertising clients don't need contract or onboarding
+    if (isAdvertising) return null;
     
     if (profile.contractStatus === "not_signed") {
       return (
@@ -364,41 +378,45 @@ const ClientDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Step 3: Contract */}
-                  <div className="flex items-center gap-3">
-                    {profile.contractStatus === "signed" ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Contract Signed</p>
-                      <p className="text-xs text-muted-foreground">
-                        {profile.contractStatus === "signed" && profile.contractSignedAt
-                          ? `Signed ${new Date(profile.contractSignedAt).toLocaleDateString()}`
-                          : "Pending signature"}
-                      </p>
+                  {/* Step 3: Contract - hidden for advertising */}
+                  {profile.plan !== "advertising" && (
+                    <div className="flex items-center gap-3">
+                      {profile.contractStatus === "signed" ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Contract Signed</p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.contractStatus === "signed" && profile.contractSignedAt
+                            ? `Signed ${new Date(profile.contractSignedAt).toLocaleDateString()}`
+                            : "Pending signature"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Step 4: Onboarding */}
-                  <div className="flex items-center gap-3">
-                    {profile.onboardingStatus === "completed" ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Onboarding Completed</p>
-                      <p className="text-xs text-muted-foreground">
-                        {profile.onboardingStatus === "completed"
-                          ? "All set!"
-                          : profile.onboardingStatus === "in_progress"
-                          ? "In progress..."
-                          : "Not started"}
-                      </p>
+                  {/* Step 4: Onboarding - hidden for advertising */}
+                  {profile.plan !== "advertising" && (
+                    <div className="flex items-center gap-3">
+                      {profile.onboardingStatus === "completed" ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Onboarding Completed</p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.onboardingStatus === "completed"
+                            ? "All set!"
+                            : profile.onboardingStatus === "in_progress"
+                            ? "In progress..."
+                            : "Not started"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -464,7 +482,8 @@ const ClientDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Contract Status Card */}
+            {/* Contract Status Card - hidden for advertising */}
+            {profile.plan !== "advertising" && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -494,6 +513,7 @@ const ClientDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Account Info Card */}
             <Card>
