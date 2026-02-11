@@ -32,18 +32,18 @@ const planLabels: Record<string, string> = {
 
 // Map price IDs to plan names
 const PRICE_TO_PLAN: Record<string, string> = {
-  "price_1SpD4wKEtylNfLjGh9kGQO3z": "single",
-  "price_1SpD4wKEtylNfLjGfBzytYeS": "triple",
-  "price_1SpD4wKEtylNfLjGGsGBcNq1": "full",
-  // New price IDs
-  "price_1SsCeiDnw1azoLSpWtUULskR": "amazon",
-  "price_1SsCeiDnw1azoLSpdKorTBU8": "advertising",
-  "price_1SsCejDnw1azoLSpKGej9Ksg": "advertising",
-  "price_1SsCejDnw1azoLSpheqeYG3a": "advertising",
-  "price_1SsCejDnw1azoLSpWC515bsb": "advertising",
-  "price_1SsCekDnw1azoLSpH2i8JsLM": "advertising",
-  "price_1SsCekDnw1azoLSpKL6oHsDB": "advertising",
-  "price_1SsCekDnw1azoLSpFwnEh8a2": "advertising",
+  // Live price IDs
+  "price_1SzlcmDnw1azoLSpefO3ANVU": "single",
+  "price_1SzlcmDnw1azoLSpfA06Dtiu": "triple",
+  "price_1SzlcnDnw1azoLSpQA6jwghB": "full",
+  "price_1SzlchDnw1azoLSpQUJfYRrN": "amazon",
+  "price_1SzlciDnw1azoLSpMrBXt4xU": "advertising",
+  "price_1SzlciDnw1azoLSptoIxpDxu": "advertising",
+  "price_1SzlciDnw1azoLSpLxadTvOl": "advertising",
+  "price_1SzlciDnw1azoLSpFXm6SG8H": "advertising",
+  "price_1SzlcjDnw1azoLSpn6OEzyq6": "advertising",
+  "price_1SzlcjDnw1azoLSpa3SQYqLL": "advertising",
+  "price_1SzlcjDnw1azoLSp4rdCJZwY": "advertising",
 };
 
 // Service labels for display

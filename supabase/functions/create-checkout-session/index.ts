@@ -12,30 +12,30 @@ const corsHeaders = {
 
 // Bundle plans
 const BUNDLE_PRICE_IDS: Record<string, string> = {
-  single: "price_1SsCemDnw1azoLSpvfY7B30Y",
-  triple: "price_1SsCenDnw1azoLSp613lo4Ye",
-  full: "price_1SsCeoDnw1azoLSpO7KUsTYp",
+  single: "price_1SzlcmDnw1azoLSpefO3ANVU",
+  triple: "price_1SzlcmDnw1azoLSpfA06Dtiu",
+  full: "price_1SzlcnDnw1azoLSpQA6jwghB",
 };
 
 // Individual service prices
 const SERVICE_PRICE_IDS: Record<string, string> = {
-  "custom-website": "price_1SsCelDnw1azoLSpQEQ0YSAB",
-  "seo-aeo": "price_1SsCelDnw1azoLSpQEQ0YSAB",
-  "custom-ai-assistant": "price_1SsCelDnw1azoLSpQEQ0YSAB",
-  "amazon-design": "price_1SsCeiDnw1azoLSpWtUULskR",        // $999/mo
-  "social-media-suite": "price_1SsCelDnw1azoLSpROO7m3P1",   // $2,450/mo
-  "custom-lms": "price_1SsCemDnw1azoLSpSuyocfHZ",           // $2,450/mo
+  "custom-website": "price_1SzlckDnw1azoLSpYce1Va8F",
+  "seo-aeo": "price_1SzlckDnw1azoLSpYce1Va8F",
+  "custom-ai-assistant": "price_1SzlckDnw1azoLSpYce1Va8F",
+  "amazon-design": "price_1SzlchDnw1azoLSpQUJfYRrN",
+  "social-media-suite": "price_1SzlclDnw1azoLSp67eBDxr5",
+  "custom-lms": "price_1SzlclDnw1azoLSpmMcgCKKN",
 };
 
 // Advertising pricing by channel count
 const ADVERTISING_PRICE_IDS: Record<number, string> = {
-  1: "price_1SsCeiDnw1azoLSpdKorTBU8",  // 1 channel = $888
-  2: "price_1SsCejDnw1azoLSpKGej9Ksg",  // 2 channels = $1,776
-  3: "price_1SsCejDnw1azoLSpheqeYG3a",  // 3 channels = $1,479 (bundle)
-  4: "price_1SsCejDnw1azoLSpWC515bsb",  // 4 channels = $1,971 (bundle)
-  5: "price_1SsCekDnw1azoLSpH2i8JsLM",  // 5 channels = $2,464 (bundle)
-  6: "price_1SsCekDnw1azoLSpKL6oHsDB",  // 6 channels = $2,957 (bundle)
-  7: "price_1SsCekDnw1azoLSpFwnEh8a2",  // 7 channels = $3,450 (all)
+  1: "price_1SzlciDnw1azoLSpMrBXt4xU",  // 1 channel = $888
+  2: "price_1SzlciDnw1azoLSptoIxpDxu",  // 2 channels = $1,776
+  3: "price_1SzlciDnw1azoLSpLxadTvOl",  // 3 channels = $1,479 (bundle)
+  4: "price_1SzlciDnw1azoLSpFXm6SG8H",  // 4 channels = $1,971 (bundle)
+  5: "price_1SzlcjDnw1azoLSpn6OEzyq6",  // 5 channels = $2,464 (bundle)
+  6: "price_1SzlcjDnw1azoLSpa3SQYqLL",  // 6 channels = $2,957 (bundle)
+  7: "price_1SzlcjDnw1azoLSp4rdCJZwY",  // 7 channels = $3,450 (all)
 };
 
 // Pricing constants for dynamic price creation (fallback)
