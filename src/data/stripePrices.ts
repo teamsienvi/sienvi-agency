@@ -5,9 +5,9 @@
 // AUTOMATION BUNDLE PLANS
 // ============================================
 export const BUNDLE_PRICE_IDS = {
-  single: "price_1SsCemDnw1azoLSpvfY7B30Y",   // $888/mo - Single automation service
-  triple: "price_1SsCenDnw1azoLSp613lo4Ye",   // $2,664/mo - Triple bundle
-  full: "price_1SsCeoDnw1azoLSpO7KUsTYp",     // $3,996/mo - Full automation suite
+  single: "price_1SzlcmDnw1azoLSpefO3ANVU",   // $888/mo - Single automation service
+  triple: "price_1SzlcmDnw1azoLSpfA06Dtiu",   // $2,664/mo - Triple bundle
+  full: "price_1SzlcnDnw1azoLSpQA6jwghB",     // $3,996/mo - Full automation suite
 } as const;
 
 // ============================================
@@ -15,38 +15,34 @@ export const BUNDLE_PRICE_IDS = {
 // ============================================
 export const SERVICE_PRICE_IDS = {
   // Standard services ($888/mo)
-  "custom-website": "price_1SsCelDnw1azoLSpQEQ0YSAB",
-  "seo-aeo": "price_1SsCelDnw1azoLSpQEQ0YSAB",
-  "custom-ai-assistant": "price_1SsCelDnw1azoLSpQEQ0YSAB",
+  "custom-website": "price_1SzlckDnw1azoLSpYce1Va8F",
+  "seo-aeo": "price_1SzlckDnw1azoLSpYce1Va8F",
+  "custom-ai-assistant": "price_1SzlckDnw1azoLSpYce1Va8F",
   
   // Amazon Design Package ($999/mo)
-  "amazon-design": "price_1SsCeiDnw1azoLSpWtUULskR",
+  "amazon-design": "price_1SzlchDnw1azoLSpQUJfYRrN",
   
   // Premium services ($2,450/mo)
-  "social-media-suite": "price_1SsCelDnw1azoLSpROO7m3P1",
-  "custom-lms": "price_1SsCemDnw1azoLSpSuyocfHZ",
+  "social-media-suite": "price_1SzlclDnw1azoLSp67eBDxr5",
+  "custom-lms": "price_1SzlclDnw1azoLSpmMcgCKKN",
 } as const;
 
 // ============================================
 // ADVERTISING CHANNEL PRICES
 // ============================================
-// Individual channel: $888/mo each
-// Bundle (3+ channels): ~$493/mo each (pro-rated from $3,450 for all 7)
-// All 7 channels: $3,450/mo
-
 export const ADVERTISING_PRICE_IDS = {
   // Individual channels ($888/mo each)
   channels: {
-    1: "price_1SsCeiDnw1azoLSpdKorTBU8",  // 1 channel = $888
-    2: "price_1SsCejDnw1azoLSpKGej9Ksg",  // 2 channels = $1,776
+    1: "price_1SzlciDnw1azoLSpMrBXt4xU",  // 1 channel = $888
+    2: "price_1SzlciDnw1azoLSptoIxpDxu",  // 2 channels = $1,776
   },
   // Bundle pricing (3+ channels)
   bundles: {
-    3: "price_1SsCejDnw1azoLSpheqeYG3a",  // 3 channels = $1,479
-    4: "price_1SsCejDnw1azoLSpWC515bsb",  // 4 channels = $1,971
-    5: "price_1SsCekDnw1azoLSpH2i8JsLM",  // 5 channels = $2,464
-    6: "price_1SsCekDnw1azoLSpKL6oHsDB",  // 6 channels = $2,957
-    7: "price_1SsCekDnw1azoLSpFwnEh8a2",  // 7 channels = $3,450
+    3: "price_1SzlciDnw1azoLSpLxadTvOl",  // 3 channels = $1,479
+    4: "price_1SzlciDnw1azoLSpFXm6SG8H",  // 4 channels = $1,971
+    5: "price_1SzlcjDnw1azoLSpn6OEzyq6",  // 5 channels = $2,464
+    6: "price_1SzlcjDnw1azoLSpa3SQYqLL",  // 6 channels = $2,957
+    7: "price_1SzlcjDnw1azoLSp4rdCJZwY",  // 7 channels = $3,450
   },
 } as const;
 
