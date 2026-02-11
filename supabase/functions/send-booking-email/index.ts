@@ -27,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send notification email to team (internal, simple format is fine)
     const emailResponse = await resend.emails.send({
       from: "Sienvi Website <noreply@sienvi.com>",
-      to: ["teamsienvi@gmail.com"],
+      to: ["teamsienvi@gmail.com", "sienvifba@gmail.com"],
       subject: `Strategy Call Request from ${name}`,
       html: `
 <!DOCTYPE html>
