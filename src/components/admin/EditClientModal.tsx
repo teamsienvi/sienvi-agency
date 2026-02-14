@@ -38,6 +38,7 @@ const advertisingChannels = [
   { id: "channel-youtube", label: "YouTube Ads" },
   { id: "channel-pinterest", label: "Pinterest Ads" },
   { id: "channel-x", label: "X (Twitter) Ads" },
+  { id: "channel-amazon", label: "Amazon Ads" },
 ];
 
 const planConfigs: Record<string, { amount: number; maxServices: number }> = {
