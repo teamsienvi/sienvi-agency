@@ -22,20 +22,31 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-const services = [
-  { id: "social-media-suite", label: "Social Media Suite" },
-  { id: "ecommerce-operations", label: "E-Commerce Operations" },
-  { id: "custom-website", label: "Custom Website Development" },
-  { id: "seo-aeo", label: "SEO/AEO Package" },
-  { id: "custom-lms", label: "Custom LMS Package" },
-  { id: "custom-gpt", label: "Custom GPT Product" },
+const automationServices = [
+  { id: "social-media-suite", label: "Social Media Suite", price: 2450 },
+  { id: "custom-website", label: "Custom Website Development", price: 888 },
+  { id: "seo-aeo", label: "SEO/AEO Package", price: 888 },
+  { id: "custom-lms", label: "Custom LMS Package", price: 2450 },
+  { id: "custom-ai-assistant", label: "Custom AI Assistant", price: 888 },
 ];
 
-const planLimits: Record<string, number> = {
-  single: 1,
-  triple: 3,
-  full: 6,
-  custom: 6,
+const advertisingChannels = [
+  { id: "channel-google", label: "Google Ads" },
+  { id: "channel-meta", label: "Meta (Facebook/Instagram)" },
+  { id: "channel-tiktok", label: "TikTok Ads" },
+  { id: "channel-linkedin", label: "LinkedIn Ads" },
+  { id: "channel-youtube", label: "YouTube Ads" },
+  { id: "channel-pinterest", label: "Pinterest Ads" },
+  { id: "channel-x", label: "X (Twitter) Ads" },
+];
+
+const planConfigs: Record<string, { amount: number; maxServices: number }> = {
+  single: { amount: 888, maxServices: 1 },
+  triple: { amount: 2664, maxServices: 3 },
+  full: { amount: 3996, maxServices: 6 },
+  amazon: { amount: 999, maxServices: 1 },
+  advertising: { amount: 888, maxServices: 7 },
+  custom: { amount: 0, maxServices: 6 },
 };
 
 interface Client {
@@ -73,7 +84,7 @@ export const EditClientModal = ({
   const [formData, setFormData] = useState({
     clientName: "",
     email: "",
-    plan: "single" as "single" | "triple" | "full" | "custom",
+    plan: "single" as string,
     monthlyAmount: 888,
     maxServices: 1,
     selectedServices: [] as string[],
@@ -84,12 +95,17 @@ export const EditClientModal = ({
 
   useEffect(() => {
     if (client) {
+      // Detect plan type from services if not explicitly set
+      let detectedPlan = client.plan || "single";
+      if (client.selectedServices?.includes("amazon-design")) detectedPlan = "amazon";
+      if (client.selectedServices?.some(s => s.startsWith("channel-"))) detectedPlan = "advertising";
+
       setFormData({
         clientName: client.clientName || "",
         email: client.email || "",
-        plan: (client.plan as typeof formData.plan) || "single",
-        monthlyAmount: client.customPrice || 888,
-        maxServices: client.maxServices || 1,
+        plan: detectedPlan,
+        monthlyAmount: client.customPrice || planConfigs[detectedPlan]?.amount || 888,
+        maxServices: client.maxServices || planConfigs[detectedPlan]?.maxServices || 1,
         selectedServices: client.selectedServices || [],
         subscriptionStatus: client.subscriptionStatus || "pending_payment",
         isActive: client.isActive,
@@ -99,20 +115,14 @@ export const EditClientModal = ({
   }, [client]);
 
   const handlePlanChange = (plan: string) => {
-    const limits: Record<string, { amount: number; services: number }> = {
-      single: { amount: 888, services: 1 },
-      triple: { amount: 2398.20, services: 3 },
-      full: { amount: 3996, services: 6 },
-      custom: { amount: formData.monthlyAmount, services: formData.maxServices },
-    };
-
-    const planConfig = limits[plan] || limits.single;
+    const config = planConfigs[plan] || planConfigs.single;
     setFormData((prev) => ({
       ...prev,
-      plan: plan as typeof prev.plan,
-      monthlyAmount: plan === "custom" ? prev.monthlyAmount : planConfig.amount,
-      maxServices: plan === "custom" ? prev.maxServices : planConfig.services,
-      selectedServices: prev.selectedServices.slice(0, planConfig.services),
+      plan,
+      monthlyAmount: plan === "custom" ? prev.monthlyAmount : config.amount,
+      maxServices: plan === "custom" ? prev.maxServices : config.maxServices,
+      // Reset services when switching plan types
+      selectedServices: plan === "amazon" ? ["amazon-design"] : [],
     }));
   };
 
@@ -120,61 +130,53 @@ export const EditClientModal = ({
     setFormData((prev) => {
       const isSelected = prev.selectedServices.includes(serviceId);
       if (isSelected) {
-        return {
-          ...prev,
-          selectedServices: prev.selectedServices.filter((s) => s !== serviceId),
-        };
-      } else {
-        const maxAllowed = prev.plan === "custom" ? prev.maxServices : planLimits[prev.plan];
-        if (prev.selectedServices.length >= maxAllowed) {
-          toast.error(`Maximum ${maxAllowed} services allowed for this plan`);
-          return prev;
-        }
-        return {
-          ...prev,
-          selectedServices: [...prev.selectedServices, serviceId],
-        };
+        return { ...prev, selectedServices: prev.selectedServices.filter((s) => s !== serviceId) };
       }
+      const maxAllowed = prev.maxServices;
+      const currentCount = prev.plan === "advertising"
+        ? prev.selectedServices.filter(s => s.startsWith("channel-")).length
+        : prev.selectedServices.length;
+      if (currentCount >= maxAllowed) {
+        toast.error(`Maximum ${maxAllowed} selections allowed for this plan`);
+        return prev;
+      }
+      return { ...prev, selectedServices: [...prev.selectedServices, serviceId] };
     });
+  };
+
+  const getAdvertisingPrice = (channelCount: number) => {
+    if (channelCount <= 0) return 0;
+    if (channelCount < 3) return channelCount * 888;
+    return Math.min(channelCount * 493, 3450);
+  };
+
+  const getDisplayPrice = () => {
+    if (formData.plan === "custom") return formData.monthlyAmount;
+    if (formData.plan === "advertising") {
+      const channels = formData.selectedServices.filter(s => s.startsWith("channel-")).length;
+      return getAdvertisingPrice(channels);
+    }
+    if (formData.plan === "amazon") return 999;
+    return planConfigs[formData.plan]?.amount || 0;
   };
 
   const handleSubmit = async () => {
     if (!client) return;
-    
-    if (!formData.clientName.trim()) {
-      toast.error("Client name is required");
-      return;
-    }
-    if (!formData.email.trim()) {
-      toast.error("Email is required");
-      return;
-    }
+    if (!formData.clientName.trim()) { toast.error("Client name is required"); return; }
+    if (!formData.email.trim()) { toast.error("Email is required"); return; }
 
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Not authenticated");
-        return;
-      }
+      if (!session) { toast.error("Not authenticated"); return; }
 
       const response = await supabase.functions.invoke("update-client", {
-        body: {
-          clientId: client.id,
-          ...formData,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        body: { clientId: client.id, ...formData },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
 
       toast.success("Client updated successfully");
       onClientUpdated();
@@ -187,7 +189,11 @@ export const EditClientModal = ({
     }
   };
 
-  const maxAllowed = formData.plan === "custom" ? formData.maxServices : planLimits[formData.plan];
+  const isAutomationPlan = ["single", "triple", "full"].includes(formData.plan);
+  const isAdvertisingPlan = formData.plan === "advertising";
+  const isAmazonPlan = formData.plan === "amazon";
+  const isCustomPlan = formData.plan === "custom";
+  const selectedChannelCount = formData.selectedServices.filter(s => s.startsWith("channel-")).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -223,15 +229,17 @@ export const EditClientModal = ({
           {/* Plan Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Plan Type *</Label>
+              <Label>Package Type *</Label>
               <Select value={formData.plan} onValueChange={handlePlanChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="single">Single Service ($888/mo)</SelectItem>
-                  <SelectItem value="triple">Triple Automation ($2,398.20/mo)</SelectItem>
-                  <SelectItem value="full">Full Automation ($3,996/mo)</SelectItem>
+                  <SelectItem value="triple">Triple Bundle ($2,664/mo)</SelectItem>
+                  <SelectItem value="full">Full Suite ($3,996/mo)</SelectItem>
+                  <SelectItem value="amazon">Amazon Design ($999 one-time)</SelectItem>
+                  <SelectItem value="advertising">Advertising Package</SelectItem>
                   <SelectItem value="custom">Custom Plan</SelectItem>
                 </SelectContent>
               </Select>
@@ -273,7 +281,7 @@ export const EditClientModal = ({
           </div>
 
           {/* Custom Plan Options */}
-          {formData.plan === "custom" && (
+          {isCustomPlan && (
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div className="space-y-2">
                 <Label htmlFor="edit-monthlyAmount">Monthly Amount ($) *</Label>
@@ -307,30 +315,83 @@ export const EditClientModal = ({
             </div>
           )}
 
-          {/* Service Selection */}
-          <div className="space-y-3">
-            <Label>
-              Selected Services ({formData.selectedServices.length}/{maxAllowed})
-            </Label>
-            <div className="grid grid-cols-2 gap-3">
-              {services.map((service) => (
-                <div
-                  key={service.id}
-                  className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    formData.selectedServices.includes(service.id)
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                  onClick={() => handleServiceToggle(service.id)}
-                >
-                  <Checkbox
-                    checked={formData.selectedServices.includes(service.id)}
-                    onCheckedChange={() => handleServiceToggle(service.id)}
-                  />
-                  <span className="text-sm font-medium">{service.label}</span>
-                </div>
-              ))}
+          {/* Amazon Design Info */}
+          {isAmazonPlan && (
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="text-sm font-medium">Amazon Design Package</p>
+              <p className="text-sm text-muted-foreground">$999 one-time fee — Professional listing design and optimization</p>
             </div>
+          )}
+
+          {/* Advertising Channel Selection */}
+          {isAdvertisingPlan && (
+            <div className="space-y-3">
+              <Label>
+                Advertising Channels ({selectedChannelCount}/7)
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  Est. ${getAdvertisingPrice(selectedChannelCount).toLocaleString()}/mo
+                  {selectedChannelCount >= 3 && " (bundle pricing)"}
+                </span>
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {advertisingChannels.map((channel) => (
+                  <div
+                    key={channel.id}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      formData.selectedServices.includes(channel.id)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => handleServiceToggle(channel.id)}
+                  >
+                    <Checkbox
+                      checked={formData.selectedServices.includes(channel.id)}
+                      onCheckedChange={() => handleServiceToggle(channel.id)}
+                    />
+                    <span className="text-sm font-medium">{channel.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Automation Service Selection */}
+          {(isAutomationPlan || isCustomPlan) && (
+            <div className="space-y-3">
+              <Label>
+                Selected Services ({formData.selectedServices.length}/{formData.maxServices})
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {automationServices.map((service) => (
+                  <div
+                    key={service.id}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      formData.selectedServices.includes(service.id)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => handleServiceToggle(service.id)}
+                  >
+                    <Checkbox
+                      checked={formData.selectedServices.includes(service.id)}
+                      onCheckedChange={() => handleServiceToggle(service.id)}
+                    />
+                    <div>
+                      <span className="text-sm font-medium">{service.label}</span>
+                      <span className="text-xs text-muted-foreground ml-1">(${service.price}/mo)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Price Summary */}
+          <div className="p-4 bg-muted rounded-lg flex items-center justify-between">
+            <span className="font-medium">Estimated Price</span>
+            <span className="text-lg font-bold">
+              ${getDisplayPrice().toLocaleString()}{isAmazonPlan ? " (one-time)" : "/mo"}
+            </span>
           </div>
 
           {/* Notes */}

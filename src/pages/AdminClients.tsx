@@ -532,8 +532,10 @@ const AdminClients = () => {
               <SelectContent>
                 <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="single">Single Service</SelectItem>
-                <SelectItem value="triple">Triple Automation</SelectItem>
-                <SelectItem value="full">Full Automation</SelectItem>
+                <SelectItem value="triple">Triple Bundle</SelectItem>
+                <SelectItem value="full">Full Suite</SelectItem>
+                <SelectItem value="amazon">Amazon Design</SelectItem>
+                <SelectItem value="advertising">Advertising</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
             </Select>

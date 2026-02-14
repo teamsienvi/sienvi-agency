@@ -50,124 +50,53 @@ serve(async (req) => {
       monthlyAmount,
       maxServices,
       selectedServices,
-      paymentMethod,
       subscriptionStatus,
       isActive,
       notes,
-      // Billing fields
-      billingCycle,
-      billingDay,
-      nextBillingDate,
-      lastBilledDate,
-      billingReminderEnabled,
     } = body;
 
     if (!clientId) {
       throw new Error("Client ID is required");
     }
 
-    // Prepare update data
+    // Parse client name into first/last
+    const nameParts = (clientName || "").trim().split(/\s+/);
+    const firstName = nameParts[0] || null;
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
+
+    // Build update for client_profiles (source of truth)
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
-    // Build metadata object
-    const metadataUpdates: Record<string, unknown> = {};
+    if (firstName !== undefined) updateData.first_name = firstName;
+    if (lastName !== undefined) updateData.last_name = lastName;
+    if (email !== undefined) updateData.email = email;
+    if (plan !== undefined) updateData.plan = plan;
+    if (selectedServices !== undefined) updateData.selected_services = selectedServices;
+    if (subscriptionStatus !== undefined) updateData.subscription_status = subscriptionStatus;
+    if (notes !== undefined) updateData.notes = notes;
+    if (maxServices !== undefined) updateData.max_services = maxServices;
 
-    if (clientName !== undefined) {
-      metadataUpdates.client_name = clientName;
-    }
-
-    if (email !== undefined) {
-      updateData.email = email;
-    }
-
-    if (plan !== undefined) {
-      updateData.plan = plan;
+    if (isActive !== undefined) {
+      updateData.account_status = isActive ? "active" : "inactive";
     }
 
     if (plan === "custom" && monthlyAmount !== undefined) {
-      metadataUpdates.custom_price = monthlyAmount;
+      updateData.custom_price = monthlyAmount;
     }
 
-    if (maxServices !== undefined) {
-      metadataUpdates.max_services = maxServices;
-    }
-
-    if (selectedServices !== undefined) {
-      updateData.selected_services = selectedServices;
-    }
-
-    if (paymentMethod !== undefined) {
-      updateData.payment_method = paymentMethod;
-      // If switching to stripe, mark as not manual
-      if (paymentMethod === "stripe") {
-        updateData.is_manual = false;
-      } else {
-        updateData.is_manual = true;
-      }
-    }
-
-    if (subscriptionStatus !== undefined) {
-      updateData.subscription_status = subscriptionStatus;
-    }
-
-    if (isActive !== undefined) {
-      updateData.is_active = isActive;
-    }
-
-    if (notes !== undefined) {
-      metadataUpdates.notes = notes;
-    }
-
-    // Billing fields - only allow editing for manual clients
-    if (billingCycle !== undefined) {
-      updateData.billing_cycle = billingCycle;
-    }
-
-    if (billingDay !== undefined) {
-      updateData.billing_day = billingDay;
-    }
-
-    if (nextBillingDate !== undefined) {
-      updateData.next_billing_date = nextBillingDate;
-    }
-
-    if (lastBilledDate !== undefined) {
-      updateData.last_billed_date = lastBilledDate;
-    }
-
-    if (billingReminderEnabled !== undefined) {
-      updateData.billing_reminder_enabled = billingReminderEnabled;
-    }
-
-    // Fetch current metadata to merge
-    const { data: currentClient, error: fetchError } = await supabase
-      .from("subscriptions")
-      .select("metadata")
-      .eq("id", clientId)
-      .single();
-
-    if (fetchError) {
-      throw new Error(`Client not found: ${fetchError.message}`);
-    }
-
-    // Merge metadata
-    const currentMetadata = (currentClient?.metadata as Record<string, unknown>) || {};
-    updateData.metadata = {
-      ...currentMetadata,
-      ...metadataUpdates,
-    };
-
-    // Update the client
+    // Update client_profiles
     const { error: updateError } = await supabase
-      .from("subscriptions")
+      .from("client_profiles")
       .update(updateData)
       .eq("id", clientId);
 
     if (updateError) {
       throw new Error(`Failed to update client: ${updateError.message}`);
     }
+
+    console.log(`Client ${clientId} updated successfully:`, { plan, selectedServices, subscriptionStatus });
 
     return new Response(
       JSON.stringify({ success: true }),
