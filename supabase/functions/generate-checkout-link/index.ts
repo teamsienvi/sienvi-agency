@@ -126,8 +126,22 @@ serve(async (req) => {
 
     let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
-    if (plan === "custom" && customPrice) {
-      // Create a one-time price for custom plans
+    if (plan === "advertising") {
+      // Advertising plan: price based on number of selected channels
+      const channelCount = selectedServices ? selectedServices.filter((s: string) => s.startsWith("channel-")).length : 1;
+      const adPriceId = ADVERTISING_PRICE_IDS[Math.min(Math.max(channelCount, 1), 7)];
+      if (!adPriceId) {
+        return new Response(
+          JSON.stringify({ error: "Invalid advertising channel count" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      lineItems = [{ price: adPriceId, quantity: 1 }];
+    } else if (plan === "amazon") {
+      // Amazon Design Package
+      const amazonPriceId = SERVICE_PRICE_IDS["amazon-design"];
+      lineItems = [{ price: amazonPriceId, quantity: 1 }];
+    } else if (plan === "custom" && customPrice) {
       const price = await stripe.prices.create({
         unit_amount: Math.round(customPrice * 100),
         currency: "usd",
