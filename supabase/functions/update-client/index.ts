@@ -53,6 +53,8 @@ serve(async (req) => {
       subscriptionStatus,
       isActive,
       notes,
+      stripeCustomerId,
+      stripeSubscriptionId,
     } = body;
 
     if (!clientId) {
@@ -85,6 +87,9 @@ serve(async (req) => {
     if (plan === "custom" && monthlyAmount !== undefined) {
       updateData.custom_price = monthlyAmount;
     }
+
+    if (stripeCustomerId !== undefined) updateData.stripe_customer_id = stripeCustomerId;
+    if (stripeSubscriptionId !== undefined) updateData.stripe_subscription_id = stripeSubscriptionId;
 
     // Update client_profiles
     const { error: updateError } = await supabase
