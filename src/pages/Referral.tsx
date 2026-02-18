@@ -99,7 +99,7 @@ const Referral = () => {
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-white/30 text-white hover:bg-white/10 px-8"
+                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white px-8"
               >
                 <a href="#how-it-works">Learn How It Works</a>
               </Button>
