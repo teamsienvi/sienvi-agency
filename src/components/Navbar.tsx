@@ -76,6 +76,7 @@ const Navbar = () => {
               <a href="#contact" className="text-sm font-medium hover:text-plc-purple transition-colors">Contact</a>
             </>
           )}
+          <a href="/referral" className="text-sm font-medium hover:text-plc-purple transition-colors">Referral</a>
           
           {isLoggedIn ? (
             <Button 
@@ -161,6 +162,13 @@ const Navbar = () => {
                 </a>
               </>
             )}
+            <a 
+              href="/referral" 
+              className="text-sm font-medium hover:text-plc-purple transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Referral
+            </a>
             
             {isLoggedIn ? (
               <Button 
