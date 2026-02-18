@@ -17,6 +17,7 @@ import ClientDashboard from "./pages/ClientDashboard";
 import ClientLogin from "./pages/ClientLogin";
 import Onboarding from "./pages/Onboarding";
 import Contract from "./pages/Contract";
+import Referral from "./pages/Referral";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/login" element={<ClientLogin />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/contract" element={<Contract />} />
+            <Route path="/referral" element={<Referral />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/clients" element={<AdminClients />} />
