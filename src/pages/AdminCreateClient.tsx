@@ -478,6 +478,8 @@ const AdminCreateClient = () => {
                         <SelectItem value="single">Single Service ($888/mo)</SelectItem>
                         <SelectItem value="triple">Triple Automation ($2,398.20/mo)</SelectItem>
                         <SelectItem value="full">Full Automation ($3,996/mo)</SelectItem>
+                        <SelectItem value="amazon">Amazon Design ($999 one-time)</SelectItem>
+                        <SelectItem value="advertising">Advertising Package</SelectItem>
                         <SelectItem value="custom">Custom Plan</SelectItem>
                       </SelectContent>
                     </Select>
