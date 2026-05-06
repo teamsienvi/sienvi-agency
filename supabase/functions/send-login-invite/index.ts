@@ -98,8 +98,9 @@ serve(async (req) => {
     let emailIntro = "Use the button below to securely access your Sienvi dashboard.";
     let tipText = "";
 
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingAuthUser = authUsers?.users?.find(u => u.email?.toLowerCase() === clientEmail.toLowerCase());
+    // Check if user already exists in auth without fetching all users
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === clientEmail.toLowerCase());
     const isNewUser = !existingAuthUser;
 
     if (isNewUser) {
@@ -121,8 +122,9 @@ serve(async (req) => {
       tipText = "Complete your onboarding to help us get started on your automations.";
     }
 
+    // Use 'invite' for brand new users (creates auth account), 'magiclink' for existing
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
+      type: isNewUser ? "invite" : "magiclink",
       email: clientEmail,
       options: {
         redirectTo: `${baseUrl}${redirectPath}`,
@@ -218,7 +220,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: "Login invite sent successfully",
-        emailId: emailResponse.id,
+        emailId: (emailResponse as any).data?.id || (emailResponse as any).id || null,
         redirectPath,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
