@@ -27,11 +27,13 @@ const services = [
   { id: "custom-gpt", label: "Custom GPT Product" },
 ];
 
-const planLimits: Record<string, number> = {
-  single: 1,
-  triple: 3,
-  full: 6,
-  custom: 6,
+const planConfigs: Record<string, { amount: number; maxServices: number }> = {
+  single: { amount: 888, maxServices: 1 },
+  triple: { amount: 2398.20, maxServices: 3 },
+  full: { amount: 3996, maxServices: 6 },
+  amazon: { amount: 999, maxServices: 1 },
+  advertising: { amount: 888, maxServices: 7 },
+  custom: { amount: 0, maxServices: 6 },
 };
 
 const AdminCreateClient = () => {
@@ -49,7 +51,7 @@ const AdminCreateClient = () => {
     firstName: "",
     lastName: "",
     clientType: "new" as "new" | "existing",
-    plan: "single" as "single" | "triple" | "full" | "custom",
+    plan: "single" as "single" | "triple" | "full" | "amazon" | "advertising" | "custom",
     customPrice: 888,
     maxServices: 1,
     selectedServices: [] as string[],
@@ -60,20 +62,13 @@ const AdminCreateClient = () => {
   });
 
   const handlePlanChange = (plan: string) => {
-    const limits: Record<string, { amount: number; services: number }> = {
-      single: { amount: 888, services: 1 },
-      triple: { amount: 2398.20, services: 3 },
-      full: { amount: 3996, services: 6 },
-      custom: { amount: formData.customPrice, services: formData.maxServices },
-    };
-
-    const planConfig = limits[plan] || limits.single;
+    const planConfig = planConfigs[plan] || planConfigs.single;
     setFormData((prev) => ({
       ...prev,
       plan: plan as typeof prev.plan,
-      customPrice: planConfig.amount,
-      maxServices: planConfig.services,
-      selectedServices: prev.selectedServices.slice(0, planConfig.services),
+      customPrice: plan === "custom" ? prev.customPrice : planConfig.amount,
+      maxServices: plan === "custom" ? prev.maxServices : planConfig.maxServices,
+      selectedServices: prev.selectedServices.slice(0, plan === "custom" ? prev.maxServices : planConfig.maxServices),
     }));
   };
 
@@ -86,7 +81,7 @@ const AdminCreateClient = () => {
           selectedServices: prev.selectedServices.filter((s) => s !== serviceId),
         };
       } else {
-        const maxAllowed = prev.plan === "custom" ? prev.maxServices : planLimits[prev.plan];
+        const maxAllowed = prev.plan === "custom" ? prev.maxServices : planConfigs[prev.plan].maxServices;
         if (prev.selectedServices.length >= maxAllowed) {
           toast.error(`Maximum ${maxAllowed} services allowed for this plan`);
           return prev;
@@ -241,7 +236,7 @@ const AdminCreateClient = () => {
     }
   };
 
-  const maxAllowed = formData.plan === "custom" ? formData.maxServices : planLimits[formData.plan];
+  const maxAllowed = formData.plan === "custom" ? formData.maxServices : planConfigs[formData.plan].maxServices;
 
   // Show success state after client creation
   if (createdClient) {
@@ -583,32 +578,43 @@ const AdminCreateClient = () => {
                   Services ({formData.selectedServices.length}/{maxAllowed})
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {services.map((service) => (
-                    <div
-                      key={service.id}
-                      className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        formData.selectedServices.includes(service.id)
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                      onClick={() => handleServiceToggle(service.id)}
-                    >
-                      <Checkbox
-                        checked={formData.selectedServices.includes(service.id)}
-                        onCheckedChange={() => handleServiceToggle(service.id)}
-                      />
-                      <span className="text-sm font-medium">{service.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Admin Notes</h3>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  {formData.plan === "advertising" ? (
+                    advertisingChannels.map((channel) => (
+                      <div
+                        key={channel.id}
+                        className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          formData.selectedServices.includes(channel.id)
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        onClick={() => handleServiceToggle(channel.id)}
+                      >
+                        <Checkbox
+                          checked={formData.selectedServices.includes(channel.id)}
+                          onCheckedChange={() => handleServiceToggle(channel.id)}
+                        />
+                        <span className="text-sm font-medium">{channel.label}</span>
+                      </div>
+                    ))
+                  ) : (
+                    automationServices.map((service) => (
+                      <div
+                        key={service.id}
+                        className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          formData.selectedServices.includes(service.id)
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        onClick={() => handleServiceToggle(service.id)}
+                      >
+                        <Checkbox
+                          checked={formData.selectedServices.includes(service.id)}
+                          onCheckedChange={() => handleServiceToggle(service.id)}
+                        />
+                        <span className="text-sm font-medium">{service.label}</span>
+                      </div>
+                    ))
+                  )}}
                   placeholder="Any internal notes about this client..."
                   rows={3}
                 />
