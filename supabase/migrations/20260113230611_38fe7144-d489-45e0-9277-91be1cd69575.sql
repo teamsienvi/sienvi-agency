@@ -1,1 +1,0 @@
-DELETE FROM subscriptions WHERE id IN ('0899d463-cfdb-4767-9077-b6b16ca54db5', '9fe51d44-667b-4a18-907c-6ac372d09702');
