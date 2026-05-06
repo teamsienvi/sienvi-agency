@@ -162,26 +162,33 @@ serve(async (req) => {
       lineItems = [{ price: priceId, quantity: 1 }];
     }
 
-    // Create checkout session with customer ID (required for Stripe Accounts V2)
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+    // Amazon Design is a one-time payment; everything else is a subscription
+    const isOneTime = plan === "amazon";
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: isOneTime ? "payment" : "subscription",
       customer: customerId,
       line_items: lineItems,
-      success_url: `${req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app"}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app"}/`,
+      success_url: `${req.headers.get("origin") || "https://sienvi.com"}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.get("origin") || "https://sienvi.com"}/`,
       metadata: {
         client_id: clientId,
         plan: plan,
         selected_services: selectedServices ? JSON.stringify(selectedServices) : "[]",
         admin_generated: "true",
       },
-      subscription_data: {
+    };
+
+    // Only add subscription_data for recurring plans
+    if (!isOneTime) {
+      sessionParams.subscription_data = {
         metadata: {
           client_id: clientId,
           plan: plan,
         },
-      },
-    });
+      };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     console.log("Checkout link generated for client:", clientId, "URL:", session.url);
 
