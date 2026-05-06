@@ -18,13 +18,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, UserPlus, Link, Mail, Copy, Check } from "lucide-react";
 
-const services = [
+const automationServices = [
   { id: "social-media-suite", label: "Social Media Suite" },
   { id: "ecommerce-operations", label: "E-Commerce Operations" },
   { id: "custom-website", label: "Custom Website Development" },
   { id: "seo-aeo", label: "SEO/AEO Package" },
   { id: "custom-lms", label: "Custom LMS Package" },
   { id: "custom-gpt", label: "Custom GPT Product" },
+];
+
+const advertisingChannels = [
+  { id: "channel-google", label: "Google Ads" },
+  { id: "channel-meta", label: "Meta (Facebook/Instagram)" },
+  { id: "channel-tiktok", label: "TikTok Ads" },
+  { id: "channel-linkedin", label: "LinkedIn Ads" },
+  { id: "channel-youtube", label: "YouTube Ads" },
+  { id: "channel-pinterest", label: "Pinterest Ads" },
+  { id: "channel-x", label: "X (Twitter) Ads" },
+  { id: "channel-amazon", label: "Amazon Ads" },
 ];
 
 const planConfigs: Record<string, { amount: number; maxServices: number }> = {
@@ -614,7 +625,16 @@ const AdminCreateClient = () => {
                         <span className="text-sm font-medium">{service.label}</span>
                       </div>
                     ))
-                  )}}
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Admin Notes</h3>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
                   placeholder="Any internal notes about this client..."
                   rows={3}
                 />

@@ -23,13 +23,24 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ClientCreatedActions } from "./ClientCreatedActions";
 
-const services = [
+const automationServices = [
   { id: "social-media-suite", label: "Social Media Suite" },
   { id: "ecommerce-operations", label: "E-Commerce Operations" },
   { id: "custom-website", label: "Custom Website Development" },
   { id: "seo-aeo", label: "SEO/AEO Package" },
   { id: "custom-lms", label: "Custom LMS Package" },
   { id: "custom-gpt", label: "Custom GPT Product" },
+];
+
+const advertisingChannels = [
+  { id: "channel-google", label: "Google Ads" },
+  { id: "channel-meta", label: "Meta (Facebook/Instagram)" },
+  { id: "channel-tiktok", label: "TikTok Ads" },
+  { id: "channel-linkedin", label: "LinkedIn Ads" },
+  { id: "channel-youtube", label: "YouTube Ads" },
+  { id: "channel-pinterest", label: "Pinterest Ads" },
+  { id: "channel-x", label: "X (Twitter) Ads" },
+  { id: "channel-amazon", label: "Amazon Ads" },
 ];
 
 const planConfigs: Record<string, { amount: number; maxServices: number }> = {
@@ -419,7 +430,17 @@ export const AddManualClientModal = ({
                         <span className="text-sm font-medium">{service.label}</span>
                       </div>
                     ))
-                  )}}
+                  )}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Internal Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
               placeholder="Any additional notes about this client..."
               rows={3}
             />
