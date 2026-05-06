@@ -1,33 +1,33 @@
-project_id = "ikazuqhukvtdorscoads"
+project_id = "jdodjbzypuiyhgrzuyzp"
 
-[functions.setup-stripe-prices]
+# ============================================
+# CHECKOUT & STRIPE
+# ============================================
+[functions.create-checkout-session]
 verify_jwt = false
 
 [functions.create-custom-checkout-session]
 verify_jwt = false
 
-[functions.get-analytics]
+[functions.create-customer-portal-session]
 verify_jwt = false
 
-[functions.setup-admin]
-verify_jwt = false
-
-[functions.send-booking-email]
+[functions.generate-checkout-link]
 verify_jwt = false
 
 [functions.get-checkout-session]
 verify_jwt = false
 
-[functions.create-checkout-session]
-verify_jwt = false
-
 [functions.stripe-webhook]
 verify_jwt = false
 
-[functions.create-customer-portal-session]
+[functions.setup-stripe-prices]
 verify_jwt = false
 
-[functions.get-admin-clients]
+# ============================================
+# ADMIN - CLIENT MANAGEMENT
+# ============================================
+[functions.create-client]
 verify_jwt = false
 
 [functions.update-client]
@@ -36,20 +36,44 @@ verify_jwt = false
 [functions.delete-client]
 verify_jwt = false
 
-[functions.create-client]
-verify_jwt = false
-
-[functions.generate-checkout-link]
-verify_jwt = false
-
-[functions.get-client-profile]
+[functions.get-admin-clients]
 verify_jwt = false
 
 [functions.update-client-status]
 verify_jwt = false
 
-[functions.send-login-invite]
+[functions.get-client-profile]
+verify_jwt = false
+
+[functions.setup-admin]
+verify_jwt = false
+
+# ============================================
+# EMAIL FUNCTIONS
+# ============================================
+[functions.send-booking-email]
 verify_jwt = false
 
 [functions.send-checkout-email]
+verify_jwt = false
+
+[functions.send-login-invite]
+verify_jwt = false
+
+[functions.send-contract-signed-email]
+verify_jwt = false
+
+[functions.send-onboarding-complete-email]
+verify_jwt = false
+
+[functions.send-admin-notification]
+verify_jwt = false
+
+[functions.send-payment-confirmation]
+verify_jwt = false
+
+# ============================================
+# ANALYTICS & MISC
+# ============================================
+[functions.get-analytics]
 verify_jwt = false

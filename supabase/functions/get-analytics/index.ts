@@ -72,17 +72,19 @@ Deno.serve(async (req) => {
     });
     const avgDuration = durationCount > 0 ? Math.round(totalDuration / durationCount) : 0;
 
-    // Calculate bounce rate
-    const bounceSessions = sessions?.filter(s => s.is_bounce === true).length || 0;
+    // Calculate bounce rate — treat NULL as bounced (historical sessions never got updated)
+    const bounceSessions = sessions?.filter(s => s.is_bounce !== false).length || 0;
     const bounceRate = totalSessions > 0 ? (bounceSessions / totalSessions) * 100 : 0;
 
     // Calculate pages per visit
     const pagesPerVisit = totalSessions > 0 ? totalPageViews / totalSessions : 0;
 
-    // Get top pages
+    // Get top pages — filter out internal/admin routes
+    const internalPaths = ["/admin", "/login", "/dashboard", "/onboarding", "/contract", "/success"];
     const pageCounts: Record<string, number> = {};
     pageViews?.forEach(pv => {
       const path = pv.path || '/';
+      if (internalPaths.some(p => path.startsWith(p))) return;
       pageCounts[path] = (pageCounts[path] || 0) + 1;
     });
     const topPages = Object.entries(pageCounts)

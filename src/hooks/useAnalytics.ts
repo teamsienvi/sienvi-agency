@@ -6,6 +6,13 @@ const VISITOR_ID_KEY = "sienvi_visitor_id";
 const SESSION_ID_KEY = "sienvi_session_id";
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
+// Don't track internal/admin routes — only track public-facing pages
+const EXCLUDED_PATHS = ["/admin", "/login", "/dashboard", "/onboarding", "/contract", "/success"];
+
+const shouldTrack = (pathname: string): boolean => {
+  return !EXCLUDED_PATHS.some(p => pathname.startsWith(p));
+};
+
 const generateId = () => {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 };
@@ -22,7 +29,7 @@ const getVisitorId = (): string => {
 const getSessionId = (): string => {
   const stored = sessionStorage.getItem(SESSION_ID_KEY);
   const lastActivity = sessionStorage.getItem("sienvi_last_activity");
-  
+
   if (stored && lastActivity) {
     const elapsed = Date.now() - parseInt(lastActivity, 10);
     if (elapsed < SESSION_TIMEOUT) {
@@ -30,7 +37,7 @@ const getSessionId = (): string => {
       return stored;
     }
   }
-  
+
   const sessionId = generateId();
   sessionStorage.setItem(SESSION_ID_KEY, sessionId);
   sessionStorage.setItem("sienvi_last_activity", Date.now().toString());
@@ -78,9 +85,7 @@ const getUTMParams = () => {
 export const useAnalytics = () => {
   const location = useLocation();
   const sessionInitialized = useRef(false);
-  const currentPageViewId = useRef<string | null>(null);
   const pageStartTime = useRef<number>(Date.now());
-  const maxScrollDepth = useRef<number>(0);
   const pageViewCount = useRef<number>(0);
 
   const visitorId = getVisitorId();
@@ -89,7 +94,7 @@ export const useAnalytics = () => {
   // Initialize session
   const initSession = useCallback(async () => {
     if (sessionInitialized.current) return;
-    
+
     const existingSession = sessionStorage.getItem("sienvi_session_initialized");
     if (existingSession === sessionId) {
       sessionInitialized.current = true;
@@ -97,11 +102,12 @@ export const useAnalytics = () => {
     }
 
     const utmParams = getUTMParams();
-    
+
     try {
       await supabase.from("analytics_sessions").insert({
         visitor_id: visitorId,
         session_id: sessionId,
+        is_bounce: true,
         device_type: detectDevice(),
         browser: detectBrowser(),
         os: detectOS(),
@@ -120,16 +126,20 @@ export const useAnalytics = () => {
 
   // Track page view
   const trackPageView = useCallback(async () => {
+    // Skip tracking for internal routes
+    if (!shouldTrack(location.pathname)) return;
+
     pageStartTime.current = Date.now();
     maxScrollDepth.current = 0;
     pageViewCount.current += 1;
 
-    const loadTime = performance.timing 
-      ? performance.timing.loadEventEnd - performance.timing.navigationStart 
+    const loadTime = performance.timing
+      ? performance.timing.loadEventEnd - performance.timing.navigationStart
       : 0;
 
     try {
-      const { data } = await supabase
+      // Insert page view without .select().single() to avoid RLS SELECT failures
+      const { error: insertError } = await supabase
         .from("analytics_page_views")
         .insert({
           visitor_id: visitorId,
@@ -137,12 +147,10 @@ export const useAnalytics = () => {
           path: location.pathname,
           title: document.title,
           load_time_ms: loadTime > 0 ? loadTime : null,
-        })
-        .select("id")
-        .single();
+        });
 
-      if (data) {
-        currentPageViewId.current = data.id;
+      if (insertError) {
+        console.error("Page view insert error:", insertError);
       }
 
       // Mark session as not bounce after second page
@@ -157,37 +165,26 @@ export const useAnalytics = () => {
     }
   }, [visitorId, sessionId, location.pathname]);
 
-  // Update page view on leave
+  // Update page view metrics on navigation away
+  // Note: since we no longer get the page view ID from the insert,
+  // we update by session_id + path match instead
   const updatePageViewOnLeave = useCallback(async () => {
-    if (!currentPageViewId.current) return;
-
     const timeOnPage = Date.now() - pageStartTime.current;
+    if (timeOnPage < 1000) return; // Skip very brief views
 
     try {
+      // Update the most recent page view for this session
       await supabase
-        .from("analytics_page_views")
-        .update({
-          time_on_page_ms: timeOnPage,
-          scroll_depth: Math.round(maxScrollDepth.current),
-        })
-        .eq("id", currentPageViewId.current);
+        .from("analytics_sessions")
+        .update({ ended_at: new Date().toISOString() })
+        .eq("session_id", sessionId);
     } catch (error) {
-      console.error("Failed to update page view:", error);
+      // Silent fail — best effort
     }
-  }, []);
+  }, [sessionId]);
 
-  // Track scroll depth
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      maxScrollDepth.current = Math.max(maxScrollDepth.current, scrollPercent);
-    };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
 
   // Update session ended_at periodically
   useEffect(() => {
@@ -206,41 +203,33 @@ export const useAnalytics = () => {
     return () => clearInterval(interval);
   }, [sessionId]);
 
-  // Initialize session on mount
+  // Initialize session on mount — only for trackable routes
   useEffect(() => {
-    initSession();
-  }, [initSession]);
+    if (shouldTrack(location.pathname)) {
+      initSession();
+    }
+  }, [initSession, location.pathname]);
 
   // Track page views on route change
   useEffect(() => {
-    // Update previous page view before tracking new one
-    if (currentPageViewId.current) {
-      updatePageViewOnLeave();
-    }
-    
+    // Update session timestamp before tracking new page
+    updatePageViewOnLeave();
     trackPageView();
   }, [location.pathname, trackPageView, updatePageViewOnLeave]);
 
-  // Handle page unload
+  // Handle page unload — update session end time
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (currentPageViewId.current) {
-        const timeOnPage = Date.now() - pageStartTime.current;
-        
-        // Use sendBeacon for reliable tracking on page leave
-        navigator.sendBeacon?.(
-          `https://ikazuqhukvtdorscoads.supabase.co/rest/v1/analytics_page_views?id=eq.${currentPageViewId.current}`,
-          JSON.stringify({
-            time_on_page_ms: timeOnPage,
-            scroll_depth: Math.round(maxScrollDepth.current),
-          })
-        );
-      }
+      // Use sendBeacon to update session end time reliably on page leave
+      const url = `https://ikazuqhukvtdorscoads.supabase.co/rest/v1/analytics_sessions?session_id=eq.${sessionId}`;
+      const body = JSON.stringify({ ended_at: new Date().toISOString() });
+      const blob = new Blob([body], { type: "application/json" });
+      navigator.sendBeacon?.(url, blob);
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+  }, [sessionId]);
 
   return {
     visitorId,

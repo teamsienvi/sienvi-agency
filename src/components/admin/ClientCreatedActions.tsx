@@ -12,6 +12,8 @@ interface CreatedClient {
   lastName?: string | null;
   plan: string;
   subscriptionStatus: string;
+  customPrice?: number | null;
+  maxServices?: number | null;
 }
 
 interface ClientCreatedActionsProps {
@@ -70,6 +72,8 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
           clientId: client.id,
           clientEmail: client.email,
           plan: client.plan,
+          customPrice: client.customPrice,
+          selectedServices: [],
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,

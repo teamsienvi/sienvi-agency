@@ -155,6 +155,8 @@ export const AddManualClientModal = ({
         lastName: formData.lastName || null,
         plan: formData.plan,
         subscriptionStatus: formData.subscriptionStatus,
+        customPrice: formData.plan === "custom" ? formData.customPrice : null,
+        maxServices: formData.plan === "custom" ? formData.maxServices : null,
       });
       
       onClientAdded();
