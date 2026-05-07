@@ -353,8 +353,32 @@ async function sendOnboardingCompleteClientEmail(email: string, name: string | n
   }
 }
 
+// Format a section of onboarding form data into an HTML table
+function formatSection(title: string, data: Record<string, any> | null | undefined): string {
+  if (!data) return '';
+  const skip = new Set(['id', 'client_profile_id', 'created_at', 'updated_at', 'completed_at']);
+  const rows = Object.entries(data)
+    .filter(([key, val]) => !skip.has(key) && val !== null && val !== undefined && val !== '' && val !== false)
+    .map(([key, val]) => {
+      const label = key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      let value = '';
+      if (Array.isArray(val)) {
+        value = val.length > 0 ? val.join(', ') : 'None';
+      } else if (val === true) {
+        value = 'Yes';
+      } else if (typeof val === 'object') {
+        try { value = `<pre style="margin:0;font-size:11px;white-space:pre-wrap">${JSON.stringify(val, null, 2)}</pre>`; } catch { value = String(val); }
+      } else {
+        value = String(val).replace(/\n/g, '<br>');
+      }
+      return `<tr><td style="padding:8px 12px;font-size:13px;color:#6b7280;width:38%;border-bottom:1px solid #f1f5f9;vertical-align:top">${label}</td><td style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #f1f5f9;vertical-align:top">${value}</td></tr>`;
+    });
+  if (rows.length === 0) return '';
+  return `<div style="margin-bottom:24px"><h3 style="margin:0 0 10px 0;font-size:14px;font-weight:700;color:#ffffff;background:#667eea;padding:10px 14px;border-radius:6px 6px 0 0">${title}</h3><table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 6px 6px;overflow:hidden">${rows.join('')}</table></div>`;
+}
+
 // Send onboarding complete admin notification
-async function sendOnboardingCompleteAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, selectedServices: string[]) {
+async function sendOnboardingCompleteAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, selectedServices: string[], onboardingData?: { goals?: any; avatars?: any; questionnaire?: any; advertising?: any; amazon?: any }) {
   try {
     const displayName = clientName || clientEmail.split("@")[0];
     const planLabel = plan ? (planLabels[plan] || plan) : "N/A";
@@ -435,10 +459,20 @@ async function sendOnboardingCompleteAdminEmail(clientEmail: string, clientName:
                   ✅ This client is ready for service delivery. All questionnaires have been completed.
                 </p>
               </div>
+
+              ${onboardingData ? `
+              <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #1f2937;">📋 Onboarding Responses</h3>
+              ${formatSection('Goal Sheet', onboardingData.goals)}
+              ${formatSection('Avatar Profile', onboardingData.avatars)}
+              ${formatSection('General Questionnaire', onboardingData.questionnaire)}
+              ${formatSection('Advertising Questionnaire', onboardingData.advertising)}
+              ${formatSection('Amazon Questionnaire', onboardingData.amazon)}
+              ` : ''}
+
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 24px 0;">
-                    <a href="https://sienvi-agency-landing-page.lovable.app/admin/clients" style="display: inline-block; background: #8b5cf6; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Onboarding Responses</a>
+                    <a href="https://sienvi.com/admin/clients" style="display: inline-block; background: #8b5cf6; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">View in Admin Panel</a>
                   </td>
                 </tr>
               </table>
@@ -613,10 +647,25 @@ serve(async (req) => {
     }
 
     if (action === "complete_onboarding" && profile.email) {
+      // Fetch all onboarding form responses to include in admin email
+      const [goalsRes, avatarsRes, questionnaireRes, advertisingRes, amazonRes] = await Promise.all([
+        supabaseAdmin.from("onboarding_goals").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabaseAdmin.from("onboarding_avatars").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabaseAdmin.from("onboarding_questionnaire").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabaseAdmin.from("onboarding_advertising").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+        supabaseAdmin.from("onboarding_amazon").select("*").eq("client_profile_id", profile.id).maybeSingle(),
+      ]);
+      const onboardingData = {
+        goals: goalsRes.data,
+        avatars: avatarsRes.data,
+        questionnaire: questionnaireRes.data,
+        advertising: advertisingRes.data,
+        amazon: amazonRes.data,
+      };
       // Send both client and admin emails for onboarding completion
       await Promise.all([
         sendOnboardingCompleteClientEmail(profile.email, clientName, profile.selected_services || []),
-        sendOnboardingCompleteAdminEmail(profile.email, clientName, profile.plan, profile.selected_services || []),
+        sendOnboardingCompleteAdminEmail(profile.email, clientName, profile.plan, profile.selected_services || [], onboardingData),
       ]);
     }
 
