@@ -211,7 +211,7 @@ async function sendAdminNotification(
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 24px 0;">
-                    <a href="https://sienvi-agency-landing-page.lovable.app/admin/clients" style="display: inline-block; background: ${config.color}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">View in Admin Dashboard</a>
+                    <a href="https://sienvi.com/admin/clients" style="display: inline-block; background: ${config.color}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">View in Admin Dashboard</a>
                   </td>
                 </tr>
               </table>
@@ -393,7 +393,7 @@ async function sendPaymentConfirmationEmail(
     }
     
     const formattedAmount = amountTotal ? `$${(amountTotal / 100).toLocaleString()}` : "N/A";
-    const loginUrl = "https://sienvi-agency-landing-page.lovable.app/login";
+    const loginUrl = "https://sienvi.com/login";
 
     // Build channels list for advertising
     const channelsHtml = selectedServices && selectedServices.length > 0

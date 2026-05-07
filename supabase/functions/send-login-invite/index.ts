@@ -90,7 +90,7 @@ serve(async (req) => {
       }
     }
 
-    const baseUrl = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
+    const baseUrl = req.headers.get("origin") || "https://sienvi.com";
     let redirectPath = "/dashboard";
     let actionMessage = "Access Dashboard";
     let emailSubject = "Your Login Link";
