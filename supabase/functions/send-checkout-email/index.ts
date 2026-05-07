@@ -89,7 +89,7 @@ serve(async (req) => {
     const planPrice = price || planPrices[plan] || 0;
 
     const emailResponse = await resend.emails.send({
-      from: "Sienvi <noreply@sienvi.com>",
+      from: "Sienvi <info@sienvi.com>",
       to: [clientEmail],
       subject: "Complete Your Subscription",
       html: `

@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 // Admin emails to notify
-const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com"];
+const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com", "info@sienvi.com"];
 
 // Event types that trigger admin notifications
 type NotificationEvent = 
@@ -256,7 +256,7 @@ serve(async (req) => {
     // Send to all admin emails
     const emailPromises = ADMIN_EMAILS.map(adminEmail => 
       resend.emails.send({
-        from: "Sienvi Admin <noreply@sienvi.com>",
+        from: "Sienvi Admin <info@sienvi.com>",
         to: [adminEmail],
         subject: `${config.subject} - ${displayName}`,
         html: emailHtml,

@@ -140,7 +140,7 @@ serve(async (req) => {
     const displayName = clientName || clientEmail.split("@")[0];
 
     const emailResponse = await resend.emails.send({
-      from: "Sienvi <noreply@sienvi.com>",
+      from: "Sienvi <info@sienvi.com>",
       to: [clientEmail],
       subject: emailSubject,
       html: `
@@ -214,13 +214,22 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Login invite sent to:", clientEmail, "Response:", emailResponse, "Redirect:", redirectPath);
+    // Resend v2 returns { data, error } — check for failure
+    const resendError = (emailResponse as any).error;
+    if (resendError) {
+      console.error("Resend rejected the email:", JSON.stringify(resendError));
+      throw new Error(`Email delivery failed: ${resendError.message || JSON.stringify(resendError)}`);
+    }
+
+    const emailId = (emailResponse as any).data?.id || (emailResponse as any).id || null;
+
+    console.log("Login invite sent to:", clientEmail, "emailId:", emailId, "Redirect:", redirectPath);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Login invite sent successfully",
-        emailId: (emailResponse as any).data?.id || (emailResponse as any).id || null,
+        emailId,
         redirectPath,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

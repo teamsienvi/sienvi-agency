@@ -92,7 +92,7 @@ serve(async (req) => {
     console.log("Sending payment confirmation to:", customerEmail, "Plan:", planLabel, "Amount:", formattedAmount);
 
     const emailResponse = await resend.emails.send({
-      from: "Sienvi <noreply@sienvi.com>",
+      from: "Sienvi <info@sienvi.com>",
       to: [customerEmail],
       subject: "Payment Confirmed",
       html: `

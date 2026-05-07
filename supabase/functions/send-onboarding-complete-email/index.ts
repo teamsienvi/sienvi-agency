@@ -61,7 +61,7 @@ serve(async (req) => {
     console.log("Sending onboarding complete email to:", customerEmail);
 
     const emailResponse = await resend.emails.send({
-      from: "Sienvi <noreply@sienvi.com>",
+      from: "Sienvi <info@sienvi.com>",
       to: [customerEmail],
       subject: "Onboarding Complete",
       html: `

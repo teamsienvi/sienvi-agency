@@ -18,7 +18,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
 // Admin emails to notify
-const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com"];
+const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com", "info@sienvi.com"];
 
 // Plan labels for emails
 const planLabels: Record<string, string> = {
@@ -235,7 +235,7 @@ async function sendAdminNotification(
 
     const emailPromises = ADMIN_EMAILS.map(adminEmail => 
       resend.emails.send({
-        from: "Sienvi Admin <noreply@sienvi.com>",
+        from: "Sienvi Admin <info@sienvi.com>",
         to: [adminEmail],
         subject: `${config.subject} - ${displayName}`,
         html: emailHtml,
@@ -406,7 +406,7 @@ async function sendPaymentConfirmationEmail(
     console.log("Sending payment confirmation email to:", customerEmail, "Plan:", planLabel);
 
     await resend.emails.send({
-      from: "Sienvi <noreply@sienvi.com>",
+      from: "Sienvi <info@sienvi.com>",
       to: [customerEmail],
       subject: "🎉 Payment Confirmed - Welcome to Sienvi!",
       html: `
