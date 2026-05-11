@@ -1,0 +1,2 @@
+ALTER TABLE public.client_profiles DROP CONSTRAINT client_profiles_plan_check;
+ALTER TABLE public.client_profiles ADD CONSTRAINT client_profiles_plan_check CHECK (plan = ANY (ARRAY['single'::text, 'triple'::text, 'full'::text, 'custom'::text, 'advertising'::text, 'amazon'::text]));
