@@ -52,10 +52,33 @@ const planDetails: Record<string, { name: string; price: number; services: numbe
   single: { name: "Single Service", price: 888, services: 1 },
   triple: { name: "Triple Automation", price: 2398.20, services: 3 },
   full: { name: "Full Automation", price: 3996, services: 6 },
+  amazon: { name: "Amazon Design Package", price: 999, services: 1 },
+  advertising: { name: "Advertising Package", price: 888, services: 7 },
   custom: { name: "Custom Plan", price: 0, services: 0 },
 };
 
 const serviceLabels: Record<string, string> = {
+  // Automation Services
+  "social-media-suite": "Social Media Suite",
+  "ecommerce-operations": "E-Commerce Operations",
+  "custom-website": "Custom Website Development",
+  "seo-aeo": "SEO/AEO Package",
+  "custom-lms": "Custom LMS Package",
+  "custom-gpt": "Custom GPT Product",
+  "custom-ai-assistant": "Custom AI Assistant",
+  "amazon-design": "Amazon Design Package",
+  
+  // Advertising Channels
+  "channel-google": "Google Ads",
+  "channel-meta": "Meta (Facebook/Instagram)",
+  "channel-tiktok": "TikTok Ads",
+  "channel-linkedin": "LinkedIn Ads",
+  "channel-youtube": "YouTube Ads",
+  "channel-pinterest": "Pinterest Ads",
+  "channel-x": "X (Twitter) Ads",
+  "channel-amazon": "Amazon Ads",
+
+  // Legacy mappings for safety
   "social-media": "Social Media Management",
   "content-creation": "Content Creation",
   "email-marketing": "Email Marketing",
@@ -433,11 +456,6 @@ const ClientDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-lg font-semibold">{getPlanName()}</p>
-                    {profile.plan && (
-                      <p className="text-2xl font-bold text-primary">
-                        ${getPlanPrice().toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mo</span>
-                      </p>
-                    )}
                   </div>
                   <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
                     {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus.replace("_", " ")}

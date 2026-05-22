@@ -122,6 +122,7 @@ export const QuestionnaireForm = ({ clientProfileId, onComplete, initialData }: 
       if (!session) throw new Error("Not authenticated");
 
       const questionnaireData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
         client_profile_id: clientProfileId,
         business_name: data.businessName,
         business_description: data.businessDescription,
@@ -166,7 +167,7 @@ export const QuestionnaireForm = ({ clientProfileId, onComplete, initialData }: 
 
       const { error } = await supabase
         .from("onboarding_questionnaire")
-        .upsert(questionnaireData as any, { onConflict: "client_profile_id" });
+        .upsert(questionnaireData as any);
 
       if (error) throw error;
 

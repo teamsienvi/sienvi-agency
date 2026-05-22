@@ -139,6 +139,7 @@ export const GoalSheetForm = ({ clientProfileId, onComplete, initialData }: Goal
       if (!session) throw new Error("Not authenticated");
 
       const goalData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
         client_profile_id: clientProfileId,
         primary_goal: data.primaryGoal,
         specific_what: data.specificWhat,
@@ -166,7 +167,7 @@ export const GoalSheetForm = ({ clientProfileId, onComplete, initialData }: Goal
 
       const { error } = await supabase
         .from("onboarding_goals")
-        .upsert(goalData as any, { onConflict: "client_profile_id" });
+        .upsert(goalData as any);
 
       if (error) throw error;
 

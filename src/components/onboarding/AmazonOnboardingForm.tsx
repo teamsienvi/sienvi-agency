@@ -193,6 +193,7 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
       if (!session) throw new Error("Not authenticated");
 
       const amazonData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
         client_profile_id: clientProfileId,
         business_name: data.businessName,
         primary_contact_name: data.primaryContactName,
@@ -244,7 +245,7 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
 
       const { error } = await supabase
         .from("onboarding_amazon")
-        .upsert(amazonData as any, { onConflict: "client_profile_id" });
+        .upsert(amazonData as any);
 
       if (error) throw error;
 

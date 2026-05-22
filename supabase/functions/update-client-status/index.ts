@@ -208,17 +208,18 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
 
     console.log("Sending contract signed notification to admins");
 
-    const emailPromises = ADMIN_EMAILS.map(adminEmail => 
-      resend.emails.send({
-        from: "Sienvi Admin <info@sienvi.com>",
-        to: [adminEmail],
-        subject: `📝 Contract Signed - ${displayName}`,
-        html: emailHtml,
-      })
-    );
+    const { data, error } = await resend.emails.send({
+      from: "Sienvi Admin <info@sienvi.com>",
+      to: ADMIN_EMAILS,
+      subject: `📝 Contract Signed - ${displayName}`,
+      html: emailHtml,
+    });
 
-    await Promise.allSettled(emailPromises);
-    console.log("Contract signed admin notifications sent");
+    if (error) {
+      console.error("Failed to send contract signed admin notification:", error);
+    } else {
+      console.log("Contract signed admin notifications sent:", data);
+    }
   } catch (error) {
     console.error("Failed to send contract signed admin notification:", error);
   }
@@ -494,17 +495,18 @@ async function sendOnboardingCompleteAdminEmail(clientEmail: string, clientName:
 
     console.log("Sending onboarding complete notification to admins");
 
-    const emailPromises = ADMIN_EMAILS.map(adminEmail => 
-      resend.emails.send({
-        from: "Sienvi Admin <info@sienvi.com>",
-        to: [adminEmail],
-        subject: `🎉 Onboarding Completed - ${displayName}`,
-        html: emailHtml,
-      })
-    );
+    const { data, error } = await resend.emails.send({
+      from: "Sienvi Admin <info@sienvi.com>",
+      to: ADMIN_EMAILS,
+      subject: `🎉 Onboarding Completed - ${displayName}`,
+      html: emailHtml,
+    });
 
-    await Promise.allSettled(emailPromises);
-    console.log("Onboarding complete admin notifications sent");
+    if (error) {
+      console.error("Failed to send onboarding complete admin notification:", error);
+    } else {
+      console.log("Onboarding complete admin notifications sent:", data);
+    }
   } catch (error) {
     console.error("Failed to send onboarding complete admin notification:", error);
   }

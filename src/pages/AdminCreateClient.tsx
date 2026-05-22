@@ -79,7 +79,7 @@ const AdminCreateClient = () => {
       plan: plan as typeof prev.plan,
       customPrice: plan === "custom" ? prev.customPrice : planConfig.amount,
       maxServices: plan === "custom" ? prev.maxServices : planConfig.maxServices,
-      selectedServices: prev.selectedServices.slice(0, plan === "custom" ? prev.maxServices : planConfig.maxServices),
+      selectedServices: plan === "amazon" ? ["amazon-design"] : prev.selectedServices.slice(0, plan === "custom" ? prev.maxServices : planConfig.maxServices),
     }));
   };
 
@@ -588,47 +588,54 @@ const AdminCreateClient = () => {
               {/* Service Selection */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">
-                  Services ({formData.selectedServices.length}/{maxAllowed})
+                  {formData.plan === "amazon" ? "Selected Package" : `Services (${formData.selectedServices.length}/${maxAllowed})`}
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {formData.plan === "advertising" ? (
-                    advertisingChannels.map((channel) => (
-                      <div
-                        key={channel.id}
-                        className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          formData.selectedServices.includes(channel.id)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                        onClick={() => handleServiceToggle(channel.id)}
-                      >
-                        <Checkbox
-                          checked={formData.selectedServices.includes(channel.id)}
-                          onCheckedChange={() => handleServiceToggle(channel.id)}
-                        />
-                        <span className="text-sm font-medium">{channel.label}</span>
-                      </div>
-                    ))
-                  ) : (
-                    automationServices.map((service) => (
-                      <div
-                        key={service.id}
-                        className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          formData.selectedServices.includes(service.id)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                        onClick={() => handleServiceToggle(service.id)}
-                      >
-                        <Checkbox
-                          checked={formData.selectedServices.includes(service.id)}
-                          onCheckedChange={() => handleServiceToggle(service.id)}
-                        />
-                        <span className="text-sm font-medium">{service.label}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {formData.plan === "amazon" ? (
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-foreground">Amazon Design Package</p>
+                    <p className="text-sm text-muted-foreground">$999 one-time fee — Professional listing design and optimization</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {formData.plan === "advertising" ? (
+                      advertisingChannels.map((channel) => (
+                        <div
+                          key={channel.id}
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            formData.selectedServices.includes(channel.id)
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() => handleServiceToggle(channel.id)}
+                        >
+                          <Checkbox
+                            checked={formData.selectedServices.includes(channel.id)}
+                            onCheckedChange={() => handleServiceToggle(channel.id)}
+                          />
+                          <span className="text-sm font-medium">{channel.label}</span>
+                        </div>
+                      ))
+                    ) : (
+                      automationServices.map((service) => (
+                        <div
+                          key={service.id}
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            formData.selectedServices.includes(service.id)
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() => handleServiceToggle(service.id)}
+                        >
+                          <Checkbox
+                            checked={formData.selectedServices.includes(service.id)}
+                            onCheckedChange={() => handleServiceToggle(service.id)}
+                          />
+                          <span className="text-sm font-medium">{service.label}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Notes */}

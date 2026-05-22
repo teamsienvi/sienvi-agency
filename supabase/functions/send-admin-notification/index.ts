@@ -253,35 +253,28 @@ serve(async (req) => {
 
     console.log(`Sending admin notification for event: ${event}, client: ${clientEmail}`);
 
-    // Send to all admin emails
-    const emailPromises = ADMIN_EMAILS.map(adminEmail => 
-      resend.emails.send({
-        from: "Sienvi Admin <info@sienvi.com>",
-        to: [adminEmail],
-        subject: `${config.subject} - ${displayName}`,
-        html: emailHtml,
-      })
-    );
+    // Send to all admin emails in a single API call to prevent rate limiting
+    const { data, error } = await resend.emails.send({
+      from: "Sienvi Admin <info@sienvi.com>",
+      to: ADMIN_EMAILS,
+      subject: `${config.subject} - ${displayName}`,
+      html: emailHtml,
+    });
 
-    const results = await Promise.allSettled(emailPromises);
-    
-    const successCount = results.filter(r => r.status === "fulfilled").length;
-    const failedCount = results.filter(r => r.status === "rejected").length;
-
-    console.log(`Admin notifications sent: ${successCount} succeeded, ${failedCount} failed`);
-
-    if (failedCount > 0) {
-      const errors = results
-        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-        .map(r => r.reason);
-      console.error("Some admin notifications failed:", errors);
+    if (error) {
+      console.error("Admin notification failed:", error);
+      return new Response(
+        JSON.stringify({ error: error.message || "Failed to send admin notification" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    console.log("Admin notifications sent successfully to:", ADMIN_EMAILS);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        sent: successCount, 
-        failed: failedCount,
+        data,
         recipients: ADMIN_EMAILS 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

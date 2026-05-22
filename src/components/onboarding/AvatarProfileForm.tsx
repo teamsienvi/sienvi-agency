@@ -89,6 +89,7 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
       if (!session) throw new Error("Not authenticated");
 
       const avatarData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
         client_profile_id: clientProfileId,
         products_services: data.productsServices,
         avatars: avatars.filter(a => a.name.trim()),
@@ -101,7 +102,7 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
 
       const { error } = await supabase
         .from("onboarding_avatars")
-        .upsert(avatarData as any, { onConflict: "client_profile_id" });
+        .upsert(avatarData as any);
 
       if (error) throw error;
 

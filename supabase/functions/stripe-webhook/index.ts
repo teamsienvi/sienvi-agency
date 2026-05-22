@@ -233,18 +233,18 @@ async function sendAdminNotification(
 
     console.log(`Sending admin notification for event: ${event}, client: ${clientEmail}`);
 
-    const emailPromises = ADMIN_EMAILS.map(adminEmail => 
-      resend.emails.send({
-        from: "Sienvi Admin <info@sienvi.com>",
-        to: [adminEmail],
-        subject: `${config.subject} - ${displayName}`,
-        html: emailHtml,
-      })
-    );
+    const { data, error } = await resend.emails.send({
+      from: "Sienvi Admin <info@sienvi.com>",
+      to: ADMIN_EMAILS,
+      subject: `${config.subject} - ${displayName}`,
+      html: emailHtml,
+    });
 
-    const results = await Promise.allSettled(emailPromises);
-    const successCount = results.filter(r => r.status === "fulfilled").length;
-    console.log(`Admin notifications sent: ${successCount}/${ADMIN_EMAILS.length}`);
+    if (error) {
+      console.error("Failed to send admin notification:", error);
+    } else {
+      console.log(`Admin notification sent to ${ADMIN_EMAILS.length} recipients:`, data);
+    }
   } catch (error) {
     console.error("Failed to send admin notification:", error);
   }
