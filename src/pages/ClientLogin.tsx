@@ -29,7 +29,7 @@ const ClientLogin = () => {
       const type = hashParams.get("type");
       const setup = searchParams.get("setup");
       
-      if (type === "recovery" || type === "magiclink") {
+      if (type === "recovery" || type === "magiclink" || type === "invite" || type === "signup") {
         // User clicked a magic link - check if they need to set password
         const { data: { session } } = await supabase.auth.getSession();
         if (session && setup === "password") {
