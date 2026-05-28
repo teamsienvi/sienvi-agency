@@ -117,7 +117,7 @@ const styleOptions = [
 export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData }: AmazonOnboardingFormProps) => {
   const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, watch, setValue, getValues } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       businessName: initialData.business_name || "",
@@ -184,6 +184,80 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
       ? current.filter(m => m !== marketplace)
       : [...current, marketplace];
     setValue("targetMarketplaces", updated);
+  };
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const values = getValues();
+
+      const amazonData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
+        client_profile_id: clientProfileId,
+        business_name: values.businessName || null,
+        primary_contact_name: values.primaryContactName || null,
+        email_address: values.emailAddress || null,
+        seller_account_type: values.sellerAccountType || null,
+        target_marketplaces: values.targetMarketplaces || null,
+        product_name: values.productName || null,
+        product_category: values.productCategory || null,
+        asin: values.asin || null,
+        product_status: values.productStatus || null,
+        product_variations: values.productVariations || null,
+        product_description: values.productDescription || null,
+        key_features: values.keyFeatures || null,
+        top_3_benefits: values.top3Benefits || null,
+        problem_solved: values.problemSolved || null,
+        materials_specs: values.materialsSpecs || null,
+        dimensions_weight: values.dimensionsWeight || null,
+        ideal_customer: values.idealCustomer || null,
+        customer_pain_points: values.customerPainPoints || null,
+        desired_outcome: values.desiredOutcome || null,
+        customer_objections: values.customerObjections || null,
+        brand_voice: values.brandVoice || null,
+        brand_voice_other: values.brandVoiceOther || null,
+        brands_admired: values.brandsAdmired || null,
+        words_to_associate: values.wordsToAssociate || null,
+        words_to_avoid: values.wordsToAvoid || null,
+        has_brand_guidelines: values.hasBrandGuidelines || false,
+        preferred_colors: values.preferredColors || null,
+        preferred_fonts: values.preferredFonts || null,
+        style_preference: values.stylePreference || null,
+        example_listings: values.exampleListings || null,
+        competitor_asins: values.competitorAsins || null,
+        competitor_likes: values.competitorLikes || null,
+        competitor_dislikes: values.competitorDislikes || null,
+        features_to_highlight: values.featuresToHighlight || null,
+        mandatory_claims: values.mandatoryClaims || null,
+        compliance_restrictions: values.complianceRestrictions || null,
+        image_styles_to_avoid: values.imageStylesToAvoid || null,
+        video_primary_goal: values.videoPrimaryGoal || null,
+        video_messaging: values.videoMessaging || null,
+        video_tone: values.videoTone || null,
+        video_examples: values.videoExamples || null,
+        work_approver: values.workApprover || null,
+        turnaround_preference: values.turnaroundPreference || null,
+        additional_notes: values.additionalNotes || null,
+        confirmed_accurate: values.confirmedAccurate || false,
+        completed_at: null,
+      };
+
+      const { error } = await supabase
+        .from("onboarding_amazon")
+        .upsert(amazonData as any);
+
+      if (error) throw error;
+
+      toast.success("Draft saved successfully!");
+    } catch (error: any) {
+      console.error("Error saving Amazon draft:", error);
+      toast.error(error.message || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -712,7 +786,23 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
       </Card>
 
       {/* Submit Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="lg" 
+          disabled={saving} 
+          onClick={handleSaveDraft}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Draft"
+          )}
+        </Button>
         <Button type="submit" size="lg" disabled={saving} className="bg-orange-600 hover:bg-orange-700">
           {saving ? (
             <>

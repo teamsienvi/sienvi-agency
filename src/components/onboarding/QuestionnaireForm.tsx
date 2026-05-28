@@ -71,7 +71,7 @@ interface QuestionnaireFormProps {
 export const QuestionnaireForm = ({ clientProfileId, onComplete, initialData }: QuestionnaireFormProps) => {
   const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, getValues } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       businessName: initialData.business_name || "",
@@ -114,6 +114,73 @@ export const QuestionnaireForm = ({ clientProfileId, onComplete, initialData }: 
       additionalNotes: initialData.additional_notes || "",
     } : undefined,
   });
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const values = getValues();
+
+      const questionnaireData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
+        client_profile_id: clientProfileId,
+        business_name: values.businessName || null,
+        business_description: values.businessDescription || null,
+        industry_niche: values.industryNiche || null,
+        years_operating: values.yearsOperating || null,
+        target_audience: values.targetAudience || null,
+        revenue_streams: values.revenueStreams || null,
+        revenue_goals: values.revenueGoals || null,
+        top_3_goals: values.top3Goals || null,
+        vision_3_5_years: values.vision3To5Years || null,
+        planned_launches: values.plannedLaunches || null,
+        big_win_expectation: values.bigWinExpectation || null,
+        biggest_challenges: values.biggestChallenges || null,
+        stuck_areas: values.stuckAreas || null,
+        goal_blockers: values.goalBlockers || null,
+        past_agencies_experience: values.pastAgenciesExperience || null,
+        team_structure: values.teamStructure || null,
+        marketing_tools: values.marketingTools || null,
+        crm_email_tools: values.crmEmailTools || null,
+        sales_funnel_tools: values.salesFunnelTools || null,
+        project_management_tools: values.projectManagementTools || null,
+        performance_tracking: values.performanceTracking || null,
+        automation_needs: values.automationNeeds || null,
+        core_offers: values.coreOffers || null,
+        lead_acquisition: values.leadAcquisition || null,
+        marketing_working: values.marketingWorking || null,
+        marketing_not_working: values.marketingNotWorking || null,
+        existing_funnels: values.existingFunnels || null,
+        brand_identity: values.brandIdentity || null,
+        content_creation: values.contentCreation || null,
+        important_platforms: values.importantPlatforms || null,
+        assets_to_review: values.assetsToReview || null,
+        primary_contact: values.primaryContact || null,
+        communication_preference: values.communicationPreference || null,
+        decision_maker: values.decisionMaker || null,
+        ideal_collaboration: values.idealCollaboration || null,
+        start_timeline: values.startTimeline || null,
+        budget_timeline: values.budgetTimeline || null,
+        additional_notes: values.additionalNotes || null,
+        completed_at: null,
+      };
+
+      const { error } = await supabase
+        .from("onboarding_questionnaire")
+        .upsert(questionnaireData as any);
+
+      if (error) throw error;
+
+      toast.success("Draft saved successfully!");
+    } catch (error: any) {
+      console.error("Error saving questionnaire draft:", error);
+      toast.error(error.message || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     setSaving(true);
@@ -452,6 +519,22 @@ export const QuestionnaireForm = ({ clientProfileId, onComplete, initialData }: 
 
       {/* Submit */}
       <div className="flex justify-end gap-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="lg" 
+          disabled={saving} 
+          onClick={handleSaveDraft}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Draft"
+          )}
+        </Button>
         <Button type="submit" disabled={saving} size="lg">
           {saving ? (
             <>

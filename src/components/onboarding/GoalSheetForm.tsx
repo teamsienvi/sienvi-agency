@@ -75,7 +75,7 @@ export const GoalSheetForm = ({ clientProfileId, onComplete, initialData }: Goal
     initialData?.obstacles_solutions || [{ obstacle: "", solution: "" }]
   );
 
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<GoalSheetFormData>({
+  const { register, handleSubmit, formState: { errors }, watch, getValues } = useForm<GoalSheetFormData>({
     resolver: zodResolver(goalSheetSchema),
     defaultValues: initialData ? {
       primaryGoal: initialData.primary_goal || "",
@@ -130,6 +130,56 @@ export const GoalSheetForm = ({ clientProfileId, onComplete, initialData }: Goal
     const updated = [...obstacles];
     updated[index][field] = value;
     setObstacles(updated);
+  };
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const values = getValues();
+
+      const goalData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
+        client_profile_id: clientProfileId,
+        primary_goal: values.primaryGoal || null,
+        specific_what: values.specificWhat || null,
+        specific_who: values.specificWho || null,
+        specific_where: values.specificWhere || null,
+        specific_why: values.specificWhy || null,
+        specific_goal_summary: values.specificGoalSummary || null,
+        measurable_metrics: values.measurableMetrics || null,
+        measurable_target: values.measurableTarget || null,
+        measurable_goal_summary: values.measurableGoalSummary || null,
+        achievable_realistic: values.achievableRealistic || null,
+        achievable_steps: values.achievableSteps || null,
+        achievable_goal_summary: values.achievableGoalSummary || null,
+        relevant_alignment: values.relevantAlignment || null,
+        relevant_worthwhile: values.relevantWorthwhile || null,
+        relevant_goal_summary: values.relevantGoalSummary || null,
+        timebound_deadline: values.timeboundDeadline || null,
+        timebound_milestones: values.timeboundMilestones || null,
+        timebound_goal_summary: values.timeboundGoalSummary || null,
+        goal_narrative: values.goalNarrative || null,
+        action_plan: actionPlans.filter(a => a.actionItem.trim()),
+        obstacles_solutions: obstacles.filter(o => o.obstacle.trim()),
+        completed_at: null,
+      };
+
+      const { error } = await supabase
+        .from("onboarding_goals")
+        .upsert(goalData as any);
+
+      if (error) throw error;
+
+      toast.success("Draft saved successfully!");
+    } catch (error: any) {
+      console.error("Error saving goal sheet draft:", error);
+      toast.error(error.message || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const onSubmit = async (data: GoalSheetFormData) => {
@@ -501,6 +551,22 @@ export const GoalSheetForm = ({ clientProfileId, onComplete, initialData }: Goal
 
       {/* Submit */}
       <div className="flex justify-end gap-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="lg" 
+          disabled={saving} 
+          onClick={handleSaveDraft}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Draft"
+          )}
+        </Button>
         <Button type="submit" disabled={saving} size="lg">
           {saving ? (
             <>

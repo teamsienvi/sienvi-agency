@@ -63,7 +63,7 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
         ]
   );
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, watch, setValue, getValues } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       productsServices: initialData.products_services || "",
@@ -80,6 +80,41 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
     const updated = [...avatars];
     updated[index] = { ...updated[index], [field]: value };
     setAvatars(updated);
+  };
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const values = getValues();
+
+      const avatarData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
+        client_profile_id: clientProfileId,
+        products_services: values.productsServices || null,
+        avatars: avatars.filter(a => a.name.trim()),
+        most_important_avatar: values.mostImportantAvatar || null,
+        most_important_reason: values.mostImportantReason || null,
+        existing_data_available: values.existingDataAvailable || false,
+        customers_to_avoid: values.customersToAvoid || null,
+        completed_at: null,
+      };
+
+      const { error } = await supabase
+        .from("onboarding_avatars")
+        .upsert(avatarData as any);
+
+      if (error) throw error;
+
+      toast.success("Draft saved successfully!");
+    } catch (error: any) {
+      console.error("Error saving avatar profile draft:", error);
+      toast.error(error.message || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -415,6 +450,22 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
 
       {/* Submit */}
       <div className="flex justify-end gap-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="lg" 
+          disabled={saving} 
+          onClick={handleSaveDraft}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Draft"
+          )}
+        </Button>
         <Button type="submit" disabled={saving} size="lg">
           {saving ? (
             <>

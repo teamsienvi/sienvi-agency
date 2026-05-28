@@ -122,7 +122,7 @@ export const AdvertisingOnboardingForm = ({
 }: AdvertisingOnboardingFormProps) => {
   const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, watch, setValue, getValues } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       businessName: initialData.business_name || "",
@@ -191,6 +191,74 @@ export const AdvertisingOnboardingForm = ({
       ? current.filter(g => g !== goal)
       : [...current, goal];
     setValue("secondaryGoals", updated);
+  };
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const values = getValues();
+
+      const advertisingData = {
+        ...(initialData?.id ? { id: initialData.id } : {}),
+        client_profile_id: clientProfileId,
+        business_name: values.businessName || null,
+        primary_contact_name: values.primaryContactName || null,
+        email_address: values.emailAddress || null,
+        industry_niche: values.industryNiche || null,
+        selected_channels: values.selectedChannels || null,
+        primary_campaign_goal: values.primaryCampaignGoal || null,
+        secondary_goals: values.secondaryGoals || null,
+        target_kpis: values.targetKpis || null,
+        monthly_budget_range: values.monthlyBudgetRange || null,
+        target_demographics: values.targetDemographics || null,
+        target_locations: values.targetLocations || null,
+        target_interests: values.targetInterests || null,
+        audience_personas: values.audiencePersonas || null,
+        retargeting_audiences: values.retargetingAudiences || null,
+        previous_advertising_experience: values.previousAdvertisingExperience || null,
+        current_ad_accounts: values.currentAdAccounts || null,
+        historical_performance: values.historicalPerformance || null,
+        what_worked: values.whatWorked || null,
+        what_didnt_work: values.whatDidntWork || null,
+        existing_ad_creatives: values.existingAdCreatives || false,
+        brand_voice: values.brandVoice || null,
+        key_messaging_points: values.keyMessagingPoints || null,
+        unique_selling_propositions: values.uniqueSellingPropositions || null,
+        promotional_offers: values.promotionalOffers || null,
+        landing_page_urls: values.landingPageUrls || null,
+        conversion_tracking_setup: values.conversionTrackingSetup || false,
+        conversion_actions: values.conversionActions || null,
+        main_competitors: values.mainCompetitors || null,
+        competitor_ad_examples: values.competitorAdExamples || null,
+        differentiation_strategy: values.differentiationStrategy || null,
+        campaign_start_date: values.campaignStartDate || null,
+        campaign_duration: values.campaignDuration || null,
+        expected_results_timeline: values.expectedResultsTimeline || null,
+        reporting_preferences: values.reportingPreferences || null,
+        has_ad_accounts: values.hasAdAccounts || false,
+        ad_account_access_details: values.adAccountAccessDetails || null,
+        creative_assets_available: values.creativeAssetsAvailable || null,
+        additional_notes: values.additionalNotes || null,
+        confirmed_accurate: values.confirmedAccurate || false,
+        completed_at: null,
+      };
+
+      const { error } = await supabase
+        .from("onboarding_advertising")
+        .upsert(advertisingData as any);
+
+      if (error) throw error;
+
+      toast.success("Draft saved successfully!");
+    } catch (error: any) {
+      console.error("Error saving advertising questionnaire draft:", error);
+      toast.error(error.message || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -640,7 +708,23 @@ export const AdvertisingOnboardingForm = ({
       </Card>
 
       {/* Submit Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="lg" 
+          disabled={saving} 
+          onClick={handleSaveDraft}
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Draft"
+          )}
+        </Button>
         <Button type="submit" size="lg" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
           {saving ? (
             <>
