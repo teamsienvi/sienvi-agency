@@ -44,7 +44,14 @@ import {
   ClipboardList,
   CreditCard,
   Send,
+  Download,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
@@ -454,6 +461,86 @@ const AdminClients = () => {
               </div>
             </div>
             <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Download className="w-4 h-4" />
+                    Templates
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/1_SMART_Goals_Sheet.pdf"
+                      download="1_SMART_Goals_Sheet.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>1. SMART Goals Sheet</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/2_Customer_Avatar_Profile.pdf"
+                      download="2_Customer_Avatar_Profile.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>2. Customer Avatar Profile</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/3_General_Onboarding_Questionnaire.pdf"
+                      download="3_General_Onboarding_Questionnaire.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>3. General Onboarding</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/4_Amazon_Listing_Design_Questionnaire.pdf"
+                      download="4_Amazon_Listing_Design_Questionnaire.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>4. Amazon Listing Design</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/5_Advertising_Campaign_Questionnaire.pdf"
+                      download="5_Advertising_Campaign_Questionnaire.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>5. Advertising Campaign</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/6_Business_Admin_Onboarding_Questionnaire.pdf"
+                      download="6_Business_Admin_Onboarding_Questionnaire.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>6. Business Onboarding</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="/onboarding_forms_pdf/7_General_Discovery_Questionnaire.pdf"
+                      download="7_General_Discovery_Questionnaire.pdf"
+                      className="cursor-pointer w-full flex items-center justify-between"
+                    >
+                      <span>7. General Discovery</span>
+                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button onClick={() => navigate("/admin/create-client")}>
                 <UserPlus className="w-4 h-4 mr-2" />
                 Add Client

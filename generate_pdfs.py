@@ -745,7 +745,7 @@ def generate_general_discovery_pdf(output_dir):
     print(f"Generated: {path}")
 
 if __name__ == "__main__":
-    output_directory = "c:\\Users\\Iris\\OneDrive\\Work\\sienvi-agency-landing-page\\onboarding_forms_pdf"
+    output_directory = "c:\\Users\\Iris\\OneDrive\\Work\\sienvi-agency-landing-page\\public\\onboarding_forms_pdf"
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
         
