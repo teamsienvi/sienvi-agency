@@ -25,6 +25,7 @@ const automationServices = [
   { id: "seo-aeo", label: "SEO/AEO Package" },
   { id: "custom-lms", label: "Custom LMS Package" },
   { id: "custom-gpt", label: "Custom GPT Product" },
+  { id: "custom-tool", label: "Custom Tool" },
 ];
 
 const advertisingChannels = [
@@ -56,6 +57,8 @@ const AdminCreateClient = () => {
   const [sendingLoginInvite, setSendingLoginInvite] = useState(false);
   const [sendingCheckoutEmail, setSendingCheckoutEmail] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  const [additionalEmails, setAdditionalEmails] = useState("");
   
   const [formData, setFormData] = useState({
     email: "",
@@ -120,8 +123,15 @@ const AdminCreateClient = () => {
         return;
       }
 
+      const finalNotes = formData.plan === "custom" && additionalEmails.trim()
+        ? `[Additional Emails: ${additionalEmails.trim()}]\n${formData.notes}`
+        : formData.notes;
+
       const response = await supabase.functions.invoke("create-client", {
-        body: formData,
+        body: {
+          ...formData,
+          notes: finalNotes,
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -507,34 +517,45 @@ const AdminCreateClient = () => {
                 </div>
 
                 {formData.plan === "custom" && (
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                    <div className="space-y-2">
-                      <Label htmlFor="customPrice">Monthly Amount ($)</Label>
-                      <Input
-                        id="customPrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.customPrice}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, customPrice: parseFloat(e.target.value) || 0 }))}
-                      />
+                  <div className="space-y-4 p-4 bg-muted rounded-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="customPrice">Monthly Amount ($)</Label>
+                        <Input
+                          id="customPrice"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.customPrice}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, customPrice: parseFloat(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="maxServices">Max Services (1-6)</Label>
+                        <Input
+                          id="maxServices"
+                          type="number"
+                          min="1"
+                          max="6"
+                          value={formData.maxServices}
+                          onChange={(e) => {
+                            const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
+                            setFormData((prev) => ({
+                              ...prev,
+                              maxServices: value,
+                              selectedServices: prev.selectedServices.slice(0, value),
+                            }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="maxServices">Max Services (1-6)</Label>
+                      <Label htmlFor="additionalEmails">Additional Emails (comma separated)</Label>
                       <Input
-                        id="maxServices"
-                        type="number"
-                        min="1"
-                        max="6"
-                        value={formData.maxServices}
-                        onChange={(e) => {
-                          const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
-                          setFormData((prev) => ({
-                            ...prev,
-                            maxServices: value,
-                            selectedServices: prev.selectedServices.slice(0, value),
-                          }));
-                        }}
+                        id="additionalEmails"
+                        value={additionalEmails}
+                        onChange={(e) => setAdditionalEmails(e.target.value)}
+                        placeholder="email1@example.com, email2@example.com"
                       />
                     </div>
                   </div>

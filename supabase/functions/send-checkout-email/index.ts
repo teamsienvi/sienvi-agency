@@ -4,6 +4,18 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+function parseAdditionalEmails(notes: string | null | undefined): string[] {
+  if (!notes) return [];
+  const match = notes.match(/\[Additional\s+Emails:\s*([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1]
+      .split(/[,;]/)
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+  }
+  return [];
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -84,13 +96,34 @@ serve(async (req) => {
       );
     }
 
-    const displayName = clientName || clientEmail.split("@")[0];
+    const primaryEmail = clientEmail.split(/[,;]/)[0].trim().toLowerCase();
+    let additionalEmails: string[] = [];
+
+    const { data: profile } = clientId
+      ? await supabaseAdmin
+          .from("client_profiles")
+          .select("notes")
+          .eq("id", clientId)
+          .maybeSingle()
+      : await supabaseAdmin
+          .from("client_profiles")
+          .select("notes")
+          .eq("email", primaryEmail)
+          .maybeSingle();
+
+    if (profile?.notes) {
+      additionalEmails = parseAdditionalEmails(profile.notes);
+    }
+
+    const displayName = clientName || primaryEmail.split("@")[0];
     const planLabel = planLabels[plan] || plan || "Sienvi Plan";
     const planPrice = price || planPrices[plan] || 0;
 
+    const recipients = [...new Set([primaryEmail, ...additionalEmails])];
+
     const emailResponse = await resend.emails.send({
       from: "Sienvi <info@sienvi.com>",
-      to: [clientEmail],
+      to: recipients,
       subject: "Complete Your Subscription",
       html: `
 <!DOCTYPE html>
@@ -172,7 +205,7 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Checkout email sent to:", clientEmail, "Response:", emailResponse);
+    console.log("Checkout email sent to:", recipients, "Response:", emailResponse);
 
     return new Response(
       JSON.stringify({ 

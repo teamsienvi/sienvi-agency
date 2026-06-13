@@ -4,6 +4,18 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+function parseAdditionalEmails(notes: string | null | undefined): string[] {
+  if (!notes) return [];
+  const match = notes.match(/\[Additional\s+Emails:\s*([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1]
+      .split(/[,;]/)
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+  }
+  return [];
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -68,26 +80,34 @@ serve(async (req) => {
       );
     }
 
+    const targetEmail = clientEmail.split(/[,;]/)[0].trim().toLowerCase();
+    let additionalEmails: string[] = [];
+
     let clientStatus = {
       subscriptionStatus: "pending_payment",
       contractStatus: "not_signed",
       onboardingStatus: "not_started",
     };
 
-    if (clientId) {
-      const { data: profile } = await supabaseAdmin
-        .from("client_profiles")
-        .select("subscription_status, contract_status, onboarding_status")
-        .eq("id", clientId)
-        .single();
+    const { data: profile } = clientId
+      ? await supabaseAdmin
+          .from("client_profiles")
+          .select("subscription_status, contract_status, onboarding_status, notes")
+          .eq("id", clientId)
+          .maybeSingle()
+      : await supabaseAdmin
+          .from("client_profiles")
+          .select("subscription_status, contract_status, onboarding_status, notes")
+          .eq("email", targetEmail)
+          .maybeSingle();
 
-      if (profile) {
-        clientStatus = {
-          subscriptionStatus: profile.subscription_status,
-          contractStatus: profile.contract_status,
-          onboardingStatus: profile.onboarding_status,
-        };
-      }
+    if (profile) {
+      clientStatus = {
+        subscriptionStatus: profile.subscription_status,
+        contractStatus: profile.contract_status,
+        onboardingStatus: profile.onboarding_status,
+      };
+      additionalEmails = parseAdditionalEmails(profile.notes);
     }
 
     const baseUrl = req.headers.get("origin") || "https://sienvi.com";
@@ -100,7 +120,7 @@ serve(async (req) => {
 
     // Check if user already exists in auth without fetching all users
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === clientEmail.toLowerCase());
+    const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
     const isNewUser = !existingAuthUser;
 
     if (isNewUser) {
@@ -125,7 +145,7 @@ serve(async (req) => {
     // Use 'invite' for brand new users (creates auth account), 'magiclink' for existing
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: isNewUser ? "invite" : "magiclink",
-      email: clientEmail,
+      email: targetEmail,
       options: {
         redirectTo: `${baseUrl}${redirectPath}`,
       },
@@ -137,11 +157,13 @@ serve(async (req) => {
     }
 
     const loginUrl = linkData.properties?.action_link || "";
-    const displayName = clientName || clientEmail.split("@")[0];
+    const displayName = clientName || targetEmail.split("@")[0];
+
+    const recipients = [...new Set([targetEmail, ...additionalEmails])];
 
     const emailResponse = await resend.emails.send({
       from: "Sienvi <info@sienvi.com>",
-      to: [clientEmail],
+      to: recipients,
       subject: emailSubject,
       html: `
 <!DOCTYPE html>
@@ -223,7 +245,7 @@ serve(async (req) => {
 
     const emailId = (emailResponse as any).data?.id || (emailResponse as any).id || null;
 
-    console.log("Login invite sent to:", clientEmail, "emailId:", emailId, "Redirect:", redirectPath);
+    console.log("Login invite sent to:", recipients, "emailId:", emailId, "Redirect:", redirectPath);
 
     return new Response(
       JSON.stringify({ 

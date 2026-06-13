@@ -16,12 +16,13 @@ $functions = @(
     "create-customer-portal-session",
     "get-client-profile",
     "delete-client",
-    "update-client-status"
+    "update-client-status",
+    "send-reminders"
 )
 
 foreach ($fn in $functions) {
     Write-Host "Deploying $fn..." -ForegroundColor Cyan
-    supabase functions deploy $fn --no-verify-jwt
+    supabase functions deploy $fn --no-verify-jwt --use-api
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  OK: $fn deployed" -ForegroundColor Green
     } else {

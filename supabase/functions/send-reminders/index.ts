@@ -4,6 +4,18 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+function parseAdditionalEmails(notes: string | null | undefined): string[] {
+  if (!notes) return [];
+  const match = notes.match(/\[Additional\s+Emails:\s*([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1]
+      .split(/[,;]/)
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+  }
+  return [];
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -22,6 +34,7 @@ interface ClientProfile {
   contract_status: string;
   onboarding_status: string;
   created_at: string;
+  notes: string | null;
 }
 
 interface EmailReminder {
@@ -73,7 +86,7 @@ serve(async (req) => {
     // Excludes advertising plan (they skip contract/onboarding)
     const { data: clients, error: clientsError } = await supabase
       .from("client_profiles")
-      .select("id, email, first_name, last_name, plan, subscription_status, contract_status, onboarding_status, created_at")
+      .select("id, email, first_name, last_name, plan, subscription_status, contract_status, onboarding_status, created_at, notes")
       .eq("subscription_status", "active")
       .neq("plan", "advertising")
       .neq("onboarding_status", "completed");
@@ -165,10 +178,14 @@ serve(async (req) => {
           onboardingStatus: client.onboarding_status,
         });
 
+        const primaryEmail = client.email.toLowerCase().trim();
+        const additionalEmails = parseAdditionalEmails(client.notes);
+        const recipients = [...new Set([primaryEmail, ...additionalEmails])];
+
         // Send email
         const emailResponse = await resend.emails.send({
           from: "Sienvi <info@sienvi.com>",
-          to: [client.email],
+          to: recipients,
           bcc: ["info@sienvi.com"], // Keep team notified
           subject: emailContent.subject,
           html: emailContent.html,

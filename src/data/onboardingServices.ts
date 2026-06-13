@@ -1,4 +1,4 @@
-import { PenTool, Globe, Search, BookOpen, Bot, ShoppingBag, LucideIcon } from "lucide-react";
+import { PenTool, Globe, Search, BookOpen, Bot, ShoppingBag, Wrench, LucideIcon } from "lucide-react";
 
 export interface OnboardingService {
   id: string;
@@ -41,6 +41,12 @@ export const onboardingServices: OnboardingService[] = [
     title: "Custom AI Assistant",
     description: "AI-powered assistant tailored to your business needs",
     icon: Bot,
+  },
+  {
+    id: "custom-tool",
+    title: "Custom Tool",
+    description: "Custom software tools and internal applications designed for your business needs",
+    icon: Wrench,
   },
   {
     id: "amazon-design",

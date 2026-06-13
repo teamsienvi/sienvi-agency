@@ -15,6 +15,7 @@ import {
   Loader2,
   ShoppingBag,
   Megaphone,
+  Briefcase,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -23,6 +24,7 @@ import { AvatarProfileForm } from "@/components/onboarding/AvatarProfileForm";
 import { QuestionnaireForm } from "@/components/onboarding/QuestionnaireForm";
 import { AmazonOnboardingForm } from "@/components/onboarding/AmazonOnboardingForm";
 import { AdvertisingOnboardingForm } from "@/components/onboarding/AdvertisingOnboardingForm";
+import { BusinessAdminOnboardingForm } from "@/components/onboarding/BusinessAdminOnboardingForm";
 
 interface StepData {
   goals: any;
@@ -32,7 +34,7 @@ interface StepData {
   advertising: any;
 }
 
-type OnboardingType = "standard" | "amazon" | "advertising";
+type OnboardingType = "standard" | "amazon" | "advertising" | "discovery";
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -89,7 +91,10 @@ const Onboarding = () => {
       let type: OnboardingType = "standard";
       let numSteps = 3;
       
-      if (services.includes("amazon-design")) {
+      if (services.includes("custom-tool")) {
+        type = "discovery";
+        numSteps = 1;
+      } else if (services.includes("amazon-design")) {
         type = "amazon";
         numSteps = 1; // Amazon only has 1 step - the Amazon questionnaire
       } else if (services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising"))) {
@@ -109,7 +114,9 @@ const Onboarding = () => {
 
       // Determine completed steps based on onboarding type
       let completed: boolean[];
-      if (type === "amazon") {
+      if (type === "discovery") {
+        completed = [false];
+      } else if (type === "amazon") {
         // Amazon only has 1 step
         completed = [!!amazonRes.data?.completed_at];
       } else if (type === "advertising") {
@@ -173,6 +180,9 @@ const Onboarding = () => {
   };
 
   const getSteps = () => {
+    if (onboardingType === "discovery") {
+      return [{ id: "discovery-questionnaire", title: "Business Admin Questionnaire", icon: <Briefcase className="w-6 h-6" /> }];
+    }
     // Amazon Design only has 1 step - the Amazon questionnaire
     if (onboardingType === "amazon") {
       return [{ id: "amazon-questionnaire", title: "Amazon Questionnaire", icon: <ShoppingBag className="w-6 h-6" /> }];
@@ -243,6 +253,15 @@ const Onboarding = () => {
 
           {clientProfileId && (
             <div className="mt-8">
+              {/* Discovery Questionnaire has only 1 step */}
+              {onboardingType === "discovery" && currentStep === 0 && (
+                <BusinessAdminOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(0)}
+                  initialData={stepData.questionnaire}
+                />
+              )}
+
               {/* Amazon Design has only 1 step - the Amazon questionnaire */}
               {onboardingType === "amazon" && currentStep === 0 && (
                 <AmazonOnboardingForm
@@ -253,14 +272,14 @@ const Onboarding = () => {
               )}
               
               {/* Standard and Advertising flows have 3 steps */}
-              {onboardingType !== "amazon" && currentStep === 0 && (
+              {onboardingType !== "amazon" && onboardingType !== "discovery" && currentStep === 0 && (
                 <GoalSheetForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(0)}
                   initialData={stepData.goals}
                 />
               )}
-              {onboardingType !== "amazon" && currentStep === 1 && (
+              {onboardingType !== "amazon" && onboardingType !== "discovery" && currentStep === 1 && (
                 <AvatarProfileForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(1)}

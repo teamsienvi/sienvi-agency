@@ -28,6 +28,7 @@ const automationServices = [
   { id: "seo-aeo", label: "SEO/AEO Package", price: 888 },
   { id: "custom-lms", label: "Custom LMS Package", price: 2450 },
   { id: "custom-ai-assistant", label: "Custom AI Assistant", price: 888 },
+  { id: "custom-tool", label: "Custom Tool", price: 888 },
 ];
 
 const advertisingChannels = [
@@ -82,6 +83,7 @@ export const EditClientModal = ({
   onClientUpdated,
 }: EditClientModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [additionalEmails, setAdditionalEmails] = useState("");
   const [formData, setFormData] = useState({
     clientName: "",
     email: "",
@@ -101,6 +103,18 @@ export const EditClientModal = ({
       if (client.selectedServices?.includes("amazon-design")) detectedPlan = "amazon";
       if (client.selectedServices?.some(s => s.startsWith("channel-"))) detectedPlan = "advertising";
 
+      // Extract additional emails from notes
+      const notesStr = client.notes || "";
+      const match = notesStr.match(/^\[Additional Emails:\s*([^\]]*)\]\n?/i);
+      let extractedEmails = "";
+      let remainingNotes = notesStr;
+      if (match) {
+        extractedEmails = match[1];
+        remainingNotes = notesStr.substring(match[0].length);
+      }
+
+      setAdditionalEmails(extractedEmails);
+
       setFormData({
         clientName: client.clientName || "",
         email: client.email || "",
@@ -110,7 +124,7 @@ export const EditClientModal = ({
         selectedServices: client.selectedServices || [],
         subscriptionStatus: client.subscriptionStatus || "pending_payment",
         isActive: client.isActive,
-        notes: client.notes || "",
+        notes: remainingNotes,
       });
     }
   }, [client]);
@@ -171,8 +185,16 @@ export const EditClientModal = ({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Not authenticated"); return; }
 
+      const finalNotes = formData.plan === "custom" && additionalEmails.trim()
+        ? `[Additional Emails: ${additionalEmails.trim()}]\n${formData.notes}`
+        : formData.notes;
+
       const response = await supabase.functions.invoke("update-client", {
-        body: { clientId: client.id, ...formData },
+        body: { 
+          clientId: client.id, 
+          ...formData, 
+          notes: finalNotes 
+        },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
@@ -283,34 +305,45 @@ export const EditClientModal = ({
 
           {/* Custom Plan Options */}
           {isCustomPlan && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-              <div className="space-y-2">
-                <Label htmlFor="edit-monthlyAmount">Monthly Amount ($) *</Label>
-                <Input
-                  id="edit-monthlyAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.monthlyAmount}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, monthlyAmount: parseFloat(e.target.value) || 0 }))}
-                />
+            <div className="space-y-4 p-4 bg-muted rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-monthlyAmount">Monthly Amount ($) *</Label>
+                  <Input
+                    id="edit-monthlyAmount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.monthlyAmount}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, monthlyAmount: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-maxServices">Max Services (1-6) *</Label>
+                  <Input
+                    id="edit-maxServices"
+                    type="number"
+                    min="1"
+                    max="6"
+                    value={formData.maxServices}
+                    onChange={(e) => {
+                      const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
+                      setFormData((prev) => ({
+                        ...prev,
+                        maxServices: value,
+                        selectedServices: prev.selectedServices.slice(0, value),
+                      }));
+                    }}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-maxServices">Max Services (1-6) *</Label>
+                <Label htmlFor="edit-additionalEmails">Additional Emails (comma separated)</Label>
                 <Input
-                  id="edit-maxServices"
-                  type="number"
-                  min="1"
-                  max="6"
-                  value={formData.maxServices}
-                  onChange={(e) => {
-                    const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
-                    setFormData((prev) => ({
-                      ...prev,
-                      maxServices: value,
-                      selectedServices: prev.selectedServices.slice(0, value),
-                    }));
-                  }}
+                  id="edit-additionalEmails"
+                  value={additionalEmails}
+                  onChange={(e) => setAdditionalEmails(e.target.value)}
+                  placeholder="email1@example.com, email2@example.com"
                 />
               </div>
             </div>

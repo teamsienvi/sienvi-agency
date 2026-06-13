@@ -1,7 +1,20 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+function parseAdditionalEmails(notes: string | null | undefined): string[] {
+  if (!notes) return [];
+  const match = notes.match(/\[Additional\s+Emails:\s*([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1]
+      .split(/[,;]/)
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+  }
+  return [];
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +42,25 @@ serve(async (req) => {
       );
     }
 
-    const displayName = customerName || customerEmail.split("@")[0];
+    const primaryEmail = customerEmail.split(/[,;]/)[0].trim().toLowerCase();
+    let additionalEmails: string[] = [];
+
+    // Query client profile to get notes
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: profile } = await supabase
+      .from("client_profiles")
+      .select("notes")
+      .eq("email", primaryEmail)
+      .maybeSingle();
+
+    if (profile?.notes) {
+      additionalEmails = parseAdditionalEmails(profile.notes);
+    }
+
+    const displayName = customerName || primaryEmail.split("@")[0];
     const signDate = signedAt ? new Date(signedAt).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
@@ -41,11 +72,13 @@ serve(async (req) => {
     });
     const dashboardUrl = "https://sienvi-agency-landing-page.lovable.app/dashboard";
 
-    console.log("Sending contract signed confirmation to:", customerEmail);
+    const recipients = [...new Set([primaryEmail, ...additionalEmails])];
+
+    console.log("Sending contract signed confirmation to:", recipients);
 
     const emailResponse = await resend.emails.send({
       from: "Sienvi <info@sienvi.com>",
-      to: [customerEmail],
+      to: recipients,
       subject: "Agreement Signed",
       html: `
 <!DOCTYPE html>

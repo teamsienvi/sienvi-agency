@@ -17,6 +17,18 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
+function parseAdditionalEmails(notes: string | null | undefined): string[] {
+  if (!notes) return [];
+  const match = notes.match(/\[Additional\s+Emails:\s*([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1]
+      .split(/[,;]/)
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+  }
+  return [];
+}
+
 // Admin emails to notify
 const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com", "info@sienvi.com"];
 
@@ -382,7 +394,23 @@ async function sendPaymentConfirmationEmail(
   channelCount?: number
 ) {
   try {
-    const displayName = customerName || customerEmail.split("@")[0];
+    const normalizedEmail = customerEmail.toLowerCase().trim();
+    let additionalEmails: string[] = [];
+
+    const { data: profile } = await supabase
+      .from("client_profiles")
+      .select("notes")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (profile?.notes) {
+      additionalEmails = parseAdditionalEmails(profile.notes);
+    }
+
+    const primaryEmail = normalizedEmail;
+    const recipients = [...new Set([primaryEmail, ...additionalEmails])];
+
+    const displayName = customerName || primaryEmail.split("@")[0];
     
     // Determine plan label with special handling for Amazon and Advertising
     let planLabel = planLabels[plan] || plan || "Sienvi Subscription";
@@ -403,11 +431,11 @@ async function sendPaymentConfirmationEmail(
           .join(", ")
       : null;
 
-    console.log("Sending payment confirmation email to:", customerEmail, "Plan:", planLabel);
+    console.log("Sending payment confirmation email to:", recipients, "Plan:", planLabel);
 
     await resend.emails.send({
       from: "Sienvi <info@sienvi.com>",
-      to: [customerEmail],
+      to: recipients,
       subject: "🎉 Payment Confirmed - Welcome to Sienvi!",
       html: `
 <!DOCTYPE html>

@@ -66,6 +66,7 @@ const serviceLabels: Record<string, string> = {
   "custom-lms": "Custom LMS Package",
   "custom-gpt": "Custom GPT Product",
   "custom-ai-assistant": "Custom AI Assistant",
+  "custom-tool": "Custom Tool",
   "amazon-design": "Amazon Design Package",
   
   // Advertising Channels
