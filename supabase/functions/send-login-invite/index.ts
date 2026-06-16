@@ -121,7 +121,14 @@ serve(async (req) => {
     // Check if user already exists in auth without fetching all users
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
-    const isNewUser = !existingAuthUser;
+
+    // Treat as a new user if:
+    // - No auth record exists at all, OR
+    // - The user exists but has never signed in AND has no confirmed email
+    //   (i.e. they were created/invited but never actually set up their account)
+    const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
+    const hasConfirmedEmail = !!existingAuthUser?.email_confirmed_at;
+    const isNewUser = !existingAuthUser || (!hasSignedIn && !hasConfirmedEmail);
 
     if (isNewUser) {
       redirectPath = "/login?setup=password";
@@ -142,9 +149,12 @@ serve(async (req) => {
       tipText = "Complete your onboarding to help us get started on your automations.";
     }
 
-    // Use 'invite' for brand new users (creates auth account), 'magiclink' for existing
+    // Use 'invite' only when there is truly no auth record (creates a new account).
+    // If the user record already exists but is unconfirmed, use 'magiclink' to avoid
+    // a conflict — the email will still show the "Set Your Password" new-user messaging.
+    const linkType = !existingAuthUser ? "invite" : "magiclink";
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: isNewUser ? "invite" : "magiclink",
+      type: linkType,
       email: targetEmail,
       options: {
         redirectTo: `${baseUrl}${redirectPath}`,
