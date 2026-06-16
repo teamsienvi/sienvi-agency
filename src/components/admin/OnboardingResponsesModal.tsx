@@ -60,9 +60,21 @@ export const OnboardingResponsesModal = ({
         supabase.from("client_profiles").select("plan, selected_services").eq("id", clientId).maybeSingle(),
       ]);
 
+      let qData = questionnaireRes.data;
+      if (qData && qData.additional_notes) {
+        try {
+          const parsed = JSON.parse(qData.additional_notes);
+          if (parsed && typeof parsed === "object") {
+            qData = { ...qData, ...parsed };
+          }
+        } catch (e) {
+          console.error("Error parsing questionnaire additional_notes:", e);
+        }
+      }
+
       setGoals(goalsRes.data);
       setAvatars(avatarsRes.data);
-      setQuestionnaire(questionnaireRes.data);
+      setQuestionnaire(qData);
       setAmazon(amazonRes.data);
       setAdvertising(advertisingRes.data);
 

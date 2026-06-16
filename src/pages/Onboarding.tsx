@@ -71,7 +71,10 @@ const Onboarding = () => {
 
       const profile = response.data.profile;
       
-      if (profile.contractStatus !== "signed") {
+      const services = profile.selectedServices || [];
+      const isDiscovery = profile.plan === "discovery" || profile.plan === "custom-lms" || services.includes("custom-tool");
+      
+      if (profile.contractStatus !== "signed" && !isDiscovery) {
         toast.error("Please sign the contract first");
         navigate("/dashboard");
         return;
@@ -84,10 +87,9 @@ const Onboarding = () => {
       }
 
       setClientProfileId(profile.id);
-      setSelectedServices(profile.selectedServices || []);
+      setSelectedServices(services);
 
       // Determine onboarding type based on selected services
-      const services = profile.selectedServices || [];
       let type: OnboardingType = "standard";
       let numSteps = 3;
       
@@ -112,10 +114,23 @@ const Onboarding = () => {
         supabase.from("onboarding_advertising").select("*").eq("client_profile_id", profile.id).maybeSingle(),
       ]);
 
+      // Parse JSON from additional_notes for discovery questionnaire if present
+      let qData = questionnaireRes.data;
+      if (qData && qData.additional_notes) {
+        try {
+          const parsed = JSON.parse(qData.additional_notes);
+          if (parsed && typeof parsed === "object") {
+            qData = { ...qData, ...parsed };
+          }
+        } catch (e) {
+          console.error("Error parsing questionnaire additional_notes:", e);
+        }
+      }
+
       // Determine completed steps based on onboarding type
       let completed: boolean[];
       if (type === "discovery") {
-        completed = [false];
+        completed = [!!qData?.completed_at];
       } else if (type === "amazon") {
         // Amazon only has 1 step
         completed = [!!amazonRes.data?.completed_at];
@@ -137,7 +152,7 @@ const Onboarding = () => {
       setStepData({
         goals: goalsRes.data,
         avatars: avatarsRes.data,
-        questionnaire: questionnaireRes.data,
+        questionnaire: qData,
         amazon: amazonRes.data,
         advertising: advertisingRes.data,
       });
@@ -165,15 +180,27 @@ const Onboarding = () => {
     setCompletedSteps(newCompleted);
 
     if (newCompleted.every(c => c)) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await supabase.functions.invoke("update-client-status", {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("No active session found. Please log in.");
+        
+        const response = await supabase.functions.invoke("update-client-status", {
           body: { action: "complete_onboarding" },
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
+
+        if (response.error || response.data?.error) {
+          throw new Error(response.error?.message || response.data?.error || "Failed to update onboarding status");
+        }
+
+        toast.success("Onboarding completed!");
+        navigate("/dashboard");
+      } catch (error: any) {
+        console.error("Error completing onboarding:", error);
+        toast.error(error.message || "Failed to complete onboarding. Please try again.");
+        setLoading(false);
       }
-      toast.success("Onboarding completed!");
-      navigate("/dashboard");
     } else if (stepIndex < totalSteps - 1) {
       setCurrentStep(stepIndex + 1);
     }

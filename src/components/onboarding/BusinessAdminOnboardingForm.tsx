@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -431,11 +432,31 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
   const handleSaveDraft = async () => {
     setSaving(true);
     try {
-      // Stub database save since onboarding_business_admin table does not exist yet.
-      // In production, this would make an upsert to the backend.
-      const values = getValues();
-      console.log("Mock Saving Business Admin draft details:", values);
-      toast.success("Draft saved successfully! (Dev Mode)");
+      const data = getValues();
+      const mappedData: Record<string, any> = {
+        client_profile_id: clientProfileId,
+        business_name: data.businessName,
+        business_description: data.businessDescription,
+        industry_niche: data.industryNiche,
+        years_operating: data.yearsOperating,
+        top_3_goals: data.top3Goals,
+        revenue_streams: data.revenueStreams,
+      };
+
+      const fullResponse: Record<string, any> = {};
+      Object.entries(data).forEach(([key, val]) => {
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        fullResponse[snakeKey] = val;
+      });
+
+      mappedData.additional_notes = JSON.stringify(fullResponse);
+
+      const { error } = await supabase
+        .from("onboarding_questionnaire")
+        .upsert(mappedData, { onConflict: "client_profile_id" });
+
+      if (error) throw error;
+      toast.success("Draft saved successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to save draft");
     } finally {
@@ -446,8 +467,30 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
   const onSubmit = async (data: FormData) => {
     setSaving(true);
     try {
-      // Stub database completion since onboarding_business_admin table does not exist yet.
-      console.log("Mock Submitting Business Admin details:", data);
+      const mappedData: Record<string, any> = {
+        client_profile_id: clientProfileId,
+        business_name: data.businessName,
+        business_description: data.businessDescription,
+        industry_niche: data.industryNiche,
+        years_operating: data.yearsOperating,
+        top_3_goals: data.top3Goals,
+        revenue_streams: data.revenueStreams,
+        completed_at: new Date().toISOString(),
+      };
+
+      const fullResponse: Record<string, any> = {};
+      Object.entries(data).forEach(([key, val]) => {
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        fullResponse[snakeKey] = val;
+      });
+
+      mappedData.additional_notes = JSON.stringify(fullResponse);
+
+      const { error } = await supabase
+        .from("onboarding_questionnaire")
+        .upsert(mappedData, { onConflict: "client_profile_id" });
+
+      if (error) throw error;
       toast.success("Business Admin questionnaire completed successfully!");
       onComplete();
     } catch (err: any) {

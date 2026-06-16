@@ -98,6 +98,8 @@ const ClientDashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
 
+  const isDiscovery = profile?.plan === "discovery" || profile?.plan === "custom-lms" || (profile?.selectedServices || []).includes("custom-tool");
+
   useEffect(() => {
     checkAuthAndFetchProfile();
   }, []);
@@ -190,10 +192,10 @@ const ClientDashboard = () => {
     if (profile.subscriptionStatus === "pending_payment") {
       return <Badge className="bg-orange-500">Awaiting Payment</Badge>;
     }
-    if (!isAdvertising && profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
+    if (!isAdvertising && !isDiscovery && profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
       return <Badge className="bg-blue-500">Awaiting Contract</Badge>;
     }
-    if (!isAdvertising && profile.contractStatus === "signed" && profile.onboardingStatus !== "completed") {
+    if (!isAdvertising && (isDiscovery || profile.contractStatus === "signed") && profile.onboardingStatus !== "completed") {
       return <Badge className="bg-purple-500">Onboarding In Progress</Badge>;
     }
     if (isAdvertising || profile.onboardingStatus === "completed") {
@@ -210,6 +212,13 @@ const ClientDashboard = () => {
       let completed = 1;
       if (profile.subscriptionStatus === "active") completed++;
       return (completed / 2) * 100;
+    }
+    if (isDiscovery) {
+      // Discovery skips contract: 3 steps (account + payment + onboarding)
+      let completed = 1;
+      if (profile.subscriptionStatus === "active") completed++;
+      if (profile.onboardingStatus === "completed") completed++;
+      return (completed / 3) * 100;
     }
     let completed = 1;
     if (profile.subscriptionStatus === "active") completed++;
@@ -239,7 +248,7 @@ const ClientDashboard = () => {
     // Advertising clients don't need contract or onboarding
     if (isAdvertising) return null;
     
-    if (profile.contractStatus === "not_signed") {
+    if (profile.contractStatus === "not_signed" && !isDiscovery) {
       return (
         <Button size="lg" className="w-full" onClick={() => navigate("/contract")}>
           <FileSignature className="w-5 h-5 mr-2" />
@@ -350,8 +359,66 @@ const ClientDashboard = () => {
             </div>
           </div>
 
-          {/* Primary CTA - only show if there's a next action */}
-          {getPrimaryCTA() && (
+          {/* Onboarding Completion Banner or Next Step CTA */}
+          {profile.onboardingStatus === "completed" ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="border-indigo-500/25 bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-white backdrop-blur-md overflow-hidden relative shadow-md">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                  <CheckCircle2 className="w-40 h-40 text-indigo-600" />
+                </div>
+                <CardContent className="pt-8 pb-6 px-6 sm:px-8 space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/20 flex-shrink-0 animate-bounce">
+                      <span className="text-2xl">🎉</span>
+                    </div>
+                    <div className="space-y-1">
+                      <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold tracking-wider">ONBOARDING COMPLETE</Badge>
+                      <h2 className="text-2xl font-bold text-slate-800">You're All Set, {profile.firstName}!</h2>
+                      <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
+                        We have successfully registered your responses. Our technical team is now designing and building your custom automation workflows.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator className="bg-indigo-100" />
+
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="bg-white/60 backdrop-blur-sm border border-slate-100 p-4 rounded-xl space-y-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center font-bold text-indigo-700 text-sm">1</div>
+                      <p className="font-semibold text-sm text-slate-800">Strategy Analysis</p>
+                      <p className="text-xs text-muted-foreground">Our team reviews your assets, goals, and primary bottleneck areas.</p>
+                    </div>
+                    <div className="bg-white/60 backdrop-blur-sm border border-slate-100 p-4 rounded-xl space-y-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center font-bold text-purple-700 text-sm">2</div>
+                      <p className="font-semibold text-sm text-slate-800">Workflow Building</p>
+                      <p className="text-xs text-muted-foreground">We configure integrations, design SOPs, and build database structures.</p>
+                    </div>
+                    <div className="bg-white/60 backdrop-blur-sm border border-slate-100 p-4 rounded-xl space-y-2 shadow-sm">
+                      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center font-bold text-green-700 text-sm">3</div>
+                      <p className="font-semibold text-sm text-slate-800">Delivery & Launch</p>
+                      <p className="text-xs text-muted-foreground">We deliver your workspace access and invite you to our review call (2-3 business days).</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Need to add more details? Feel free to contact our specialists directly.
+                    </p>
+                    <a
+                      href="mailto:teamsienvi@gmail.com"
+                      className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-white hover:bg-slate-50 h-10 px-4 py-2 text-indigo-600 font-semibold shadow-sm"
+                    >
+                      Email Support Team
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : getPrimaryCTA() && (
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="pt-6">
                 {getPrimaryCTA()}
@@ -402,8 +469,8 @@ const ClientDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Step 3: Contract - hidden for advertising */}
-                  {profile.plan !== "advertising" && (
+                  {/* Step 3: Contract - hidden for advertising and discovery */}
+                  {profile.plan !== "advertising" && !isDiscovery && (
                     <div className="flex items-center gap-3">
                       {profile.contractStatus === "signed" ? (
                         <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -501,8 +568,8 @@ const ClientDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Contract Status Card - hidden for advertising */}
-            {profile.plan !== "advertising" && (
+            {/* Contract Status Card - hidden for advertising and discovery */}
+            {profile.plan !== "advertising" && !isDiscovery && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

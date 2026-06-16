@@ -594,7 +594,8 @@ serve(async (req) => {
         break;
 
       case "start_onboarding":
-        if (profile.contract_status !== "signed") {
+        const isDiscovery = profile.plan === "discovery" || profile.plan === "custom-lms" || (profile.selected_services || []).includes("custom-tool");
+        if (profile.contract_status !== "signed" && !isDiscovery) {
           return new Response(
             JSON.stringify({ error: "Contract must be signed before starting onboarding" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -657,10 +658,25 @@ serve(async (req) => {
         supabaseAdmin.from("onboarding_advertising").select("*").eq("client_profile_id", profile.id).maybeSingle(),
         supabaseAdmin.from("onboarding_amazon").select("*").eq("client_profile_id", profile.id).maybeSingle(),
       ]);
+
+      let questionnaireData = questionnaireRes.data;
+      if (questionnaireData && questionnaireData.additional_notes) {
+        try {
+          const parsed = JSON.parse(questionnaireData.additional_notes);
+          if (parsed && typeof parsed === "object") {
+            questionnaireData = { ...questionnaireData, ...parsed };
+            // Remove raw JSON from additional_notes to avoid printing a raw JSON block in the email
+            delete questionnaireData.additional_notes;
+          }
+        } catch (e) {
+          // not JSON, keep as is
+        }
+      }
+
       const onboardingData = {
         goals: goalsRes.data,
         avatars: avatarsRes.data,
-        questionnaire: questionnaireRes.data,
+        questionnaire: questionnaireData,
         advertising: advertisingRes.data,
         amazon: amazonRes.data,
       };
