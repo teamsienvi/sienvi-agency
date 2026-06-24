@@ -41,8 +41,19 @@ export const AuthErrorHandler = () => {
       // Create new URL without the error hash/query parameters
       const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]error[^&]*/g, "").replace(/^&/, "?");
       window.history.replaceState({}, document.title, cleanUrl);
+      return;
     }
-  }, [location]);
+
+    // Redirect user to the login/setup page if they land elsewhere (like home page) with invite/signup/recovery hash
+    const type = hashParams.get("type");
+    if (type && location.pathname !== "/login") {
+      if (type === "invite" || type === "signup") {
+        navigate(`/login?setup=password#${hash}`);
+      } else if (type === "recovery") {
+        navigate(`/login#${hash}`);
+      }
+    }
+  }, [location, navigate]);
 
   const handleClose = () => {
     setIsOpen(false);
