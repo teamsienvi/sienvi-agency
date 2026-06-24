@@ -29,7 +29,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      throw new Error("Invalid token");
+      throw new Error("Invalid token: " + (authError?.message || "No user found"));
     }
 
     // Check admin role
@@ -44,64 +44,103 @@ serve(async (req) => {
       throw new Error("Admin access required");
     }
 
-    const { clientId } = await req.json();
+    const { clientId, clientEmail } = await req.json();
 
-    if (!clientId) {
-      throw new Error("Client ID is required");
+    if (!clientId && !clientEmail) {
+      throw new Error("Client ID or clientEmail is required");
     }
 
-    console.log(`Admin ${user.email} deleting client ${clientId}`);
+    let email = (clientEmail || "").toLowerCase();
+    let userId = null;
+    let targetClientId = clientId;
 
-    // clientId is now the client_profiles.id directly
-    // First, fetch the client profile to get the email
-    const { data: clientProfile, error: profileFetchError } = await supabase
-      .from("client_profiles")
-      .select("id, email, user_id")
-      .eq("id", clientId)
-      .maybeSingle();
+    if (targetClientId) {
+      const { data: clientProfile, error: profileFetchError } = await supabase
+        .from("client_profiles")
+        .select("id, email, user_id")
+        .eq("id", targetClientId)
+        .maybeSingle();
 
-    if (profileFetchError) {
-      console.error("Error fetching client profile:", profileFetchError);
-      throw new Error(`Failed to fetch client profile: ${profileFetchError.message}`);
+      if (profileFetchError) {
+        console.error("Error fetching client profile:", profileFetchError);
+        throw new Error(`Failed to fetch client profile: ${profileFetchError.message}`);
+      }
+
+      if (clientProfile) {
+        email = (clientProfile.email || "").toLowerCase();
+        userId = clientProfile.user_id;
+      }
+    } else if (email) {
+      const { data: clientProfile, error: profileFetchError } = await supabase
+        .from("client_profiles")
+        .select("id, user_id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (profileFetchError) {
+        console.error("Error fetching client profile by email:", profileFetchError);
+      }
+
+      if (clientProfile) {
+        targetClientId = clientProfile.id;
+        userId = clientProfile.user_id;
+      }
     }
 
-    if (!clientProfile) {
-      throw new Error("Client profile not found");
+    console.log(`Admin ${user.email} deleting client: id=${targetClientId || "n/a"}, email=${email || "n/a"}, userId=${userId || "n/a"}`);
+
+    if (targetClientId) {
+      // Cleanup dependent onboarding rows first (FK constraints)
+      const { error: avatarsDelErr } = await supabase
+        .from("onboarding_avatars")
+        .delete()
+        .eq("client_profile_id", targetClientId);
+      if (avatarsDelErr) console.warn("onboarding_avatars delete warning:", avatarsDelErr);
+
+      const { error: goalsDelErr } = await supabase
+        .from("onboarding_goals")
+        .delete()
+        .eq("client_profile_id", targetClientId);
+      if (goalsDelErr) console.warn("onboarding_goals delete warning:", goalsDelErr);
+
+      const { error: questionnaireDelErr } = await supabase
+        .from("onboarding_questionnaire")
+        .delete()
+        .eq("client_profile_id", targetClientId);
+      if (questionnaireDelErr) console.warn("onboarding_questionnaire delete warning:", questionnaireDelErr);
+
+      // Delete the client profile
+      const { error: profileDelErr } = await supabase
+        .from("client_profiles")
+        .delete()
+        .eq("id", targetClientId);
+
+      if (profileDelErr) {
+        console.error("client_profiles delete error:", profileDelErr);
+        throw new Error(`Failed to delete client profile: ${profileDelErr.message}`);
+      }
     }
 
-    const email = (clientProfile.email || "").toLowerCase();
-    const userId = clientProfile.user_id;
+    // Find auth user by email if we still don't have userId
+    if (!userId && email) {
+      console.log(`Looking up auth user by email: ${email}`);
+      const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const foundUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (foundUser) {
+        userId = foundUser.id;
+        console.log(`Found auth user by email lookup: ${userId}`);
+      }
+    }
 
-    console.log(`Found client profile: id=${clientId}, email=${email}, user_id=${userId}`);
-
-    // Cleanup dependent onboarding rows first (FK constraints)
-    const { error: avatarsDelErr } = await supabase
-      .from("onboarding_avatars")
-      .delete()
-      .eq("client_profile_id", clientId);
-    if (avatarsDelErr) console.warn("onboarding_avatars delete warning:", avatarsDelErr);
-
-    const { error: goalsDelErr } = await supabase
-      .from("onboarding_goals")
-      .delete()
-      .eq("client_profile_id", clientId);
-    if (goalsDelErr) console.warn("onboarding_goals delete warning:", goalsDelErr);
-
-    const { error: questionnaireDelErr } = await supabase
-      .from("onboarding_questionnaire")
-      .delete()
-      .eq("client_profile_id", clientId);
-    if (questionnaireDelErr) console.warn("onboarding_questionnaire delete warning:", questionnaireDelErr);
-
-    // Delete the client profile
-    const { error: profileDelErr } = await supabase
-      .from("client_profiles")
-      .delete()
-      .eq("id", clientId);
-
-    if (profileDelErr) {
-      console.error("client_profiles delete error:", profileDelErr);
-      throw new Error(`Failed to delete client profile: ${profileDelErr.message}`);
+    // Delete the auth user
+    if (userId) {
+      console.log(`Deleting auth user: ${userId}`);
+      const { error: authDelErr } = await supabase.auth.admin.deleteUser(userId);
+      if (authDelErr) {
+        console.warn("Auth user delete warning:", authDelErr);
+      } else {
+        console.log(`Successfully deleted auth user: ${userId}`);
+      }
     }
 
     // Also cleanup any subscription records by email (if they exist)
@@ -116,7 +155,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Successfully deleted client ${clientId} (email=${email || "n/a"}, userId=${userId || "n/a"})`);
+    console.log(`Successfully deleted client. id=${targetClientId || "n/a"}, email=${email || "n/a"}, userId=${userId || "n/a"}`);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -99,7 +99,7 @@ const Onboarding = () => {
       } else if (services.includes("amazon-design")) {
         type = "amazon";
         numSteps = 1; // Amazon only has 1 step - the Amazon questionnaire
-      } else if (services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising"))) {
+      } else if (profile.plan === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"))) {
         type = "advertising";
       }
       setOnboardingType(type);

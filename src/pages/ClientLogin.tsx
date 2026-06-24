@@ -25,16 +25,20 @@ const ClientLogin = () => {
   // Check if user is coming from a password reset link or setup password flow
   useEffect(() => {
     const checkForPasswordReset = async () => {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const type = hashParams.get("type");
+      const { data: { session } } = await supabase.auth.getSession();
       const setup = searchParams.get("setup");
       
+      // If we are logged in and explicitly need to set a password
+      if (session && setup === "password") {
+        setViewMode("set-password");
+        return;
+      }
+
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get("type");
+      
       if (type === "recovery" || type === "magiclink" || type === "invite" || type === "signup") {
-        // User clicked a magic link - check if they need to set password
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && setup === "password") {
-          setViewMode("set-password");
-        } else if (type === "recovery") {
+        if (type === "recovery") {
           setViewMode("reset-confirm");
         } else if (session) {
           // Regular magic link login - redirect to dashboard

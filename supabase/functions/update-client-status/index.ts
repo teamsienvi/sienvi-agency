@@ -131,7 +131,7 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
 }
 
 // Send contract signed admin notification
-async function sendContractSignedAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, signedAt: string) {
+async function sendContractSignedAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, signedAt: string, signature?: string) {
   try {
     const displayName = clientName || clientEmail.split("@")[0];
     const planLabel = plan ? (planLabels[plan] || plan) : "N/A";
@@ -173,6 +173,12 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
                     <td style="padding: 8px 0;"><strong style="color: #6b7280;">Name:</strong></td>
                     <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937;">${displayName}</span></td>
                   </tr>
+                  ${signature ? `
+                  <tr>
+                    <td style="padding: 8px 0;"><strong style="color: #6b7280;">Digital Signature:</strong></td>
+                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937; font-family: 'Courier New', Courier, monospace; font-weight: bold; font-style: italic;">${signature}</span></td>
+                  </tr>
+                  ` : ""}
                   <tr>
                     <td style="padding: 8px 0;"><strong style="color: #6b7280;">Email:</strong></td>
                     <td style="padding: 8px 0; text-align: right;"><a href="mailto:${clientEmail}" style="color: #667eea; text-decoration: none;">${clientEmail}</a></td>
@@ -540,7 +546,7 @@ serve(async (req) => {
       );
     }
 
-    const { action, clientId } = await req.json();
+    const { action, clientId, signature } = await req.json();
 
     // Get the client profile
     let profileQuery = supabaseAdmin.from("client_profiles").select("*");
@@ -590,6 +596,7 @@ serve(async (req) => {
         updateData = {
           contract_status: "signed",
           contract_signed_at: signedAt,
+          contract_signature: signature || "",
         };
         break;
 
@@ -645,7 +652,7 @@ serve(async (req) => {
       // Send both client and admin emails for contract signing
       await Promise.all([
         sendContractSignedClientEmail(profile.email, clientName, signedAt),
-        sendContractSignedAdminEmail(profile.email, clientName, profile.plan, signedAt),
+        sendContractSignedAdminEmail(profile.email, clientName, profile.plan, signedAt, signature),
       ]);
     }
 
