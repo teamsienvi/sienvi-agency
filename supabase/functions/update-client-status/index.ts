@@ -130,8 +130,42 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
   }
 }
 
+// Format agreement details into an HTML table for the admin email
+function formatContractDetails(details: any): string {
+  if (!details) return '';
+  
+  const labels: Record<string, string> = {
+    effectiveDate: "Effective Date",
+    clientLegalName: "Client Legal Name",
+    clientTradeName: "Client Trade Name / DBA",
+    clientJurisdiction: "Client Jurisdiction",
+    clientAddress: "Client Address",
+    clientContactName: "Client Contact Name",
+    clientEmail: "Client Email",
+    strategyDiscussionPeriod: "Strategy Discussion Date / Period",
+    confidentialitySurvivalPeriod: "Confidentiality Survival Period",
+  };
+
+  const rows = Object.entries(details)
+    .filter(([key, val]) => val !== null && val !== undefined && val !== '')
+    .map(([key, val]) => {
+      const label = labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      return `<tr><td style="padding:8px 12px;font-size:13px;color:#6b7280;width:38%;border-bottom:1px solid #f1f5f9;vertical-align:top">${label}</td><td style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #f1f5f9;vertical-align:top">${val}</td></tr>`;
+    });
+
+  if (rows.length === 0) return '';
+  return `
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #ffffff; background: #3b82f6; padding: 10px 14px; border-radius: 6px 6px 0 0;">Agreement Details</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 6px 6px; overflow: hidden;">
+        ${rows.join('')}
+      </table>
+    </div>
+  `;
+}
+
 // Send contract signed admin notification
-async function sendContractSignedAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, signedAt: string, signature?: string) {
+async function sendContractSignedAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, signedAt: string, signature?: string, contractDetails?: any) {
   try {
     const displayName = clientName || clientEmail.split("@")[0];
     const planLabel = plan ? (planLabels[plan] || plan) : "N/A";
@@ -189,6 +223,7 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
                   </tr>
                 </table>
               </div>
+              ${formatContractDetails(contractDetails)}
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 24px 0;">
@@ -546,7 +581,7 @@ serve(async (req) => {
       );
     }
 
-    const { action, clientId, signature } = await req.json();
+    const { action, clientId, signature, contractDetails } = await req.json();
 
     // Get the client profile
     let profileQuery = supabaseAdmin.from("client_profiles").select("*");
@@ -597,6 +632,7 @@ serve(async (req) => {
           contract_status: "signed",
           contract_signed_at: signedAt,
           contract_signature: signature || "",
+          contract_details: contractDetails || null,
         };
         break;
 
@@ -652,7 +688,7 @@ serve(async (req) => {
       // Send both client and admin emails for contract signing
       await Promise.all([
         sendContractSignedClientEmail(profile.email, clientName, signedAt),
-        sendContractSignedAdminEmail(profile.email, clientName, profile.plan, signedAt, signature),
+        sendContractSignedAdminEmail(profile.email, clientName, profile.plan, signedAt, signature, contractDetails),
       ]);
     }
 

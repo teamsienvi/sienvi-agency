@@ -30,6 +30,17 @@ const Contract = () => {
   const [profile, setProfile] = useState<any>(null);
   const [signatureName, setSignatureName] = useState("");
 
+  // Agreement Details Form Fields
+  const [effectiveDate, setEffectiveDate] = useState("");
+  const [clientLegalName, setClientLegalName] = useState("");
+  const [clientTradeName, setClientTradeName] = useState("");
+  const [clientJurisdiction, setClientJurisdiction] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [clientContactName, setClientContactName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [strategyPeriod, setStrategyPeriod] = useState("");
+  const [confidentialityPeriod, setConfidentialityPeriod] = useState("5 years");
+
   const isAmazonContract = profile?.plan === "amazon" || 
     (profile?.selectedServices || []).includes("channel-amazon") || 
     (profile?.selectedServices || []).includes("amazon-design");
@@ -72,6 +83,19 @@ const Contract = () => {
       if (profile.contractStatus === "signed" && !isViewMode) {
         setAlreadySigned(true);
       }
+
+      // Pre-populate Agreement Details fields
+      const details = profile.contractDetails || {};
+      setEffectiveDate(details.effectiveDate || new Date().toISOString().substring(0, 10));
+      setClientLegalName(details.clientLegalName || "");
+      setClientTradeName(details.clientTradeName || "");
+      setClientJurisdiction(details.clientJurisdiction || "");
+      setClientAddress(details.clientAddress || "");
+      setClientContactName(details.clientContactName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim());
+      setClientEmail(details.clientEmail || profile.email || "");
+      setStrategyPeriod(details.strategyPeriod || "");
+      setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
+
     } catch (error: any) {
       console.error("Error checking access:", error);
       navigate("/dashboard");
@@ -80,7 +104,56 @@ const Contract = () => {
     }
   };
 
+  const getPlanPrice = () => {
+    if (profile?.customPrice) {
+      return `$${profile.customPrice} USD/month`;
+    }
+    switch (profile?.plan) {
+      case "single":
+        return "$888 USD/month";
+      case "triple":
+        return "$2,664 USD/month";
+      case "full":
+        return "$3,996 USD/month";
+      case "amazon":
+        return "$999 USD/month";
+      case "advertising": {
+        const channelsCount = (profile?.selectedServices || []).filter((s: string) => s.startsWith("channel-")).length;
+        if (channelsCount === 1) return "$888 USD/month";
+        if (channelsCount === 2) return "$1,776 USD/month";
+        if (channelsCount === 3) return "$1,479 USD/month";
+        if (channelsCount === 4) return "$1,971 USD/month";
+        if (channelsCount === 5) return "$2,464 USD/month";
+        if (channelsCount === 6) return "$2,957 USD/month";
+        if (channelsCount === 7) return "$3,450 USD/month";
+        return "$888 USD/month";
+      }
+      default:
+        return "$888 USD/month";
+    }
+  };
+
   const handleSign = async () => {
+    if (!effectiveDate) {
+      toast.error("Please select an Effective Date");
+      return;
+    }
+    if (!clientLegalName.trim()) {
+      toast.error("Please enter your Client Legal Name");
+      return;
+    }
+    if (!clientJurisdiction.trim()) {
+      toast.error("Please enter your Client Jurisdiction");
+      return;
+    }
+    if (!clientAddress.trim()) {
+      toast.error("Please enter your Client Address");
+      return;
+    }
+    if (!clientContactName.trim()) {
+      toast.error("Please enter your Client Contact Name");
+      return;
+    }
     if (!agreed) {
       toast.error("Please agree to the terms first");
       return;
@@ -96,10 +169,23 @@ const Contract = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
+      const contractDetails = {
+        effectiveDate,
+        clientLegalName: clientLegalName.trim(),
+        clientTradeName: clientTradeName.trim(),
+        clientJurisdiction: clientJurisdiction.trim(),
+        clientAddress: clientAddress.trim(),
+        clientContactName: clientContactName.trim(),
+        clientEmail: clientEmail.trim(),
+        strategyPeriod: strategyPeriod.trim(),
+        confidentialityPeriod: confidentialityPeriod.trim(),
+      };
+
       const response = await supabase.functions.invoke("update-client-status", {
         body: { 
           action: "sign_contract",
-          signature: signatureName.trim()
+          signature: signatureName.trim(),
+          contractDetails
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -117,6 +203,281 @@ const Contract = () => {
     } finally {
       setSigning(false);
     }
+  };
+
+  const renderAgreementDetailsTable = () => {
+    if (isViewMode) {
+      return (
+        <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:shadow-none print:border-slate-300">
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 print:bg-slate-100 print:border-slate-300">
+            <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase print:text-slate-900">Agreement Details</h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider print:border-slate-300 print:bg-transparent">
+                <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Field</th>
+                <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800 w-1/2">Effective Date</td>
+                <td className="px-4 py-3 text-slate-800 w-1/2">{effectiveDate}</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Legal Name</td>
+                <td className="px-4 py-3 text-slate-800">{clientLegalName}</td>
+              </tr>
+              {clientTradeName && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Trade Name / DBA, if applicable</td>
+                  <td className="px-4 py-3 text-slate-800">{clientTradeName}</td>
+                </tr>
+              )}
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Jurisdiction</td>
+                <td className="px-4 py-3 text-slate-800">{clientJurisdiction}</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Address</td>
+                <td className="px-4 py-3 text-slate-800">{clientAddress}</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Contact Name</td>
+                <td className="px-4 py-3 text-slate-800">{clientContactName}</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Email</td>
+                <td className="px-4 py-3 text-slate-800">{clientEmail}</td>
+              </tr>
+              <tr className="bg-slate-50/30 print:bg-transparent">
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Legal Name</td>
+                <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Description</td>
+                <td className="px-4 py-3 text-slate-800">A company specialized in AI Automations & Advertising</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Jurisdiction</td>
+                <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Principal Office</td>
+                <td className="px-4 py-3 text-slate-800">9194 Tronson Road, Vernon, BC, V1H1E2</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Email</td>
+                <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Initial Term</td>
+                <td className="px-4 py-3 text-slate-800">3 months</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Month-to-Month Renewal</td>
+                <td className="px-4 py-3 text-slate-800">Yes, after the Initial Term</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Monthly Fee</td>
+                <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{getPlanPrice()}</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Invoice Date</td>
+                <td className="px-4 py-3 text-slate-800">7th of each month</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Payment Due Date</td>
+                <td className="px-4 py-3 text-slate-800">Within 7 days of invoice receipt</td>
+              </tr>
+              {strategyPeriod && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Strategy Discussion Date / Period</td>
+                  <td className="px-4 py-3 text-slate-800">{strategyPeriod}</td>
+                </tr>
+              )}
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Confidentiality Survival Period</td>
+                <td className="px-4 py-3 text-slate-800">{confidentialityPeriod}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:border-slate-300">
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
+          <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase">Agreement Details</h3>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left w-1/2">Field</th>
+              <th className="px-4 py-2.5 text-left w-1/2">Details</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1 w-1/2">
+                Effective Date <span className="text-red-500">*</span>
+              </td>
+              <td className="px-4 py-2 w-1/2">
+                <Input
+                  type="date"
+                  value={effectiveDate}
+                  onChange={(e) => setEffectiveDate(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                Client Legal Name <span className="text-red-500">*</span>
+              </td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., Acme Corporation LLC"
+                  value={clientLegalName}
+                  onChange={(e) => setClientLegalName(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Client Trade Name / DBA, if applicable</td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., Acme Labs"
+                  value={clientTradeName}
+                  onChange={(e) => setClientTradeName(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                Client Jurisdiction <span className="text-red-500">*</span>
+              </td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., Delaware, USA or Ontario, Canada"
+                  value={clientJurisdiction}
+                  onChange={(e) => setClientJurisdiction(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                Client Address <span className="text-red-500">*</span>
+              </td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., 123 Main St, Suite 100, New York, NY 10001"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                Client Contact Name <span className="text-red-500">*</span>
+              </td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="Full Name"
+                  value={clientContactName}
+                  onChange={(e) => setClientContactName(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Client Email</td>
+              <td className="px-4 py-2">
+                <Input
+                  type="email"
+                  value={clientEmail}
+                  readOnly
+                  disabled
+                  className="max-w-md h-9 text-sm bg-slate-50 cursor-not-allowed"
+                />
+              </td>
+            </tr>
+            <tr className="bg-slate-50/30">
+              <td className="px-4 py-3 font-semibold text-slate-600">Agency Legal Name</td>
+              <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Agency Description</td>
+              <td className="px-4 py-3 text-slate-800">A company specialized in AI Automations & Advertising</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Agency Jurisdiction</td>
+              <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Agency Principal Office</td>
+              <td className="px-4 py-3 text-slate-800">9194 Tronson Road, Vernon, BC, V1H1E2</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Agency Email</td>
+              <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Initial Term</td>
+              <td className="px-4 py-3 text-slate-800">3 months</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Month-to-Month Renewal</td>
+              <td className="px-4 py-3 text-slate-800">Yes, after the Initial Term</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Monthly Fee</td>
+              <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{getPlanPrice()}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Invoice Date</td>
+              <td className="px-4 py-3 text-slate-800">7th of each month</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Payment Due Date</td>
+              <td className="px-4 py-3 text-slate-800">Within 7 days of invoice receipt</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Strategy Discussion Date / Period</td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., June 2026 or leave blank"
+                  value={strategyPeriod}
+                  onChange={(e) => setStrategyPeriod(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Confidentiality Survival Period</td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., 5 years"
+                  value={confidentialityPeriod}
+                  onChange={(e) => setConfidentialityPeriod(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   if (loading) {
@@ -209,7 +570,8 @@ const Contract = () => {
             <CardContent className="prose prose-sm max-w-none print:p-0">
               {isAmazonContract ? (
                 <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
-                  <h3 className="font-semibold text-center text-base border-b pb-2 mb-4">BUSINESS AGREEMENT FOR AMAZON ADVERTISING SERVICES</h3>
+                  <h3 className="font-semibold text-center text-base border-b pb-2 mb-4 print:hidden">BUSINESS AGREEMENT FOR AMAZON ADVERTISING SERVICES</h3>
+                  {renderAgreementDetailsTable()}
                   
                   <p>
                     This Business Agreement ("Agreement") is made effective as of the date of signing, 
@@ -307,7 +669,8 @@ const Contract = () => {
                 </div>
               ) : (
                 <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
-                  <h3 className="font-semibold">Terms of Service</h3>
+                  <h3 className="font-semibold print:hidden">Terms of Service</h3>
+                  {renderAgreementDetailsTable()}
                   
                   <p>
                     This Service Agreement ("Agreement") is entered into between SIENVI Agency 

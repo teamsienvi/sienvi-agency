@@ -311,6 +311,8 @@ export type Database = {
       client_profiles: {
         Row: {
           account_status: string
+          contract_details: Json | null
+          contract_signature: string | null
           contract_signed_at: string | null
           contract_status: string
           created_at: string
@@ -334,6 +336,8 @@ export type Database = {
         }
         Insert: {
           account_status?: string
+          contract_details?: Json | null
+          contract_signature?: string | null
           contract_signed_at?: string | null
           contract_status?: string
           created_at?: string
@@ -357,6 +361,8 @@ export type Database = {
         }
         Update: {
           account_status?: string
+          contract_details?: Json | null
+          contract_signature?: string | null
           contract_signed_at?: string | null
           contract_status?: string
           created_at?: string

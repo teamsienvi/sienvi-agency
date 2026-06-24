@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, Mail, ArrowLeft, KeyRound, CheckCircle } from "lucide-react";
+import { Lock, Mail, ArrowLeft, KeyRound, CheckCircle, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -19,50 +19,84 @@ const ClientLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [resetSent, setResetSent] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Check if user is coming from a password reset link or setup password flow
+  // Handle auth flow: PKCE code exchange, magic links, invite links, password setup
   useEffect(() => {
-    const checkForPasswordReset = async () => {
+    const setup = searchParams.get("setup");
+    const hasCode = searchParams.get("code");
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashType = hashParams.get("type");
+
+    // If there's a `code` param (PKCE flow) or hash tokens, Supabase is exchanging
+    // them for a session in the background. We MUST wait for onAuthStateChange
+    // before rendering the final view.
+    const isAwaitingAuth = !!(hasCode || hashType);
+
+    const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      const setup = searchParams.get("setup");
-      
-      // If we are logged in and explicitly need to set a password
+
       if (session && setup === "password") {
+        // Session already exists and we need password setup
         setViewMode("set-password");
+        setIsAuthLoading(false);
         return;
       }
 
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const type = hashParams.get("type");
-      
-      if (type === "recovery" || type === "magiclink" || type === "invite" || type === "signup") {
-        if (type === "recovery") {
-          setViewMode("reset-confirm");
-        } else if (session) {
-          // Regular magic link login - redirect to dashboard
-          navigate("/dashboard");
-        }
+      if (session && hashType === "recovery") {
+        setViewMode("reset-confirm");
+        setIsAuthLoading(false);
+        return;
       }
-      // Note: We do NOT auto-redirect logged-in users here
-      // Users must actively log in to access the dashboard
-    };
-    
-    checkForPasswordReset();
 
-    // Listen for auth state changes (for password reset/magic link flow)
+      // If no auth exchange is pending, stop loading immediately
+      if (!isAwaitingAuth) {
+        setIsAuthLoading(false);
+      }
+      // Otherwise keep loading — onAuthStateChange will handle it
+    };
+
+    checkSession();
+
+    // Listen for auth state changes (handles PKCE code exchange completion,
+    // magic link sessions, invite sessions, and password recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[Auth] Event:", event, "Setup:", setup, "Session:", !!session);
+
       if (event === "PASSWORD_RECOVERY") {
         setViewMode("reset-confirm");
-      } else if (event === "SIGNED_IN" && searchParams.get("setup") === "password") {
+        setIsAuthLoading(false);
+      } else if (event === "SIGNED_IN" && setup === "password") {
+        // User just signed in via invite/magic link and needs to set password
         setViewMode("set-password");
+        setIsAuthLoading(false);
+      } else if (event === "SIGNED_IN" && !setup) {
+        // Regular sign-in via magic link (no password setup needed)
+        setIsAuthLoading(false);
+        navigate("/dashboard");
+      } else if (event === "INITIAL_SESSION") {
+        // Initial session loaded — if we're still waiting, check again
+        if (session && setup === "password") {
+          setViewMode("set-password");
+          setIsAuthLoading(false);
+        } else if (!isAwaitingAuth) {
+          setIsAuthLoading(false);
+        }
       }
-      // Note: We removed auto-redirect on SIGNED_IN to prevent unwanted navigation
-      // The login form will handle navigation after explicit login
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout: if auth exchange takes too long (e.g., expired link),
+    // stop loading so the user can see the login form or an error dialog
+    const timeout = setTimeout(() => {
+      setIsAuthLoading(false);
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [navigate, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -459,6 +493,29 @@ const ClientLogin = () => {
         return <Lock className="h-8 w-8 text-primary" />;
     }
   };
+
+  // Show a loading state while Supabase is processing auth tokens
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 hero-gradient flex items-center justify-center px-4 py-20">
+          <div className="w-full max-w-md">
+            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+              <div className="text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+                <h1 className="text-2xl font-bold text-white">Setting Up Your Account</h1>
+                <p className="text-white/60">Please wait while we verify your access...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
