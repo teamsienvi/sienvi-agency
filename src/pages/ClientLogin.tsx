@@ -147,8 +147,9 @@ const ClientLogin = () => {
 
       toast.success("Password updated successfully!");
       navigate("/dashboard");
-    } catch (err) {
-      toast.error("An unexpected error occurred.");
+    } catch (err: any) {
+      console.error("Error updating password:", err);
+      toast.error(err?.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
@@ -181,8 +182,9 @@ const ClientLogin = () => {
 
       toast.success("Password set successfully! You can now log in with your email and password.");
       navigate("/dashboard");
-    } catch (err) {
-      toast.error("An unexpected error occurred.");
+    } catch (err: any) {
+      console.error("Error setting password:", err);
+      toast.error(err?.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
