@@ -82,10 +82,16 @@ serve(async (req) => {
     
     const servicesHtml = selectedServices && selectedServices.length > 0 
       ? selectedServices.map(s => `
-          <div style="display: flex; align-items: center; padding: 6px 0;">
-            <span style="color: #10b981; font-size: 14px; margin-right: 10px;">✓</span>
-            <span style="font-size: 14px; color: #1f2937;">${serviceLabels[s] || s}</span>
-          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                <span style="color: #10b981; font-size: 14px;">✓</span>
+              </td>
+              <td align="left" style="padding: 6px 0 6px 10px; font-size: 14px; color: #1f2937; vertical-align: middle;">
+                ${serviceLabels[s] || s}
+              </td>
+            </tr>
+          </table>
         `).join('')
       : '';
 
@@ -113,9 +119,13 @@ serve(async (req) => {
             <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); overflow: hidden; border-top: 3px solid #667eea;">
               <!-- Header -->
               <div style="padding: 32px 32px 24px 32px; text-align: center; border-bottom: 1px solid #f1f5f9;">
-                <div style="width: 48px; height: 48px; background: #667eea; border-radius: 50%; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center;">
-                  <span style="color: #ffffff; font-size: 20px; line-height: 48px;">✓</span>
-                </div>
+                <table align="center" cellpadding="0" cellspacing="0" width="48" height="48" style="border-collapse: collapse; margin: 0 auto 16px auto;">
+                  <tr>
+                    <td align="center" valign="middle" style="width: 48px; height: 48px; background: #667eea; border-radius: 50%; color: #ffffff; font-size: 20px; line-height: 48px; text-align: center; vertical-align: middle;">
+                      ✓
+                    </td>
+                  </tr>
+                </table>
                 <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #1f2937; letter-spacing: -0.3px;">You're All Set</h1>
                 <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">Onboarding successfully completed</p>
               </div>
@@ -129,33 +139,71 @@ serve(async (req) => {
                 </p>
                 
                 <!-- Progress Summary -->
-                <div style="background: #f1f5f9; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
-                  <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Your journey</p>
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #ffffff; font-size: 11px;">✓</span>
-                    </div>
-                    <span style="font-size: 14px; color: #9ca3af; text-decoration: line-through;">Payment completed</span>
-                  </div>
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #ffffff; font-size: 11px;">✓</span>
-                    </div>
-                    <span style="font-size: 14px; color: #9ca3af; text-decoration: line-through;">Contract signed</span>
-                  </div>
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #ffffff; font-size: 11px;">✓</span>
-                    </div>
-                    <span style="font-size: 14px; color: #9ca3af; text-decoration: line-through;">Onboarding complete</span>
-                  </div>
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #667eea; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #ffffff; font-size: 11px;">→</span>
-                    </div>
-                    <span style="font-size: 14px; color: #1f2937; font-weight: 500;">We're building your automations</span>
-                  </div>
-                </div>
+                <table width="100%" cellpadding="0" cellspacing="0" style="background: #f1f5f9; border-radius: 8px; margin: 20px 0; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 16px 20px;">
+                      <p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Your journey</p>
+                      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                        <tr>
+                          <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                            <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                              <tr>
+                                <td align="center" valign="middle" style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; color: #ffffff; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                                  ✓
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #9ca3af; text-decoration: line-through; vertical-align: middle;">
+                            Payment completed
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                            <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                              <tr>
+                                <td align="center" valign="middle" style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; color: #ffffff; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                                  ✓
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #9ca3af; text-decoration: line-through; vertical-align: middle;">
+                            Contract signed
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                            <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                              <tr>
+                                <td align="center" valign="middle" style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; color: #ffffff; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                                  ✓
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #9ca3af; text-decoration: line-through; vertical-align: middle;">
+                            Onboarding complete
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                            <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                              <tr>
+                                <td align="center" valign="middle" style="width: 20px; height: 20px; background: #667eea; border-radius: 50%; color: #ffffff; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                                  →
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #1f2937; font-weight: 500; vertical-align: middle;">
+                            We're building your automations
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
                 
                 ${servicesHtml ? `
                 <!-- Selected Services -->

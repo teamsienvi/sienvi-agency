@@ -117,36 +117,55 @@ export const emailNote = (text: string) => `
 
 // Simple details card
 export const emailDetails = (items: { label: string; value: string; highlight?: boolean }[]) => `
-<div style="background: ${colors.bgSubtle}; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
-  ${items.map((item, i) => `
-    <div style="display: flex; justify-content: space-between; padding: 8px 0; ${i < items.length - 1 ? `border-bottom: 1px solid ${colors.border};` : ''}">
-      <span style="font-size: 13px; color: ${colors.textSecondary};">${item.label}</span>
-      <span style="font-size: 13px; font-weight: ${item.highlight ? '600' : '500'}; color: ${item.highlight ? colors.primary : colors.text};">${item.value}</span>
-    </div>
-  `).join('')}
-</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="background: ${colors.bgSubtle}; border-radius: 8px; margin: 20px 0; border-collapse: collapse;">
+  <tr>
+    <td style="padding: 16px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+        ${items.map((item, i) => `
+          <tr>
+            <td align="left" style="font-size: 13px; color: ${colors.textSecondary}; padding: 8px 0; ${i < items.length - 1 ? `border-bottom: 1px solid ${colors.border};` : ''}">
+              ${item.label}
+            </td>
+            <td align="right" style="font-size: 13px; font-weight: ${item.highlight ? '600' : '500'}; color: ${item.highlight ? colors.primary : colors.text}; padding: 8px 0; ${i < items.length - 1 ? `border-bottom: 1px solid ${colors.border};` : ''}">
+              ${item.value}
+            </td>
+          </tr>
+        `).join('')}
+      </table>
+    </td>
+  </tr>
+</table>
 `;
 
 // Simple step list
 export const emailSteps = (steps: { text: string; done?: boolean }[]) => `
-<div style="margin: 16px 0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0; border-collapse: collapse;">
   ${steps.map((step, i) => `
-    <div style="display: flex; align-items: center; padding: 8px 0;">
-      <div style="width: 20px; height: 20px; background: ${step.done ? colors.success : colors.bgSubtle}; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-        ${step.done 
-          ? `<span style="color: #ffffff; font-size: 11px;">✓</span>`
-          : `<span style="color: ${colors.textMuted}; font-size: 11px; font-weight: 500;">${i + 1}</span>`
-        }
-      </div>
-      <span style="font-size: 14px; color: ${step.done ? colors.textMuted : colors.text}; ${step.done ? 'text-decoration: line-through;' : ''}">${step.text}</span>
-    </div>
+    <tr>
+      <td style="padding: 8px 0; width: 20px; vertical-align: middle;">
+        <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+          <tr>
+            <td align="center" valign="middle" style="width: 20px; height: 20px; background: ${step.done ? colors.success : colors.bgSubtle}; border-radius: 50%; color: ${step.done ? '#ffffff' : colors.textMuted}; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+              ${step.done ? '✓' : (i + 1)}
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td align="left" style="padding: 8px 0 8px 12px; font-size: 14px; color: ${step.done ? colors.textMuted : colors.text}; ${step.done ? 'text-decoration: line-through;' : ''}; vertical-align: middle;">
+        ${step.text}
+      </td>
+    </tr>
   `).join('')}
-</div>
+</table>
 `;
 
 // Success badge for headers
 export const emailSuccessBadge = () => `
-<div style="width: 48px; height: 48px; background: ${colors.success}; border-radius: 50%; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center;">
-  <span style="color: #ffffff; font-size: 20px; line-height: 48px;">✓</span>
-</div>
+<table align="center" cellpadding="0" cellspacing="0" width="48" height="48" style="border-collapse: collapse; margin: 0 auto 16px auto;">
+  <tr>
+    <td align="center" valign="middle" style="width: 48px; height: 48px; background: ${colors.success}; border-radius: 50%; color: #ffffff; font-size: 20px; font-weight: bold; line-height: 48px; text-align: center; vertical-align: middle;">
+      ✓
+    </td>
+  </tr>
+</table>
 `;

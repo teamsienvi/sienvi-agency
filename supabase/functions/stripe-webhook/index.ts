@@ -466,9 +466,13 @@ async function sendPaymentConfirmationEmail(
             <td style="background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
               <!-- Success Header -->
               <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center;">
-                <div style="width: 72px; height: 72px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                  <span style="font-size: 36px; line-height: 72px;">✓</span>
-                </div>
+                <table align="center" cellpadding="0" cellspacing="0" width="72" height="72" style="border-collapse: collapse; margin: 0 auto 20px auto;">
+                  <tr>
+                    <td align="center" valign="middle" style="width: 72px; height: 72px; background: rgba(255,255,255,0.2); border-radius: 50%; color: #ffffff; font-size: 36px; font-weight: bold; line-height: 72px; text-align: center; vertical-align: middle;">
+                      ✓
+                    </td>
+                  </tr>
+                </table>
                 <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">Payment Successful!</h1>
                 <p style="margin: 12px 0 0 0; font-size: 16px; color: rgba(255,255,255,0.9);">Welcome to the Sienvi family</p>
               </div>
