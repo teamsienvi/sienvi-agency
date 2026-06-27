@@ -87,6 +87,8 @@ export const EditClientModal = ({
 }: EditClientModalProps) => {
   const [loading, setLoading] = useState(false);
   const [additionalEmails, setAdditionalEmails] = useState("");
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [existingContractName, setExistingContractName] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     clientName: "",
     email: "",
@@ -129,6 +131,10 @@ export const EditClientModal = ({
         isActive: client.isActive,
         notes: remainingNotes,
       });
+
+      // Load existing contract name if available
+      setExistingContractName((client as any).contractDetails?.uploadedContractName || null);
+      setContractFile(null);
     }
   }, [client]);
 
@@ -208,14 +214,39 @@ export const EditClientModal = ({
         ? `[Additional Emails: ${additionalEmails.trim()}]\n${formData.notes}`
         : formData.notes;
 
+      // Handle contract file upload if a new file was selected
+      let contractDetails: any = undefined; // undefined = don't update
+      if (formData.plan === "custom" && contractFile) {
+        toast.info("Uploading contract document...");
+        const fileExt = contractFile.name.split(".").pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("contracts")
+          .upload(fileName, contractFile);
+
+        if (uploadError) {
+          throw new Error(`Failed to upload contract file: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(fileName);
+
+        contractDetails = {
+          uploadedContractUrl: urlData?.publicUrl || null,
+          uploadedContractName: contractFile.name,
+        };
+      }
+
       const response = await supabase.functions.invoke("update-client", {
         body: { 
           clientId: client.id, 
           ...formData, 
           maxServices: formData.plan === "custom" ? (parseInt(formData.maxServices as any) || 1) : planConfigs[formData.plan].maxServices,
-          notes: finalNotes 
+          notes: finalNotes,
+          ...(contractDetails !== undefined ? { contractDetails } : {}),
         },
-        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -375,6 +406,21 @@ export const EditClientModal = ({
                   onChange={(e) => setAdditionalEmails(e.target.value)}
                   placeholder="email1@example.com, email2@example.com"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-contractFile">Upload Custom Contract (Optional)</Label>
+                {existingContractName && !contractFile && (
+                  <p className="text-xs text-muted-foreground">Current: {existingContractName}</p>
+                )}
+                <Input
+                  id="edit-contractFile"
+                  type="file"
+                  accept=".pdf,.docx,.doc"
+                  onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-xs text-muted-foreground italic">
+                  Upload a new PDF/DOCX to replace the current contract. Leave empty to keep the existing one.
+                </p>
               </div>
             </div>
           )}
