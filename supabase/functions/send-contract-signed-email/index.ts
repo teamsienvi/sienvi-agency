@@ -70,7 +70,7 @@ serve(async (req) => {
       month: 'long', 
       day: 'numeric' 
     });
-    const dashboardUrl = "https://sienvi-agency-landing-page.lovable.app/dashboard";
+    const dashboardUrl = "https://sienvi.com/dashboard";
 
     const recipients = [...new Set([primaryEmail, ...additionalEmails])];
 

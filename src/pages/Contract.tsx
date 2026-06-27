@@ -586,11 +586,11 @@ const Contract = () => {
 
                 return (
                   <>
-                    {/* Show fillable client details form above custom contract */}
-                    {!isViewMode && renderAgreementDetailsTable()}
+                    {/* Show agreement details: static in view mode, editable in signing mode */}
+                    {renderAgreementDetailsTable()}
                     
-                    <h3 className="font-semibold text-base mt-4 mb-2 print:hidden">Contract Document</h3>
-                
+                    <h3 className="font-semibold text-base mt-4 mb-2">Contract Document</h3>
+
                     {isPdf ? (
                       <div className="w-full h-[650px] rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
                         <iframe
@@ -599,9 +599,9 @@ const Contract = () => {
                           title="Service Agreement"
                         />
                         <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
-                          <p className="font-medium">Custom Agreement Attached</p>
-                          <p className="text-xs mt-1">Uploaded document: {fileName}</p>
-                          <p className="text-xs mt-1">Please sign digitally below</p>
+                          <p className="font-medium">Custom Agreement Document</p>
+                          <p className="text-xs mt-1">Document: {fileName}</p>
+                          <p className="text-xs mt-1">Full document available at: {contractUrl}</p>
                         </div>
                       </div>
                     ) : isDocx ? (() => {
@@ -624,9 +624,9 @@ const Contract = () => {
                             </a>
                           </div>
                           <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
-                            <p className="font-medium">Custom Agreement Attached</p>
-                            <p className="text-xs mt-1">Uploaded document: {fileName}</p>
-                            <p className="text-xs mt-1">Please sign digitally below</p>
+                            <p className="font-medium">Custom Agreement Document</p>
+                            <p className="text-xs mt-1">Document: {fileName}</p>
+                            <p className="text-xs mt-1">Full document available at: {contractUrl}</p>
                           </div>
                         </div>
                       );
