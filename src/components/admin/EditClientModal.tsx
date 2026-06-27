@@ -103,10 +103,12 @@ export const EditClientModal = ({
 
   useEffect(() => {
     if (client) {
-      // Detect plan type from services if not explicitly set
+      // Use the explicitly stored plan; only auto-detect as fallback when plan is missing
       let detectedPlan = client.plan || "single";
-      if (client.selectedServices?.includes("amazon-design")) detectedPlan = "amazon";
-      if (client.selectedServices?.some(s => s.startsWith("channel-"))) detectedPlan = "advertising";
+      if (!client.plan) {
+        if (client.selectedServices?.includes("amazon-design")) detectedPlan = "amazon";
+        if (client.selectedServices?.some(s => s.startsWith("channel-"))) detectedPlan = "advertising";
+      }
 
       // Extract additional emails from notes
       const notesStr = client.notes || "";
