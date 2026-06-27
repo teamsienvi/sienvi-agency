@@ -1,4 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +45,11 @@ const Contract = () => {
   const [clientEmail, setClientEmail] = useState("");
   const [strategyPeriod, setStrategyPeriod] = useState("");
   const [confidentialityPeriod, setConfidentialityPeriod] = useState("5 years");
+  const [pdfNumPages, setPdfNumPages] = useState<number>(0);
+
+  const onPdfLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setPdfNumPages(numPages);
+  }, []);
 
   const isAmazonContract = profile?.plan === "amazon" || 
     (profile?.selectedServices || []).includes("channel-amazon") || 
@@ -592,20 +602,39 @@ const Contract = () => {
                     <h3 className="font-semibold text-base mt-4 mb-2">Contract Document</h3>
 
                     {isPdf ? (
-                      <>
-                        <div className="w-full h-[650px] rounded-lg border overflow-hidden bg-white mb-6 print:hidden">
-                          <iframe
-                            src={`${contractUrl}#toolbar=0`}
-                            className="w-full h-full border-none min-h-[600px]"
-                            title="Service Agreement"
-                          />
+                      <div className="w-full rounded-lg border overflow-hidden bg-white mb-6 print:border-none print:rounded-none print:overflow-visible print:mb-0">
+                        <div className="max-h-[650px] overflow-y-auto print:max-h-none print:overflow-visible">
+                          <Document
+                            file={contractUrl}
+                            onLoadSuccess={onPdfLoadSuccess}
+                            loading={
+                              <div className="flex items-center justify-center p-12">
+                                <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
+                                <span className="text-sm text-muted-foreground">Loading contract...</span>
+                              </div>
+                            }
+                            error={
+                              <div className="text-center p-8 text-muted-foreground">
+                                <p className="font-medium">Unable to load PDF</p>
+                                <a href={contractUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm mt-2 inline-block">
+                                  Download document instead →
+                                </a>
+                              </div>
+                            }
+                          >
+                            {Array.from(new Array(pdfNumPages), (_, i) => (
+                              <div key={`page_${i + 1}`} className="border-b border-slate-100 last:border-b-0 print:border-b-0 print:break-after-page">
+                                <Page
+                                  pageNumber={i + 1}
+                                  width={680}
+                                  renderTextLayer={true}
+                                  renderAnnotationLayer={true}
+                                />
+                              </div>
+                            ))}
+                          </Document>
                         </div>
-                        <div className="hidden print:block text-center p-6 border-2 border-slate-300 rounded-lg bg-slate-50 mb-6">
-                          <p className="font-semibold text-slate-700 text-sm">📎 Custom Agreement Document Attached</p>
-                          <p className="text-xs text-slate-500 mt-1">{fileName}</p>
-                          <p className="text-xs text-slate-400 mt-2 italic">The full contract document has been reviewed and agreed to by both parties as referenced above.</p>
-                        </div>
-                      </>
+                      </div>
                     ) : isDocx ? (() => {
                       const viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(contractUrl)}`;
                       return (
