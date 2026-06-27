@@ -417,11 +417,11 @@ export const EditClientModal = ({
                 <Input
                   id="edit-contractFile"
                   type="file"
-                  accept=".pdf,.docx,.doc"
+                  accept=".pdf"
                   onChange={(e) => setContractFile(e.target.files?.[0] || null)}
                 />
                 <p className="text-xs text-muted-foreground italic">
-                  Upload a new PDF/DOCX to replace the current contract. Leave empty to keep the existing one.
+                  Upload a new PDF to replace the current contract. Leave empty to keep the existing one.
                 </p>
               </div>
             </div>

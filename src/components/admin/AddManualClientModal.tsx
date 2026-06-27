@@ -435,12 +435,12 @@ export const AddManualClientModal = ({
                   <Input
                     id="contractFile"
                     type="file"
-                    accept=".pdf,.docx"
+                    accept=".pdf"
                     onChange={handleFileChange}
                     className="bg-background cursor-pointer text-foreground file:text-foreground"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    <strong>Note for Admins:</strong> This is for custom plans only. If you upload a custom PDF/DOCX contract, it will be presented to the client during onboarding instead of the standard template.
+                    <strong>Note for Admins:</strong> This is for custom plans only. If you upload a custom PDF contract, it will be presented to the client during onboarding instead of the standard template.
                   </p>
                 </div>
               </div>
