@@ -5,9 +5,9 @@
 // AUTOMATION BUNDLE PLANS
 // ============================================
 export const BUNDLE_PRICE_IDS = {
-  single: "price_1SzlcmDnw1azoLSpefO3ANVU",   // $888/mo - Single automation service
-  triple: "price_1SzlcmDnw1azoLSpfA06Dtiu",   // $2,664/mo - Triple bundle
-  full: "price_1SzlcnDnw1azoLSpQA6jwghB",     // $3,996/mo - Full automation suite
+  single: "price_1TmzSSDnw1azoLSpVISk2j7g",   // $888/mo - Single automation service
+  triple: "price_1TmzSTDnw1azoLSpaa2hhifg",   // $2,664/mo - Triple bundle
+  full: "price_1TmzSTDnw1azoLSpyqfODpkC",     // $3,996/mo - Full automation suite
 } as const;
 
 // ============================================
@@ -15,34 +15,34 @@ export const BUNDLE_PRICE_IDS = {
 // ============================================
 export const SERVICE_PRICE_IDS = {
   // Standard services ($888/mo)
-  "custom-website": "price_1SzlckDnw1azoLSpYce1Va8F",
-  "seo-aeo": "price_1SzlckDnw1azoLSpYce1Va8F",
-  "custom-ai-assistant": "price_1SzlckDnw1azoLSpYce1Va8F",
+  "custom-website": "price_1TmzSSDnw1azoLSpdu8Ro2qj",
+  "seo-aeo": "price_1TmzSSDnw1azoLSpdu8Ro2qj",
+  "custom-ai-assistant": "price_1TmzSSDnw1azoLSpdu8Ro2qj",
   
   // Amazon Design Package ($999/mo)
-  "amazon-design": "price_1SzlchDnw1azoLSpQUJfYRrN",
+  "amazon-design": "price_1TmzSQDnw1azoLSpnP8Zv2uA",
   
   // Premium services ($2,450/mo)
-  "social-media-suite": "price_1SzlclDnw1azoLSp67eBDxr5",
-  "custom-lms": "price_1SzlclDnw1azoLSpmMcgCKKN",
+  "social-media-suite": "price_1TmzSSDnw1azoLSp9lSJ8jTS",
+  "custom-lms": "price_1TmzSSDnw1azoLSpeZvymtPf",
 } as const;
 
 // ============================================
 // ADVERTISING CHANNEL PRICES
 // ============================================
 export const ADVERTISING_PRICE_IDS = {
-  // Individual channels ($888/mo each)
+  // Individual channels ($999/mo each)
   channels: {
-    1: "price_1SzlciDnw1azoLSpMrBXt4xU",  // 1 channel = $888
-    2: "price_1SzlciDnw1azoLSptoIxpDxu",  // 2 channels = $1,776
+    1: "price_1TmzSRDnw1azoLSpBjYhowwg",  // 1 channel = $999
+    2: "price_1TmzSRDnw1azoLSpAzyv0tkW",  // 2 channels = $1,998
   },
   // Bundle pricing (3+ channels)
   bundles: {
-    3: "price_1SzlciDnw1azoLSpLxadTvOl",  // 3 channels = $1,479
-    4: "price_1SzlciDnw1azoLSpFXm6SG8H",  // 4 channels = $1,971
-    5: "price_1SzlcjDnw1azoLSpn6OEzyq6",  // 5 channels = $2,464
-    6: "price_1SzlcjDnw1azoLSpa3SQYqLL",  // 6 channels = $2,957
-    7: "price_1SzlcjDnw1azoLSp4rdCJZwY",  // 7 channels = $3,450
+    3: "price_1TmzSRDnw1azoLSp4QyTp9Qv",  // 3 channels = $1,479
+    4: "price_1TmzSRDnw1azoLSptPh0wjZ0",  // 4 channels = $1,971
+    5: "price_1TmzSRDnw1azoLSpvBkjCky8",  // 5 channels = $2,464
+    6: "price_1TmzSRDnw1azoLSpRDE5DMx3",  // 6 channels = $2,957
+    7: "price_1TmzSRDnw1azoLSpeQNPrjO8",  // 7 channels = $3,450
   },
 } as const;
 
@@ -60,7 +60,7 @@ export const PRICING = {
   PREMIUM_SERVICE: 2450,
   
   // Advertising
-  PER_CHANNEL: 888,
+  PER_CHANNEL: 999,
   ALL_CHANNELS: 3450,
   CHANNEL_COUNT: 7,
   BUNDLE_THRESHOLD: 3,
@@ -101,6 +101,8 @@ export const getServicePrice = (serviceId: string): number => {
   switch (serviceId) {
     case "amazon-design":
       return PRICING.AMAZON_DESIGN;
+    case "advertising-package":
+      return PRICING.PER_CHANNEL;
     case "social-media-suite":
     case "custom-lms":
       return PRICING.PREMIUM_SERVICE;

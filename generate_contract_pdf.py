@@ -245,7 +245,7 @@ def generate_amazon_pdf(output_paths):
     pdf.ln(6)
     
     exhibits_b = [
-        ("Fee Structure", "$888 USD/month for 3 months."),
+        ("Fee Structure", "$999 USD/month for 3 months."),
         ("Payment Schedule", "Payments to be made on a monthly basis, within 7 days of invoice receipt on the 7th of each month."),
         ("Late Payment", "Late payments may incur a late fee of 2% per month on the overdue amount."),
         ("Expenses", "The Client is responsible for any additional costs agreed upon for all payments to be made directly to third-party vendors unless otherwise agreed. This includes PPC costs on all applicable advertising platforms such as Amazon and other related e-commerce and social channels."),

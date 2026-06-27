@@ -44,7 +44,7 @@ const planLabels: Record<string, string> = {
 
 // Map price IDs to plan names
 const PRICE_TO_PLAN: Record<string, string> = {
-  // Live price IDs
+  // Old Price IDs (Backwards Compatibility)
   "price_1SzlcmDnw1azoLSpefO3ANVU": "single",
   "price_1SzlcmDnw1azoLSpfA06Dtiu": "triple",
   "price_1SzlcnDnw1azoLSpQA6jwghB": "full",
@@ -56,6 +56,19 @@ const PRICE_TO_PLAN: Record<string, string> = {
   "price_1SzlcjDnw1azoLSpn6OEzyq6": "advertising",
   "price_1SzlcjDnw1azoLSpa3SQYqLL": "advertising",
   "price_1SzlcjDnw1azoLSp4rdCJZwY": "advertising",
+  
+  // New Price IDs ($999 Advertising update)
+  "price_1TmzSSDnw1azoLSpVISk2j7g": "single",
+  "price_1TmzSTDnw1azoLSpaa2hhifg": "triple",
+  "price_1TmzSTDnw1azoLSpyqfODpkC": "full",
+  "price_1TmzSQDnw1azoLSpnP8Zv2uA": "amazon",
+  "price_1TmzSRDnw1azoLSpBjYhowwg": "advertising",
+  "price_1TmzSRDnw1azoLSpAzyv0tkW": "advertising",
+  "price_1TmzSRDnw1azoLSp4QyTp9Qv": "advertising",
+  "price_1TmzSRDnw1azoLSptPh0wjZ0": "advertising",
+  "price_1TmzSRDnw1azoLSpvBkjCky8": "advertising",
+  "price_1TmzSRDnw1azoLSpRDE5DMx3": "advertising",
+  "price_1TmzSRDnw1azoLSpeQNPrjO8": "advertising",
 };
 
 // Service labels for display

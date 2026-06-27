@@ -216,9 +216,9 @@ const AdminClients = () => {
     // Advertising Package - calculate based on channel count
     if (plan === "advertising" || selectedServices.includes("advertising-package")) {
       const channelCount = selectedServices.filter(s => s.startsWith("channel-")).length;
-      if (channelCount === 0) return 888;
-      if (channelCount === 1) return 888;
-      if (channelCount === 2) return 1776;
+      if (channelCount === 0) return 999;
+      if (channelCount === 1) return 999;
+      if (channelCount === 2) return 1998;
       if (channelCount >= 3) {
         // Bundle pricing: $493/channel, capped at $3,450 for all 7
         const bundlePrice = channelCount * 493;

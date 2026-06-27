@@ -25,7 +25,7 @@ const PLAN_PRICE_IDS: Record<string, string> = {
 };
 
 // Advertising pricing constants
-const PRICE_PER_CHANNEL = 888;
+const PRICE_PER_CHANNEL = 999;
 const TOTAL_CHANNELS = 7;
 const ALL_CHANNELS_PRICE = 3450;
 const AD_BUNDLE_THRESHOLD = 3;

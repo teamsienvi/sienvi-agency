@@ -56,7 +56,7 @@ export const services = [
       "Budget management and allocation",
       "💡 Select 3+ channels for bundle discount — Get Started to learn more"
     ],
-    price: "$888/channel",
+    price: "$999/channel",
     isAdvertising: true
   },
   // Row 2: Custom AI Assistant, Custom Website, SEO/AEO

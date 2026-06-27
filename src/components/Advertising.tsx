@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { advertisingChannels } from "./advertising/advertisingData";
 import { Button } from "@/components/ui/button";
 
-const PRICE_PER_CHANNEL = 888;
+const PRICE_PER_CHANNEL = 999;
 const TOTAL_CHANNELS = 7;
 const ALL_CHANNELS_PRICE = 3450; // Total price for all 7 channels
 const BUNDLE_THRESHOLD = 3;
@@ -104,7 +104,7 @@ const Advertising = () => {
 
               <div className="flex items-center gap-4">
                 <div className="text-right hidden sm:block">
-                  <p className="text-2xl font-bold text-primary">$888</p>
+                  <p className="text-2xl font-bold text-primary">$999</p>
                   <p className="text-xs text-muted-foreground">/month per channel</p>
                 </div>
                 <motion.div animate={{ rotate: isMainExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -128,7 +128,7 @@ const Advertising = () => {
                     <div className="px-6 py-4 bg-muted/20">
                       <p className="text-sm text-muted-foreground">
                         Select individual channels to add to your automation package. Each channel is priced at
-                        $888/month. Expand any channel to see the full service breakdown.
+                        $999/month. Expand any channel to see the full service breakdown.
                       </p>
                     </div>
 
@@ -168,7 +168,7 @@ const Advertising = () => {
                                 </span>
                               </div>
                               <div className="flex items-center gap-3">
-                                <span className="text-sm font-medium text-primary">$888/mo</span>
+                                <span className="text-sm font-medium text-primary">$999/mo</span>
                                 <motion.div
                                   animate={{ rotate: expandedChannelId === channel.id ? 180 : 0 }}
                                   transition={{ duration: 0.2 }}

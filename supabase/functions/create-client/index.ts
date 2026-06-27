@@ -20,6 +20,7 @@ interface CreateClientRequest {
   onboardingStatus: "not_started" | "in_progress" | "completed";
   notes?: string;
   selectedServices?: string[];
+  contractDetails?: any;
 }
 
 serve(async (req) => {
@@ -124,6 +125,7 @@ serve(async (req) => {
         selected_services: body.selectedServices || [],
         notes: body.notes || null,
         custom_price: body.customPrice ?? null,
+        contract_details: body.contractDetails || null,
       })
       .select()
       .single();

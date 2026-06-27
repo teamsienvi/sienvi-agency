@@ -45,6 +45,14 @@ const Contract = () => {
     (profile?.selectedServices || []).includes("channel-amazon") || 
     (profile?.selectedServices || []).includes("amazon-design");
 
+  // Resolve the monthly price from profile or plan defaults
+  const planDefaultPrices: Record<string, number> = {
+    single: 888, triple: 2398.20, full: 3996,
+    amazon: 999, advertising: 999, custom: 0,
+  };
+  const monthlyPrice = profile?.customPrice ?? profile?.custom_price ?? planDefaultPrices[profile?.plan] ?? 0;
+  const formattedPrice = `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
+
   useEffect(() => {
     checkAccess();
   }, []);
@@ -119,14 +127,14 @@ const Contract = () => {
         return "$999 USD/month";
       case "advertising": {
         const channelsCount = (profile?.selectedServices || []).filter((s: string) => s.startsWith("channel-")).length;
-        if (channelsCount === 1) return "$888 USD/month";
-        if (channelsCount === 2) return "$1,776 USD/month";
+        if (channelsCount === 1) return "$999 USD/month";
+        if (channelsCount === 2) return "$1,998 USD/month";
         if (channelsCount === 3) return "$1,479 USD/month";
         if (channelsCount === 4) return "$1,971 USD/month";
         if (channelsCount === 5) return "$2,464 USD/month";
         if (channelsCount === 6) return "$2,957 USD/month";
         if (channelsCount === 7) return "$3,450 USD/month";
-        return "$888 USD/month";
+        return "$999 USD/month";
       }
       default:
         return "$888 USD/month";
@@ -179,6 +187,8 @@ const Contract = () => {
         clientEmail: clientEmail.trim(),
         strategyPeriod: strategyPeriod.trim(),
         confidentialityPeriod: confidentialityPeriod.trim(),
+        uploadedContractUrl: profile?.contractDetails?.uploadedContractUrl || null,
+        uploadedContractName: profile?.contractDetails?.uploadedContractName || null,
       };
 
       const response = await supabase.functions.invoke("update-client-status", {
@@ -568,7 +578,74 @@ const Contract = () => {
               </div>
             </CardHeader>
             <CardContent className="prose prose-sm max-w-none print:p-0">
-              {isAmazonContract ? (
+              {profile?.contractDetails?.uploadedContractUrl ? (() => {
+                const contractUrl = profile.contractDetails.uploadedContractUrl;
+                const fileName = profile.contractDetails.uploadedContractName || 'Service Agreement';
+                const isPdf = contractUrl.toLowerCase().endsWith('.pdf');
+                const isDocx = contractUrl.toLowerCase().endsWith('.docx') || contractUrl.toLowerCase().endsWith('.doc');
+                
+                if (isPdf) {
+                  return (
+                    <div className="w-full h-[650px] rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
+                      <iframe
+                        src={`${contractUrl}#toolbar=0`}
+                        className="w-full h-full border-none min-h-[600px] print:hidden"
+                        title="Service Agreement"
+                      />
+                      <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
+                        <p className="font-medium">Custom Agreement Attached</p>
+                        <p className="text-xs mt-1">Uploaded document: {fileName}</p>
+                        <p className="text-xs mt-1">Please sign digitally below</p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                if (isDocx) {
+                  const viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(contractUrl)}`;
+                  return (
+                    <div className="w-full rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
+                      <iframe
+                        src={viewerUrl}
+                        className="w-full h-[650px] border-none min-h-[600px] print:hidden"
+                        title="Service Agreement"
+                      />
+                      <div className="flex items-center justify-center gap-2 py-2 bg-muted/50 border-t print:hidden">
+                        <a
+                          href={contractUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Download original document: {fileName}
+                        </a>
+                      </div>
+                      <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
+                        <p className="font-medium">Custom Agreement Attached</p>
+                        <p className="text-xs mt-1">Uploaded document: {fileName}</p>
+                        <p className="text-xs mt-1">Please sign digitally below</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Fallback for other file types
+                return (
+                  <div className="bg-muted p-6 rounded-lg space-y-4 text-sm mb-6">
+                    <p className="font-medium">Custom Agreement Uploaded</p>
+                    <p className="text-muted-foreground">Document: {fileName}</p>
+                    <a
+                      href={contractUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-primary hover:underline font-medium"
+                    >
+                      Open / Download Agreement Document →
+                    </a>
+                    <p className="text-xs text-muted-foreground">Please review the agreement above and sign below.</p>
+                  </div>
+                );
+              })() : isAmazonContract ? (
                 <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
                   <h3 className="font-semibold text-center text-base border-b pb-2 mb-4 print:hidden">BUSINESS AGREEMENT FOR AMAZON ADVERTISING SERVICES</h3>
                   {renderAgreementDetailsTable()}
@@ -649,7 +726,7 @@ const Contract = () => {
                   <div className="border-t pt-4 mt-6">
                     <h3 className="font-semibold text-base mb-2">Exhibit B: Payment Terms</h3>
                     <ul className="list-disc pl-5 space-y-1">
-                      <li><strong>Fee Structure:</strong> $888 USD/month for 3 months.</li>
+                      <li><strong>Fee Structure:</strong> {formattedPrice} for 3 months.</li>
                       <li><strong>Payment Schedule:</strong> Payments to be made on a monthly basis, within 7 days of invoice receipt on the 7th of each month.</li>
                       <li><strong>Late Payment:</strong> Late payments may incur a late fee of 2% per month on the overdue amount.</li>
                       <li><strong>Expenses:</strong> The Client is responsible for any additional costs agreed upon for all payments to be made directly to third-party vendors unless otherwise agreed. This includes PPC costs on all applicable advertising platforms such as Amazon and other related e-commerce and social channels.</li>
@@ -686,7 +763,7 @@ const Contract = () => {
 
                   <h4 className="font-semibold mt-4">2. Payment Terms</h4>
                   <p>
-                    Client agrees to pay the agreed-upon monthly subscription fee via the 
+                    Client agrees to pay {formattedPrice} as the monthly subscription fee via the 
                     payment method on file. Payments are processed automatically on each 
                     billing cycle.
                   </p>
