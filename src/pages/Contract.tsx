@@ -583,67 +583,69 @@ const Contract = () => {
                 const fileName = profile.contractDetails.uploadedContractName || 'Service Agreement';
                 const isPdf = contractUrl.toLowerCase().endsWith('.pdf');
                 const isDocx = contractUrl.toLowerCase().endsWith('.docx') || contractUrl.toLowerCase().endsWith('.doc');
+
+                return (
+                  <>
+                    {/* Show fillable client details form above custom contract */}
+                    {!isViewMode && renderAgreementDetailsTable()}
+                    
+                    <h3 className="font-semibold text-base mt-4 mb-2 print:hidden">Contract Document</h3>
                 
-                if (isPdf) {
-                  return (
-                    <div className="w-full h-[650px] rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
-                      <iframe
-                        src={`${contractUrl}#toolbar=0`}
-                        className="w-full h-full border-none min-h-[600px] print:hidden"
-                        title="Service Agreement"
-                      />
-                      <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
-                        <p className="font-medium">Custom Agreement Attached</p>
-                        <p className="text-xs mt-1">Uploaded document: {fileName}</p>
-                        <p className="text-xs mt-1">Please sign digitally below</p>
+                    {isPdf ? (
+                      <div className="w-full h-[650px] rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
+                        <iframe
+                          src={`${contractUrl}#toolbar=0`}
+                          className="w-full h-full border-none min-h-[600px] print:hidden"
+                          title="Service Agreement"
+                        />
+                        <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
+                          <p className="font-medium">Custom Agreement Attached</p>
+                          <p className="text-xs mt-1">Uploaded document: {fileName}</p>
+                          <p className="text-xs mt-1">Please sign digitally below</p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                }
-                
-                if (isDocx) {
-                  const viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(contractUrl)}`;
-                  return (
-                    <div className="w-full rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
-                      <iframe
-                        src={viewerUrl}
-                        className="w-full h-[650px] border-none min-h-[600px] print:hidden"
-                        title="Service Agreement"
-                      />
-                      <div className="flex items-center justify-center gap-2 py-2 bg-muted/50 border-t print:hidden">
+                    ) : isDocx ? (() => {
+                      const viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(contractUrl)}`;
+                      return (
+                        <div className="w-full rounded-lg border overflow-hidden bg-white mb-6 print:h-auto print:overflow-visible">
+                          <iframe
+                            src={viewerUrl}
+                            className="w-full h-[650px] border-none min-h-[600px] print:hidden"
+                            title="Service Agreement"
+                          />
+                          <div className="flex items-center justify-center gap-2 py-2 bg-muted/50 border-t print:hidden">
+                            <a
+                              href={contractUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Download original document: {fileName}
+                            </a>
+                          </div>
+                          <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
+                            <p className="font-medium">Custom Agreement Attached</p>
+                            <p className="text-xs mt-1">Uploaded document: {fileName}</p>
+                            <p className="text-xs mt-1">Please sign digitally below</p>
+                          </div>
+                        </div>
+                      );
+                    })() : (
+                      <div className="bg-muted p-6 rounded-lg space-y-4 text-sm mb-6">
+                        <p className="font-medium">Custom Agreement Uploaded</p>
+                        <p className="text-muted-foreground">Document: {fileName}</p>
                         <a
                           href={contractUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline"
+                          className="inline-block text-primary hover:underline font-medium"
                         >
-                          Download original document: {fileName}
+                          Open / Download Agreement Document →
                         </a>
+                        <p className="text-xs text-muted-foreground">Please review the agreement above and sign below.</p>
                       </div>
-                      <div className="hidden print:block text-center p-4 border border-dashed rounded-lg bg-gray-50 text-muted-foreground">
-                        <p className="font-medium">Custom Agreement Attached</p>
-                        <p className="text-xs mt-1">Uploaded document: {fileName}</p>
-                        <p className="text-xs mt-1">Please sign digitally below</p>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Fallback for other file types
-                return (
-                  <div className="bg-muted p-6 rounded-lg space-y-4 text-sm mb-6">
-                    <p className="font-medium">Custom Agreement Uploaded</p>
-                    <p className="text-muted-foreground">Document: {fileName}</p>
-                    <a
-                      href={contractUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block text-primary hover:underline font-medium"
-                    >
-                      Open / Download Agreement Document →
-                    </a>
-                    <p className="text-xs text-muted-foreground">Please review the agreement above and sign below.</p>
-                  </div>
+                    )}
+                  </>
                 );
               })() : isAmazonContract ? (
                 <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
