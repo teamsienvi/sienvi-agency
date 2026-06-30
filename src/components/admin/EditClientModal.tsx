@@ -70,6 +70,8 @@ interface Client {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  contractStatus?: string;
+  onboardingStatus?: string;
 }
 
 interface EditClientModalProps {
@@ -99,6 +101,7 @@ export const EditClientModal = ({
     subscriptionStatus: "pending_payment" as string,
     isActive: true,
     notes: "",
+    contractStatus: "not_signed" as string,
   });
 
   useEffect(() => {
@@ -132,6 +135,7 @@ export const EditClientModal = ({
         subscriptionStatus: client.subscriptionStatus || "pending_payment",
         isActive: client.isActive,
         notes: remainingNotes,
+        contractStatus: client.contractStatus || "not_signed",
       });
 
       // Load existing contract name if available
@@ -340,21 +344,38 @@ export const EditClientModal = ({
             </div>
           </div>
 
-          {/* Active Status */}
-          <div className="space-y-2">
-            <Label>Active Status</Label>
-            <Select
-              value={formData.isActive ? "active" : "inactive"}
-              onValueChange={(v) => setFormData((prev) => ({ ...prev, isActive: v === "active" }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Active & Contract Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Active Status</Label>
+              <Select
+                value={formData.isActive ? "active" : "inactive"}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, isActive: v === "active" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Contract Status</Label>
+              <Select
+                value={formData.contractStatus}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, contractStatus: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_signed">Awaiting Signature</SelectItem>
+                  <SelectItem value="signed">Signed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Custom Plan Options */}

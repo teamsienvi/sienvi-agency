@@ -219,20 +219,20 @@ async function sendAdminNotification(
                     <td style="padding: 8px 0; text-align: right;"><span style="color: ${config.color}; font-weight: 700;">${formattedAmount}/mo</span></td>
                   </tr>
                   ` : ""}
-                  \${channelsHtml ? \`
+                  ${channelsHtml ? `
                   <tr>
                     <td style="padding: 8px 0;"><strong style="color: #6b7280;">Channels:</strong></td>
-                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937;">\${channelsHtml}</span></td>
+                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937;">${channelsHtml}</span></td>
                   </tr>
-                  \` : ""}
+                  ` : ""}
                 </table>
               </div>
-              \${regularServices && regularServices.length > 0 ? \`
+              ${regularServices && regularServices.length > 0 ? `
               <div style="margin-bottom: 24px;">
                 <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Selected Services</h4>
-                <ul style="margin: 0; padding: 0 0 0 20px; list-style: disc;">\${servicesHtml}</ul>
+                <ul style="margin: 0; padding: 0 0 0 20px; list-style: disc;">${servicesHtml}</ul>
               </div>
-              \` : ""}
+              ` : ""}
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 24px 0;">
@@ -511,17 +511,17 @@ async function sendPaymentConfirmationEmail(
                         <table width="100%" cellpadding="0" cellspacing="0">
                           <tr>
                             <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Plan</span></td>
-                            <td align="right" style="padding: 10px 0;"><span style="color: #1f2937; font-size: 15px; font-weight: 600;">\${planLabel}</span></td>
+                            <td align="right" style="padding: 10px 0;"><span style="color: #1f2937; font-size: 15px; font-weight: 600;">${planLabel}</span></td>
                           </tr>
-                          \${channelsHtml ? \`
+                          ${channelsHtml ? `
                           <tr>
                             <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Channels</span></td>
-                            <td align="right" style="padding: 10px 0;"><span style="color: #1f2937; font-size: 14px; font-weight: 500;">\${channelsHtml}</span></td>
+                            <td align="right" style="padding: 10px 0;"><span style="color: #1f2937; font-size: 14px; font-weight: 500;">${channelsHtml}</span></td>
                           </tr>
-                          \` : ""}
+                          ` : ""}
                           <tr>
                             <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Amount</span></td>
-                            <td align="right" style="padding: 10px 0;"><span style="color: #10b981; font-size: 20px; font-weight: 700;">\${formattedAmount}/mo</span></td>
+                            <td align="right" style="padding: 10px 0;"><span style="color: #10b981; font-size: 20px; font-weight: 700;">${formattedAmount}/mo</span></td>
                           </tr>
                           <tr>
                             <td style="padding: 10px 0;"><span style="color: #6b7280; font-size: 15px;">Status</span></td>
@@ -536,7 +536,7 @@ async function sendPaymentConfirmationEmail(
                 <!-- Next Steps -->
                 <h3 style="margin: 36px 0 20px 0; font-size: 18px; font-weight: 700; color: #1f2937;">What's Next?</h3>
                 
-                \${plan === "advertising" ? \`
+                ${plan === "advertising" ? `
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
                   <tr>
                     <td style="padding: 10px 0; vertical-align: top; width: 40px;">
@@ -557,7 +557,7 @@ async function sendPaymentConfirmationEmail(
                     <td style="padding: 10px 0; color: #374151; font-size: 15px;">We launch your campaigns!</td>
                   </tr>
                 </table>
-                \` : \`
+                ` : `
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
                   <tr>
                     <td style="padding: 10px 0; vertical-align: top; width: 40px;">
@@ -584,7 +584,7 @@ async function sendPaymentConfirmationEmail(
                     <td style="padding: 10px 0; color: #374151; font-size: 15px;">We start building your automations!</td>
                   </tr>
                 </table>
-                \`}
+                `}
                 
                 <!-- CTA Button -->
                 <table width="100%" cellpadding="0" cellspacing="0">
@@ -600,7 +600,7 @@ async function sendPaymentConfirmationEmail(
                 <!-- Tip -->
                 <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
                   <p style="margin: 0; font-size: 14px; color: #1e40af;">
-                    \${plan === "advertising" 
+                    ${plan === "advertising" 
                       ? "<strong>💡 Tip:</strong> Your advertising account is all set! Our team will be in touch shortly to begin setting up your campaigns."
                       : "<strong>💡 Tip:</strong> Log in to your dashboard to sign your contract and complete onboarding so we can start building!"}
                   </p>

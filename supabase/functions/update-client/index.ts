@@ -56,6 +56,7 @@ serve(async (req) => {
       stripeCustomerId,
       stripeSubscriptionId,
       contractDetails,
+      contractStatus,
     } = body;
 
     if (!clientId) {
@@ -92,6 +93,7 @@ serve(async (req) => {
     if (stripeCustomerId !== undefined) updateData.stripe_customer_id = stripeCustomerId;
     if (stripeSubscriptionId !== undefined) updateData.stripe_subscription_id = stripeSubscriptionId;
     if (contractDetails !== undefined) updateData.contract_details = contractDetails;
+    if (contractStatus !== undefined) updateData.contract_status = contractStatus;
 
     // Update client_profiles
     const { error: updateError } = await supabase
