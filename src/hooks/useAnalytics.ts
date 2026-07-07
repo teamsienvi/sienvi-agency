@@ -87,6 +87,7 @@ export const useAnalytics = () => {
   const sessionInitialized = useRef(false);
   const pageStartTime = useRef<number>(Date.now());
   const pageViewCount = useRef<number>(0);
+  const maxScrollDepth = useRef<number>(0);
 
   const visitorId = getVisitorId();
   const sessionId = getSessionId();

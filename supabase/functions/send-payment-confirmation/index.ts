@@ -111,9 +111,13 @@ serve(async (req) => {
             <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); overflow: hidden; border-top: 3px solid #10b981;">
               <!-- Header -->
               <div style="padding: 32px 32px 24px 32px; text-align: center; border-bottom: 1px solid #f1f5f9;">
-                <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center;">
-                  <span style="color: #ffffff; font-size: 20px; line-height: 48px;">✓</span>
-                </div>
+                <table align="center" cellpadding="0" cellspacing="0" width="48" height="48" style="border-collapse: collapse; margin: 0 auto 16px auto;">
+                  <tr>
+                    <td align="center" valign="middle" style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; color: #ffffff; font-size: 20px; line-height: 48px; text-align: center; vertical-align: middle;">
+                      ✓
+                    </td>
+                  </tr>
+                </table>
                 <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #1f2937; letter-spacing: -0.3px;">Payment Confirmed</h1>
                 <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">Your subscription is now active</p>
               </div>
@@ -127,56 +131,106 @@ serve(async (req) => {
                 </p>
                 
                 <!-- Payment Details -->
-                <div style="background: #f1f5f9; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="font-size: 13px; color: #6b7280;">Plan</span>
-                    <span style="font-size: 13px; font-weight: 500; color: #1f2937;">${planLabel}</span>
-                  </div>
-                  ${channelsHtml ? `
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="font-size: 13px; color: #6b7280;">Channels</span>
-                    <span style="font-size: 13px; font-weight: 500; color: #1f2937;">${channelsHtml}</span>
-                  </div>
-                  ` : ""}
-                  ${servicesHtml && !channelsHtml ? `
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="font-size: 13px; color: #6b7280;">Services</span>
-                    <span style="font-size: 13px; font-weight: 500; color: #1f2937;">${servicesHtml}</span>
-                  </div>
-                  ` : ""}
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="font-size: 13px; color: #6b7280;">Amount</span>
-                    <span style="font-size: 13px; font-weight: 600; color: #10b981;">${formattedAmount}/mo</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                    <span style="font-size: 13px; color: #6b7280;">Status</span>
-                    <span style="font-size: 13px; font-weight: 500; color: #10b981;">Active</span>
-                  </div>
-                </div>
+                <table width="100%" cellpadding="0" cellspacing="0" style="background: #f1f5f9; border-radius: 8px; margin: 20px 0; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 16px 20px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                        <tr>
+                          <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            Plan
+                          </td>
+                          <td align="right" style="font-size: 13px; font-weight: 500; color: #1f2937; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            ${planLabel}
+                          </td>
+                        </tr>
+                        ${channelsHtml ? `
+                        <tr>
+                          <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            Channels
+                          </td>
+                          <td align="right" style="font-size: 13px; font-weight: 500; color: #1f2937; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            ${channelsHtml}
+                          </td>
+                        </tr>
+                        ` : ""}
+                        ${servicesHtml && !channelsHtml ? `
+                        <tr>
+                          <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            Services
+                          </td>
+                          <td align="right" style="font-size: 13px; font-weight: 500; color: #1f2937; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            ${servicesHtml}
+                          </td>
+                        </tr>
+                        ` : ""}
+                        <tr>
+                          <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            Amount
+                          </td>
+                          <td align="right" style="font-size: 13px; font-weight: 600; color: #10b981; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            ${formattedAmount}/mo
+                          </td>
+                        </tr>
+                        <tr>
+                          <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0;">
+                            Status
+                          </td>
+                          <td align="right" style="font-size: 13px; font-weight: 500; color: #10b981; padding: 8px 0;">
+                            Active
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
                 
                 <!-- Next Steps -->
                 <p style="margin: 24px 0 12px 0; font-size: 14px; font-weight: 600; color: #1f2937;">What's next?</p>
                 
-                <div style="margin: 0 0 20px 0;">
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #ffffff; font-size: 11px;">✓</span>
-                    </div>
-                    <span style="font-size: 14px; color: #9ca3af; text-decoration: line-through;">Complete payment</span>
-                  </div>
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #f1f5f9; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #9ca3af; font-size: 11px; font-weight: 500;">2</span>
-                    </div>
-                    <span style="font-size: 14px; color: #1f2937;">Sign service agreement</span>
-                  </div>
-                  <div style="display: flex; align-items: center; padding: 6px 0;">
-                    <div style="width: 20px; height: 20px; background: #f1f5f9; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <span style="color: #9ca3af; font-size: 11px; font-weight: 500;">3</span>
-                    </div>
-                    <span style="font-size: 14px; color: #1f2937;">Complete onboarding</span>
-                  </div>
-                </div>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px 0; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                      <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                        <tr>
+                          <td align="center" valign="middle" style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; color: #ffffff; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                            ✓
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #9ca3af; text-decoration: line-through; vertical-align: middle;">
+                      Complete payment
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                      <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                        <tr>
+                          <td align="center" valign="middle" style="width: 20px; height: 20px; background: #f1f5f9; border-radius: 50%; color: #9ca3af; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                            2
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #1f2937; vertical-align: middle;">
+                      Sign service agreement
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; width: 20px; vertical-align: middle;">
+                      <table cellpadding="0" cellspacing="0" width="20" height="20" style="border-collapse: collapse;">
+                        <tr>
+                          <td align="center" valign="middle" style="width: 20px; height: 20px; background: #f1f5f9; border-radius: 50%; color: #9ca3af; font-size: 11px; font-family: sans-serif; font-weight: 500; line-height: 20px; text-align: center;">
+                            3
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td align="left" style="padding: 6px 0 6px 12px; font-size: 14px; color: #1f2937; vertical-align: middle;">
+                      Complete onboarding
+                    </td>
+                  </tr>
+                </table>
                 
                 <!-- CTA Button -->
                 <table width="100%" cellpadding="0" cellspacing="0">

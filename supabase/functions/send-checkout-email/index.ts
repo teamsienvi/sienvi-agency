@@ -34,6 +34,7 @@ const planLabels: Record<string, string> = {
   single: "Single Service",
   triple: "Triple Automation",
   full: "Full Automation Suite",
+  advertising: "Advertising",
   custom: "Custom Plan",
 };
 
@@ -155,14 +156,19 @@ serve(async (req) => {
                 
                 <!-- Plan Details -->
                 <div style="background: #f1f5f9; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                    <span style="font-size: 13px; color: #6b7280;">Plan</span>
-                    <span style="font-size: 13px; font-weight: 500; color: #1f2937;">${planLabel}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #e2e8f0;">
-                    <span style="font-size: 13px; color: #6b7280;">Monthly</span>
-                    <span style="font-size: 13px; font-weight: 600; color: #667eea;">$${planPrice.toLocaleString()}/mo</span>
-                  </div>
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="font-size: 13px; color: #6b7280; padding: 8px 0;" align="left">Plan</td>
+                      <td style="font-size: 13px; font-weight: 500; color: #1f2937; padding: 8px 0;" align="right">${planLabel}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="2" style="border-top: 1px solid #e2e8f0;"></td>
+                    </tr>
+                    <tr>
+                      <td style="font-size: 13px; color: #6b7280; padding: 8px 0;" align="left">Monthly</td>
+                      <td style="font-size: 13px; font-weight: 600; color: #667eea; padding: 8px 0;" align="right">$${planPrice.toLocaleString()}/mo</td>
+                    </tr>
+                  </table>
                 </div>
                 
                 <!-- CTA Button -->

@@ -24,11 +24,14 @@ import { Loader2 } from "lucide-react";
 
 const automationServices = [
   { id: "social-media-suite", label: "Social Media Suite", price: 2450 },
+  { id: "ecommerce-operations", label: "E-Commerce Operations", price: 888 },
   { id: "custom-website", label: "Custom Website Development", price: 888 },
   { id: "seo-aeo", label: "SEO/AEO Package", price: 888 },
   { id: "custom-lms", label: "Custom LMS Package", price: 2450 },
-  { id: "custom-ai-assistant", label: "Custom AI Assistant", price: 888 },
+  { id: "custom-gpt", label: "Custom GPT Product", price: 888 },
   { id: "custom-tool", label: "Custom Tool", price: 888 },
+  { id: "custom-ai-assistant", label: "Custom AI Assistant", price: 888 },
+  { id: "advertising-package", label: "Advertising", price: 999 },
 ];
 
 const advertisingChannels = [
@@ -47,7 +50,7 @@ const planConfigs: Record<string, { amount: number; maxServices: number }> = {
   triple: { amount: 2664, maxServices: 3 },
   full: { amount: 3996, maxServices: 6 },
   amazon: { amount: 999, maxServices: 1 },
-  advertising: { amount: 888, maxServices: 7 },
+  advertising: { amount: 999, maxServices: 7 },
   custom: { amount: 0, maxServices: 6 },
 };
 
@@ -67,6 +70,8 @@ interface Client {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  contractStatus?: string;
+  onboardingStatus?: string;
 }
 
 interface EditClientModalProps {
@@ -84,6 +89,8 @@ export const EditClientModal = ({
 }: EditClientModalProps) => {
   const [loading, setLoading] = useState(false);
   const [additionalEmails, setAdditionalEmails] = useState("");
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [existingContractName, setExistingContractName] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     clientName: "",
     email: "",
@@ -94,14 +101,17 @@ export const EditClientModal = ({
     subscriptionStatus: "pending_payment" as string,
     isActive: true,
     notes: "",
+    contractStatus: "not_signed" as string,
   });
 
   useEffect(() => {
     if (client) {
-      // Detect plan type from services if not explicitly set
+      // Use the explicitly stored plan; only auto-detect as fallback when plan is missing
       let detectedPlan = client.plan || "single";
-      if (client.selectedServices?.includes("amazon-design")) detectedPlan = "amazon";
-      if (client.selectedServices?.some(s => s.startsWith("channel-"))) detectedPlan = "advertising";
+      if (!client.plan) {
+        if (client.selectedServices?.includes("amazon-design")) detectedPlan = "amazon";
+        if (client.selectedServices?.some(s => s.startsWith("channel-"))) detectedPlan = "advertising";
+      }
 
       // Extract additional emails from notes
       const notesStr = client.notes || "";
@@ -125,7 +135,12 @@ export const EditClientModal = ({
         subscriptionStatus: client.subscriptionStatus || "pending_payment",
         isActive: client.isActive,
         notes: remainingNotes,
+        contractStatus: client.contractStatus || "not_signed",
       });
+
+      // Load existing contract name if available
+      setExistingContractName((client as any).contractDetails?.uploadedContractName || null);
+      setContractFile(null);
     }
   }, [client]);
 
@@ -143,17 +158,33 @@ export const EditClientModal = ({
 
   const handleServiceToggle = (serviceId: string) => {
     setFormData((prev) => {
-      const isSelected = prev.selectedServices.includes(serviceId);
-      if (isSelected) {
-        return { ...prev, selectedServices: prev.selectedServices.filter((s) => s !== serviceId) };
+      if (prev.selectedServices.includes(serviceId)) {
+        return {
+          ...prev,
+          selectedServices: prev.selectedServices.filter((s) => s !== serviceId),
+        };
       }
-      const maxAllowed = prev.maxServices;
-      const currentCount = prev.plan === "advertising"
-        ? prev.selectedServices.filter(s => s.startsWith("channel-")).length
-        : prev.selectedServices.length;
-      if (currentCount >= maxAllowed) {
-        toast.error(`Maximum ${maxAllowed} selections allowed for this plan`);
-        return prev;
+      
+      const isAdvertisingChannel = serviceId.startsWith("channel-");
+      
+      if (prev.plan === "custom") {
+        if (!isAdvertisingChannel) {
+          const maxAllowed = parseInt(prev.maxServices as any) || 0;
+          const currentGeneralCount = prev.selectedServices.filter(s => !s.startsWith("channel-")).length;
+          if (currentGeneralCount >= maxAllowed) {
+            toast.error(`Maximum ${maxAllowed} general services allowed`);
+            return prev;
+          }
+        }
+      } else {
+        const maxAllowed = planConfigs[prev.plan].maxServices;
+        const currentCount = prev.plan === "advertising"
+          ? prev.selectedServices.filter(s => s.startsWith("channel-")).length
+          : prev.selectedServices.length;
+        if (currentCount >= maxAllowed) {
+          toast.error(`Maximum ${maxAllowed} selections allowed for this plan`);
+          return prev;
+        }
       }
       return { ...prev, selectedServices: [...prev.selectedServices, serviceId] };
     });
@@ -161,7 +192,7 @@ export const EditClientModal = ({
 
   const getAdvertisingPrice = (channelCount: number) => {
     if (channelCount <= 0) return 0;
-    if (channelCount < 3) return channelCount * 888;
+    if (channelCount < 3) return channelCount * 999;
     return Math.min(channelCount * 493, 3450);
   };
 
@@ -189,13 +220,39 @@ export const EditClientModal = ({
         ? `[Additional Emails: ${additionalEmails.trim()}]\n${formData.notes}`
         : formData.notes;
 
+      // Handle contract file upload if a new file was selected
+      let contractDetails: any = undefined; // undefined = don't update
+      if (formData.plan === "custom" && contractFile) {
+        toast.info("Uploading contract document...");
+        const fileExt = contractFile.name.split(".").pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("contracts")
+          .upload(fileName, contractFile);
+
+        if (uploadError) {
+          throw new Error(`Failed to upload contract file: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(fileName);
+
+        contractDetails = {
+          uploadedContractUrl: urlData?.publicUrl || null,
+          uploadedContractName: contractFile.name,
+        };
+      }
+
       const response = await supabase.functions.invoke("update-client", {
         body: { 
           clientId: client.id, 
           ...formData, 
-          notes: finalNotes 
+          maxServices: formData.plan === "custom" ? (parseInt(formData.maxServices as any) || 1) : planConfigs[formData.plan].maxServices,
+          notes: finalNotes,
+          ...(contractDetails !== undefined ? { contractDetails } : {}),
         },
-        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -217,10 +274,11 @@ export const EditClientModal = ({
   const isAmazonPlan = formData.plan === "amazon";
   const isCustomPlan = formData.plan === "custom";
   const selectedChannelCount = formData.selectedServices.filter(s => s.startsWith("channel-")).length;
+  const generalServicesCount = formData.selectedServices.filter(s => !s.startsWith("channel-")).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-slate-900">
         <DialogHeader>
           <DialogTitle>Edit Client</DialogTitle>
         </DialogHeader>
@@ -286,21 +344,38 @@ export const EditClientModal = ({
             </div>
           </div>
 
-          {/* Active Status */}
-          <div className="space-y-2">
-            <Label>Active Status</Label>
-            <Select
-              value={formData.isActive ? "active" : "inactive"}
-              onValueChange={(v) => setFormData((prev) => ({ ...prev, isActive: v === "active" }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Active & Contract Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Active Status</Label>
+              <Select
+                value={formData.isActive ? "active" : "inactive"}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, isActive: v === "active" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Contract Status</Label>
+              <Select
+                value={formData.contractStatus}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, contractStatus: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_signed">Awaiting Signature</SelectItem>
+                  <SelectItem value="signed">Signed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Custom Plan Options */}
@@ -319,20 +394,29 @@ export const EditClientModal = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-maxServices">Max Services (1-6) *</Label>
+                  <Label htmlFor="edit-maxServices">Max Services *</Label>
                   <Input
                     id="edit-maxServices"
                     type="number"
                     min="1"
-                    max="6"
                     value={formData.maxServices}
                     onChange={(e) => {
-                      const value = Math.min(6, Math.max(1, parseInt(e.target.value) || 1));
-                      setFormData((prev) => ({
-                        ...prev,
-                        maxServices: value,
-                        selectedServices: prev.selectedServices.slice(0, value),
-                      }));
+                      const val = e.target.value;
+                      if (val === "") {
+                        setFormData((prev) => ({
+                          ...prev,
+                          maxServices: "" as any,
+                        }));
+                        return;
+                      }
+                      const value = parseInt(val);
+                      if (!isNaN(value)) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          maxServices: value,
+                          selectedServices: prev.selectedServices.slice(0, value),
+                        }));
+                      }
                     }}
                   />
                 </div>
@@ -345,6 +429,21 @@ export const EditClientModal = ({
                   onChange={(e) => setAdditionalEmails(e.target.value)}
                   placeholder="email1@example.com, email2@example.com"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-contractFile">Upload Custom Contract (Optional)</Label>
+                {existingContractName && !contractFile && (
+                  <p className="text-xs text-muted-foreground">Current: {existingContractName}</p>
+                )}
+                <Input
+                  id="edit-contractFile"
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-xs text-muted-foreground italic">
+                  Upload a new PDF to replace the current contract. Leave empty to keep the existing one.
+                </p>
               </div>
             </div>
           )}
@@ -393,30 +492,86 @@ export const EditClientModal = ({
           {(isAutomationPlan || isCustomPlan) && (
             <div className="space-y-3">
               <Label>
-                Selected Services ({formData.selectedServices.length}/{formData.maxServices})
+                {formData.plan === "custom" ? "Selected Services" : `Selected Services (${formData.selectedServices.length}/${formData.maxServices})`}
               </Label>
-              <div className="grid grid-cols-2 gap-3">
-                {automationServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      formData.selectedServices.includes(service.id)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => handleServiceToggle(service.id)}
-                  >
-                    <Checkbox
-                      checked={formData.selectedServices.includes(service.id)}
-                      onCheckedChange={() => handleServiceToggle(service.id)}
-                    />
-                    <div>
-                      <span className="text-sm font-medium">{service.label}</span>
-                      <span className="text-xs text-muted-foreground ml-1">(${service.price}/mo)</span>
+              {isCustomPlan ? (
+                <div className="space-y-4 w-full">
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Other Services ({generalServicesCount}/{formData.maxServices})</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {automationServices.filter(s => s.id !== "advertising-package").map((service) => (
+                        <div
+                          key={service.id}
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            formData.selectedServices.includes(service.id)
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() => handleServiceToggle(service.id)}
+                        >
+                          <Checkbox
+                            checked={formData.selectedServices.includes(service.id)}
+                            onCheckedChange={() => handleServiceToggle(service.id)}
+                          />
+                          <div>
+                            <span className="text-sm font-medium">{service.label}</span>
+                            <span className="text-xs text-muted-foreground ml-1">(${service.price}/mo)</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="space-y-2 border-t pt-4">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Advertising Specific</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {advertisingChannels.map((channel) => (
+                        <div
+                          key={channel.id}
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            formData.selectedServices.includes(channel.id)
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          onClick={() => handleServiceToggle(channel.id)}
+                        >
+                          <Checkbox
+                            checked={formData.selectedServices.includes(channel.id)}
+                            onCheckedChange={() => handleServiceToggle(channel.id)}
+                          />
+                          <div>
+                            <span className="text-sm font-medium">{channel.label}</span>
+                            <span className="text-xs text-muted-foreground ml-1">($999/mo)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {automationServices.map((service) => (
+                    <div
+                      key={service.id}
+                      className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        formData.selectedServices.includes(service.id)
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                      onClick={() => handleServiceToggle(service.id)}
+                    >
+                      <Checkbox
+                        checked={formData.selectedServices.includes(service.id)}
+                        onCheckedChange={() => handleServiceToggle(service.id)}
+                      />
+                      <div>
+                        <span className="text-sm font-medium">{service.label}</span>
+                        <span className="text-xs text-muted-foreground ml-1">(${service.price}/mo)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

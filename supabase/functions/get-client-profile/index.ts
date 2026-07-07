@@ -131,6 +131,8 @@ serve(async (req) => {
           stripeSubscriptionId: profile.stripe_subscription_id,
           contractStatus: profile.contract_status,
           contractSignedAt: profile.contract_signed_at,
+          contractSignature: profile.contract_signature,
+          contractDetails: profile.contract_details,
           onboardingStatus: profile.onboarding_status,
           onboardingCompletedAt: profile.onboarding_completed_at,
           maxServices: profile.max_services,

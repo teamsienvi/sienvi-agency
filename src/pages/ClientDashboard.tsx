@@ -38,6 +38,7 @@ interface ClientProfile {
   stripeSubscriptionId: string | null;
   contractStatus: string;
   contractSignedAt: string | null;
+  contractSignature?: string | null;
   onboardingStatus: string;
   onboardingCompletedAt: string | null;
   maxServices: number;
@@ -187,18 +188,17 @@ const ClientDashboard = () => {
 
   const getStatusBadge = () => {
     if (!profile) return null;
-    const isAdvertising = profile.plan === "advertising";
     
     if (profile.subscriptionStatus === "pending_payment") {
       return <Badge className="bg-orange-500">Awaiting Payment</Badge>;
     }
-    if (!isAdvertising && !isDiscovery && profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
+    if (!isDiscovery && profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
       return <Badge className="bg-blue-500">Awaiting Contract</Badge>;
     }
-    if (!isAdvertising && (isDiscovery || profile.contractStatus === "signed") && profile.onboardingStatus !== "completed") {
+    if ((isDiscovery || profile.contractStatus === "signed") && profile.onboardingStatus !== "completed") {
       return <Badge className="bg-purple-500">Onboarding In Progress</Badge>;
     }
-    if (isAdvertising || profile.onboardingStatus === "completed") {
+    if (profile.onboardingStatus === "completed") {
       return <Badge className="bg-green-500">Active</Badge>;
     }
     return <Badge variant="outline">Unknown</Badge>;
@@ -206,13 +206,6 @@ const ClientDashboard = () => {
 
   const getProgress = () => {
     if (!profile) return 0;
-    const isAdvertising = profile.plan === "advertising";
-    if (isAdvertising) {
-      // Advertising: only 2 steps (account + payment)
-      let completed = 1;
-      if (profile.subscriptionStatus === "active") completed++;
-      return (completed / 2) * 100;
-    }
     if (isDiscovery) {
       // Discovery skips contract: 3 steps (account + payment + onboarding)
       let completed = 1;
@@ -229,7 +222,6 @@ const ClientDashboard = () => {
 
   const getPrimaryCTA = () => {
     if (!profile) return null;
-    const isAdvertising = profile.plan === "advertising";
     
     if (profile.subscriptionStatus === "pending_payment") {
       return (
@@ -244,9 +236,6 @@ const ClientDashboard = () => {
         </div>
       );
     }
-    
-    // Advertising clients don't need contract or onboarding
-    if (isAdvertising) return null;
     
     if (profile.contractStatus === "not_signed" && !isDiscovery) {
       return (
@@ -469,8 +458,8 @@ const ClientDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Step 3: Contract - hidden for advertising and discovery */}
-                  {profile.plan !== "advertising" && !isDiscovery && (
+                  {/* Step 3: Contract - hidden for discovery */}
+                  {!isDiscovery && (
                     <div className="flex items-center gap-3">
                       {profile.contractStatus === "signed" ? (
                         <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -488,8 +477,8 @@ const ClientDashboard = () => {
                     </div>
                   )}
 
-                  {/* Step 4: Onboarding - hidden for advertising */}
-                  {profile.plan !== "advertising" && (
+                  {/* Step 4: Onboarding */}
+                  {true && (
                     <div className="flex items-center gap-3">
                       {profile.onboardingStatus === "completed" ? (
                         <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -568,8 +557,8 @@ const ClientDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Contract Status Card - hidden for advertising and discovery */}
-            {profile.plan !== "advertising" && !isDiscovery && (
+            {/* Contract Status Card - hidden for discovery */}
+            {!isDiscovery && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -588,7 +577,16 @@ const ClientDashboard = () => {
                     </p>
                   </div>
                   {profile.contractStatus === "signed" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => window.open("/contract?view=true", "_blank")}
+                      >
+                        View Signed Copy
+                      </Button>
+                      <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
+                    </div>
                   ) : profile.subscriptionStatus === "active" ? (
                     <Button size="sm" onClick={() => navigate("/contract")}>
                       Sign Now

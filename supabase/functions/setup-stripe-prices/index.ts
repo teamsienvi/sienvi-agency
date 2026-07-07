@@ -64,10 +64,10 @@ serve(async (req) => {
       },
     });
 
-    // Individual channel pricing ($888/channel)
+    // Individual channel pricing ($999/channel)
     const channelPricing = [
-      { channels: 1, amount: 88800, nickname: "1 Channel" },
-      { channels: 2, amount: 177600, nickname: "2 Channels" },
+      { channels: 1, amount: 99900, nickname: "1 Channel" },
+      { channels: 2, amount: 199800, nickname: "2 Channels" },
       // Bundle pricing (3+ channels at ~$493/channel)
       { channels: 3, amount: 147900, nickname: "3 Channels Bundle" },
       { channels: 4, amount: 197100, nickname: "4 Channels Bundle" },

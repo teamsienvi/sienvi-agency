@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import { AuthErrorHandler } from "@/components/AuthErrorHandler";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
@@ -28,6 +29,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AnalyticsProvider>
+          <AuthErrorHandler />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/success" element={<Success />} />

@@ -13,30 +13,30 @@ const corsHeaders = {
 
 // Bundle plans
 const PLAN_PRICE_IDS: Record<string, string> = {
-  single: "price_1SzlcmDnw1azoLSpefO3ANVU",
-  triple: "price_1SzlcmDnw1azoLSpfA06Dtiu",
-  full: "price_1SzlcnDnw1azoLSpQA6jwghB",
+  single: "price_1TmzSSDnw1azoLSpVISk2j7g",
+  triple: "price_1TmzSTDnw1azoLSpaa2hhifg",
+  full: "price_1TmzSTDnw1azoLSpyqfODpkC",
 };
 
 // Individual service prices
 const SERVICE_PRICE_IDS: Record<string, string> = {
-  "custom-website": "price_1SzlckDnw1azoLSpYce1Va8F",
-  "seo-aeo": "price_1SzlckDnw1azoLSpYce1Va8F",
-  "custom-ai-assistant": "price_1SzlckDnw1azoLSpYce1Va8F",
-  "amazon-design": "price_1SzlchDnw1azoLSpQUJfYRrN",
-  "social-media-suite": "price_1SzlclDnw1azoLSp67eBDxr5",
-  "custom-lms": "price_1SzlclDnw1azoLSpmMcgCKKN",
+  "custom-website": "price_1TmzSSDnw1azoLSpdu8Ro2qj",
+  "seo-aeo": "price_1TmzSSDnw1azoLSpdu8Ro2qj",
+  "custom-ai-assistant": "price_1TmzSSDnw1azoLSpdu8Ro2qj",
+  "amazon-design": "price_1TmzSQDnw1azoLSpnP8Zv2uA",
+  "social-media-suite": "price_1TmzSSDnw1azoLSp9lSJ8jTS",
+  "custom-lms": "price_1TmzSSDnw1azoLSpeZvymtPf",
 };
 
 // Advertising pricing by channel count
 const ADVERTISING_PRICE_IDS: Record<number, string> = {
-  1: "price_1SzlciDnw1azoLSpMrBXt4xU",
-  2: "price_1SzlciDnw1azoLSptoIxpDxu",
-  3: "price_1SzlciDnw1azoLSpLxadTvOl",
-  4: "price_1SzlciDnw1azoLSpFXm6SG8H",
-  5: "price_1SzlcjDnw1azoLSpn6OEzyq6",
-  6: "price_1SzlcjDnw1azoLSpa3SQYqLL",
-  7: "price_1SzlcjDnw1azoLSp4rdCJZwY",
+  1: "price_1TmzSRDnw1azoLSpBjYhowwg",
+  2: "price_1TmzSRDnw1azoLSpAzyv0tkW",
+  3: "price_1TmzSRDnw1azoLSp4QyTp9Qv",
+  4: "price_1TmzSRDnw1azoLSptPh0wjZ0",
+  5: "price_1TmzSRDnw1azoLSpvBkjCky8",
+  6: "price_1TmzSRDnw1azoLSpRDE5DMx3",
+  7: "price_1TmzSRDnw1azoLSpeQNPrjO8",
 };
 
 serve(async (req) => {

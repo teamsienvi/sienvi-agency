@@ -73,7 +73,7 @@ export const DeleteClientDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="text-slate-900">
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Client</AlertDialogTitle>
           <AlertDialogDescription>
