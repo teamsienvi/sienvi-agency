@@ -29,7 +29,7 @@ const testimonials = [
     position: "Founder of Max Reach Tools"
   },
   {
-    quote: "I highly recommend Lance and the entire Sienvi Team. It was a surprise to find such an experienced group to assist me with product development and guidance in ecommerce. I have never been disappointed with their advice or results. I am in constant conversation with them about how to navigate the future which seems to be changing very rapidly. No matter where you are in your ecommerce journey, I feel confident about their abilities to guide your success.",
+    quote: "I highly recommend the Sienvi Team. It was a surprise to find such an experienced group to assist me with product development and guidance in ecommerce. I have never been disappointed with their advice or results. I am in constant conversation with them about how to navigate the future which seems to be changing very rapidly. No matter where you are in your ecommerce journey, I feel confident about their abilities to guide your success.",
     author: "Rodney Gray",
     position: "Serenity Scrolls"
   },
@@ -39,7 +39,7 @@ const testimonials = [
     position: "OxiSureTech"
   },
   {
-    quote: "I've had the absolute pleasure of working with Lance, Scott, and the entire team at Sienvi Agency, and I can honestly say it's been one of the best agency experiences my team and I have ever had.\n\nThey've taken on several projects for us, and even though some are still in progress, every step of the process has been remarkably smooth, transparent, and collaborative. What stands out most is how much my staff and I have learned along the way: Sienvi doesn't just deliver results, they elevate your own understanding and capabilities.\n\nI couldn't recommend Lance, Scott, and the Sienvi team highly enough. If you're looking for partners who are professional, proactive, and truly invested in your success, these are your people.",
+    quote: "I've had the absolute pleasure of working with the entire team at Sienvi Agency, and I can honestly say it's been one of the best agency experiences my team and I have ever had.\n\nThey've taken on several projects for us, and even though some are still in progress, every step of the process has been remarkably smooth, transparent, and collaborative. What stands out most is how much my staff and I have learned along the way: Sienvi doesn't just deliver results, they elevate your own understanding and capabilities.\n\nI couldn't recommend the Sienvi team highly enough. If you're looking for partners who are professional, proactive, and truly invested in your success, these are your people.",
     author: "David & Cissie Pryor",
     position: "A Touch of Health / Cissie Pryor Presents"
   }
