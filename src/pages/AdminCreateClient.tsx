@@ -320,7 +320,7 @@ const AdminCreateClient = () => {
   // Show success state after client creation
   if (createdClient) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 text-slate-800">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <Button variant="ghost" onClick={() => navigate("/admin/clients")} className="mb-6">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -437,7 +437,7 @@ const AdminCreateClient = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-slate-800">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
