@@ -868,7 +868,7 @@ export const OnboardingResponsesModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh]">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto text-slate-900">
         <DialogHeader className="flex flex-row items-center justify-between pr-6 border-b pb-4 mb-4">
           <DialogTitle className="text-xl font-bold">Onboarding Responses - {clientName}</DialogTitle>
           {!loading && (

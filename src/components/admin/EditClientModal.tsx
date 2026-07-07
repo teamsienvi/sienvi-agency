@@ -278,7 +278,7 @@ export const EditClientModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-slate-900">
         <DialogHeader>
           <DialogTitle>Edit Client</DialogTitle>
         </DialogHeader>
