@@ -13,7 +13,7 @@ const Pricing = () => {
   };
 
   return (
-    <section id="pricing" className="section-padding bg-gray-50 overflow-hidden">
+    <section id="pricing" className="section-padding bg-transparent overflow-hidden relative z-10">
       <div className="container-custom">
         <motion.div 
           className="text-center mb-16"
@@ -23,7 +23,7 @@ const Pricing = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Stack Your Automation & Save</h2>
-          <p className="max-w-3xl mx-auto text-gray-600">
+          <p className="max-w-3xl mx-auto text-slate-300">
             Choose the automation package that works best for your business needs and 
             scale efficiently with our bundled services.
           </p>
@@ -36,7 +36,7 @@ const Pricing = () => {
         </div>
         
         <motion.div 
-          className="mt-16 bg-plc-purple text-white rounded-2xl p-10 text-center"
+          className="mt-16 bg-plc-purple/20 backdrop-blur-md text-white rounded-2xl p-10 text-center border border-plc-purple/30 shadow-2xl"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ 
@@ -47,7 +47,7 @@ const Pricing = () => {
           }}
           viewport={{ once: true }}
           whileHover={{ 
-            boxShadow: "0 20px 40px rgba(139, 92, 246, 0.3)",
+            boxShadow: "0 20px 40px rgba(139, 92, 246, 0.2)",
             scale: 1.02,
             transition: { duration: 0.3 }
           }}
@@ -62,7 +62,7 @@ const Pricing = () => {
             whileTap={{ scale: 0.95 }}
           >
             <Button 
-              className="bg-white text-plc-purple hover:bg-gray-100"
+              className="bg-plc-purple hover:bg-plc-purple/90 text-white"
               onClick={handleBookCall}
             >
               Book Your Strategy Call

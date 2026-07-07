@@ -11,7 +11,7 @@ export interface PricingTier {
 export const pricingTiers: PricingTier[] = [
   {
     title: "Single Service",
-    price: "$888",
+    price: "Custom Pricing",
     description: "Perfect for businesses looking to automate one area of their operations.",
     features: [
       "Full access to one core service",
@@ -24,7 +24,7 @@ export const pricingTiers: PricingTier[] = [
   },
   {
     title: "Triple Automation",
-    price: "$2,398.20",
+    price: "Custom Pricing",
     description: "Our most popular package for businesses ready to integrate multiple services.",
     features: [
       "Full access to three core services",
@@ -39,7 +39,7 @@ export const pricingTiers: PricingTier[] = [
   },
   {
     title: "Full Automation",
-    price: "$3,996.00",
+    price: "Custom Pricing",
     description: "The complete solution for businesses ready to fully integrate automation.",
     features: [
       "All six core automation services",

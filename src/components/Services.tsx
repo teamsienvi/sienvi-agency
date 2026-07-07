@@ -5,7 +5,7 @@ import { services } from "./services/servicesData";
 
 const Services = () => {
   return (
-    <section id="services" className="section-padding bg-plc-purple-light overflow-hidden">
+    <section id="services" className="section-padding bg-transparent overflow-hidden relative z-10">
       <div className="container-custom">
         <motion.div 
           className="text-center mb-16"
@@ -15,7 +15,7 @@ const Services = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Core Services</h2>
-          <p className="max-w-3xl mx-auto text-gray-600">
+          <p className="max-w-3xl mx-auto text-slate-300">
             We specialize in AI-driven automation solutions that simplify and optimize 
             business operations. Whether you're an eCommerce seller, a small business 
             owner, or a digital entrepreneur, our services help you scale efficiently with data-driven 

@@ -68,11 +68,9 @@ const TestimonialsCarousel = ({
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <section id="testimonials" className="section-padding relative overflow-hidden">
-      {/* Background with gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-plc-burgundy/5 via-transparent to-plc-purple/5" />
-      <div className="absolute top-0 left-0 w-72 h-72 bg-plc-burgundy/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-plc-purple/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+    <section id="testimonials" className="section-padding relative overflow-hidden bg-transparent z-10">
+      {/* Subtle background glow */}
+      <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       
       <div className="container-custom relative z-10">
         <motion.div 
@@ -82,10 +80,10 @@ const TestimonialsCarousel = ({
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-plc-dark via-plc-burgundy to-plc-purple bg-clip-text text-transparent">
-            Testimonials
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            Client Success Stories
           </h2>
-          <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
+          <p className="max-w-2xl mx-auto text-slate-400 text-lg">
             Hear directly from our clients about their experience working with Sienvi.
           </p>
         </motion.div>
@@ -98,18 +96,18 @@ const TestimonialsCarousel = ({
           {/* Navigation Arrows */}
           <button
             onClick={goToPrevious}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-16 z-10 p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 group border border-border/50"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-16 z-10 p-3 rounded-full bg-slate-900/60 hover:bg-primary/20 border border-slate-800/80 hover:border-primary/50 text-slate-300 hover:text-white backdrop-blur-sm shadow-2xl transition-all duration-300 group"
             aria-label="Previous testimonial"
           >
-            <ChevronLeft className="h-5 w-5 text-plc-burgundy group-hover:scale-110 transition-transform" />
+            <ChevronLeft className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
           </button>
           
           <button
             onClick={goToNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-16 z-10 p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 group border border-border/50"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-16 z-10 p-3 rounded-full bg-slate-900/60 hover:bg-primary/20 border border-slate-800/80 hover:border-primary/50 text-slate-300 hover:text-white backdrop-blur-sm shadow-2xl transition-all duration-300 group"
             aria-label="Next testimonial"
           >
-            <ChevronRight className="h-5 w-5 text-plc-burgundy group-hover:scale-110 transition-transform" />
+            <ChevronRight className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
           </button>
 
           {/* Testimonial Card */}
@@ -125,33 +123,51 @@ const TestimonialsCarousel = ({
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="w-full"
               >
-                <div className="relative bg-white rounded-3xl shadow-2xl p-8 md:p-14 border border-border/30 overflow-hidden">
-                  {/* Decorative elements */}
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-plc-burgundy/10 to-plc-purple/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-plc-purple/10 to-plc-burgundy/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+                <motion.div 
+                  className="relative bg-slate-900/65 backdrop-blur-md rounded-3xl shadow-2xl p-8 md:p-14 border border-slate-800/80 overflow-hidden text-white"
+                  whileHover={{ borderColor: "hsl(var(--primary) / 0.4)", boxShadow: "0 20px 40px rgba(139, 92, 246, 0.15)" }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Drafting corner marks */}
+                  <span className="absolute top-2 left-3 text-primary/30 font-mono text-xs select-none">+</span>
+                  <span className="absolute top-2 right-3 text-primary/30 font-mono text-xs select-none">+</span>
+                  <span className="absolute bottom-2 left-3 text-primary/30 font-mono text-xs select-none">+</span>
+                  <span className="absolute bottom-2 right-3 text-primary/30 font-mono text-xs select-none">+</span>
+
+                  {/* Faint premium double quotes background icon */}
+                  <svg
+                    className="absolute top-6 left-8 h-20 w-20 text-primary/10 pointer-events-none"
+                    fill="currentColor"
+                    viewBox="0 0 32 32"
+                    aria-hidden="true"
+                  >
+                    <path d="M10 8c-3.3 0-6 2.7-6 6v10h10V14H8c0-2.2 1.8-4 4-4V8zm18 0c-3.3 0-6 2.7-6 6v10h10V14h-6c0-2.2 1.8-4 4-4V8z" />
+                  </svg>
+                  
+                  {/* Decorative faint glow inside */}
+                  <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
                   
                   <div className="relative flex flex-col items-center text-center">
-                    <p className="text-foreground text-lg md:text-xl leading-relaxed mb-8 whitespace-pre-line max-w-3xl italic">
+                    <p className="text-slate-200 text-lg md:text-xl leading-relaxed mb-8 whitespace-pre-line max-w-3xl italic font-medium">
                       "{currentTestimonial.quote}"
                     </p>
                     
                     {/* Decorative divider */}
                     <div className="flex justify-center mb-6">
-                      <div className="w-14 h-1 rounded-full bg-plc-purple/25" />
+                      <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
                     </div>
                     
                     {/* Author info */}
                     <div className="flex flex-col items-center">
-                      <p className="font-bold text-xl text-foreground">{currentTestimonial.author}</p>
-                      <p className="text-plc-burgundy font-medium">{currentTestimonial.position}</p>
+                      <p className="font-bold text-xl text-white">{currentTestimonial.author}</p>
+                      <p className="text-primary font-medium text-sm mt-1">{currentTestimonial.position}</p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {/* Dot Indicators */}
           <div className="flex justify-center gap-3 mt-10">
             {testimonials.map((_, index) => (
               <button
@@ -159,8 +175,8 @@ const TestimonialsCarousel = ({
                 onClick={() => goToSlide(index)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
                   index === currentIndex 
-                    ? 'bg-gradient-to-r from-plc-burgundy to-plc-purple w-10 shadow-md' 
-                    : 'bg-gray-300 hover:bg-gray-400 w-2.5'
+                    ? 'bg-primary w-8 shadow-md shadow-primary/25' 
+                    : 'bg-slate-800 hover:bg-slate-700 w-2.5'
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
               />

@@ -6,16 +6,22 @@ const ContactInfo = () => {
   return (
     <div>
       <h3 className="text-xl font-bold mb-4">Contact Information</h3>
-      <p className="text-gray-600 mb-6">
+      <p className="text-slate-300 mb-6">
         Fill out the form or email us directly! Use our contact 
         information below.
       </p>
       
-      <div className="mb-8">
-        <p className="text-gray-800 font-medium mb-1">Email</p>
+      <div className="mb-8 flex flex-col gap-1">
+        <p className="text-slate-100 font-medium mb-1">Email</p>
+        <a 
+          href="mailto:info@sienvi.com" 
+          className="text-plc-purple hover:underline w-fit"
+        >
+          info@sienvi.com
+        </a>
         <a 
           href="mailto:teamsienvi@gmail.com" 
-          className="text-plc-purple hover:underline"
+          className="text-plc-purple hover:underline w-fit"
         >
           teamsienvi@gmail.com
         </a>

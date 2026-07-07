@@ -95,7 +95,7 @@
   }
 
   body {
-    @apply bg-white text-foreground font-sans;
+    @apply bg-slate-950 text-slate-100 font-sans;
   }
   
   html {
@@ -121,7 +121,11 @@
   }
   
   .service-card {
-    @apply bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-all duration-300;
+    @apply bg-slate-900/65 backdrop-blur-md rounded-2xl p-6 border border-slate-800/80 shadow-2xl hover:border-primary/50 transition-all duration-300 text-white;
+  }
+  
+  .glass-card {
+    @apply bg-slate-900/65 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-2xl relative p-8 md:p-12 text-white;
   }
   
   .service-icon {

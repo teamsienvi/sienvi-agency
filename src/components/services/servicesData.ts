@@ -22,9 +22,9 @@ export const services = [
       "Student progress tracking and analytics",
       "Interactive quizzes and assessments",
       "Branded learning portal with user management",
-      "💡 Bundle with Custom AI Assistant or Social Media Suite — Inquire for details"
+      "💡 Bundle with Custom AI Assistant or Social Media Suite - Bundle & Save"
     ],
-    price: "$2450"
+    price: "Custom Pricing"
   },
   {
     id: "social-media-suite",
@@ -38,9 +38,9 @@ export const services = [
       "Auto-scheduling and cross-posting to all major platforms",
       "Automated engagement and community management",
       "Performance tracking and analytics",
-      "💡 Bundle with Custom AI Assistant or SEO/AEO — Inquire for details"
+      "💡 Bundle with Custom AI Assistant or SEO/AEO - Bundle & Save"
     ],
-    price: "$2450"
+    price: "Custom Pricing"
   },
   {
     id: "advertising-package",
@@ -54,9 +54,9 @@ export const services = [
       "Performance optimization",
       "Detailed analytics and reporting",
       "Budget management and allocation",
-      "💡 Select 3+ channels for bundle discount — Get Started to learn more"
+      "💡 Select 3+ channels for bundle discount - Get Started to learn more"
     ],
-    price: "$999/channel",
+    price: "Custom Pricing",
     isAdvertising: true
   },
   // Row 2: Custom AI Assistant, Custom Website, SEO/AEO
@@ -75,9 +75,9 @@ export const services = [
       "Safety, privacy, and governance",
       "Deployment and handoff",
       "Ongoing optimization (monthly retainer option)",
-      "💡 Bundle with Custom Website or LMS — Inquire for details"
+      "💡 Bundle with Custom Website or LMS - Bundle & Save"
     ],
-    price: "$888"
+    price: "Custom Pricing"
   },
   {
     id: "custom-website",
@@ -94,9 +94,9 @@ export const services = [
       "Analytics and tracking",
       "Trust builders and compliance",
       "Training and support",
-      "💡 Bundle with SEO/AEO or Custom AI Assistant — Inquire for details"
+      "💡 Bundle with SEO/AEO or Custom AI Assistant - Bundle & Save"
     ],
-    price: "$888"
+    price: "Custom Pricing"
   },
   {
     id: "seo-aeo",
@@ -109,9 +109,9 @@ export const services = [
       "Backlink strategy and quality link acquisition",
       "On-page and technical SEO improvements",
       "Modern AI-powered SEO/AEO tools for search and answer engine performance",
-      "💡 Bundle with Custom Website or Custom AI Assistant — Inquire for details"
+      "💡 Bundle with Custom Website or Custom AI Assistant - Bundle & Save"
     ],
-    price: "$888"
+    price: "Custom Pricing"
   },
   {
     id: "amazon-design",
@@ -128,7 +128,7 @@ export const services = [
       "Competitor analysis and positioning",
       "💡 Perfect for Amazon sellers looking to stand out"
     ],
-    price: "$999 one-time",
+    price: "Custom Pricing",
     isAmazon: true
   }
 ];

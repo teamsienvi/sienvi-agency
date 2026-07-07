@@ -93,7 +93,7 @@ const Process = () => {
   ];
 
   return (
-    <section id="process" className="section-padding bg-white">
+    <section id="process" className="section-padding bg-transparent relative z-10">
       <div className="container-custom">
         <div className="max-w-3xl mx-auto">
           <motion.div 

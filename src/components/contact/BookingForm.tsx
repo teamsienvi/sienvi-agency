@@ -73,7 +73,7 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-1">
           Name
         </label>
         <Input
@@ -87,7 +87,7 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
       </div>
       
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1">
           Email
         </label>
         <Input
@@ -102,7 +102,7 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
       </div>
       
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-1">
           Phone (optional)
         </label>
         <Input
@@ -115,7 +115,7 @@ const BookingForm = ({ calendarUrl }: BookingFormProps) => {
       </div>
       
       <div>
-        <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="message" className="block text-sm font-medium text-slate-300 mb-1">
           Message
         </label>
         <Textarea

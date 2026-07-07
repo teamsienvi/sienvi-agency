@@ -6,7 +6,7 @@ const VISITOR_ID_KEY = "sienvi_visitor_id";
 const SESSION_ID_KEY = "sienvi_session_id";
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
-// Don't track internal/admin routes — only track public-facing pages
+// Don't track internal/admin routes - only track public-facing pages
 const EXCLUDED_PATHS = ["/admin", "/login", "/dashboard", "/onboarding", "/contract", "/success"];
 
 const shouldTrack = (pathname: string): boolean => {
@@ -87,6 +87,7 @@ export const useAnalytics = () => {
   const sessionInitialized = useRef(false);
   const pageStartTime = useRef<number>(Date.now());
   const pageViewCount = useRef<number>(0);
+  const maxScrollDepth = useRef<number>(0);
 
   const visitorId = getVisitorId();
   const sessionId = getSessionId();
@@ -179,7 +180,7 @@ export const useAnalytics = () => {
         .update({ ended_at: new Date().toISOString() })
         .eq("session_id", sessionId);
     } catch (error) {
-      // Silent fail — best effort
+      // Silent fail - best effort
     }
   }, [sessionId]);
 
@@ -203,7 +204,7 @@ export const useAnalytics = () => {
     return () => clearInterval(interval);
   }, [sessionId]);
 
-  // Initialize session on mount — only for trackable routes
+  // Initialize session on mount - only for trackable routes
   useEffect(() => {
     if (shouldTrack(location.pathname)) {
       initSession();
@@ -217,7 +218,7 @@ export const useAnalytics = () => {
     trackPageView();
   }, [location.pathname, trackPageView, updatePageViewOnLeave]);
 
-  // Handle page unload — update session end time
+  // Handle page unload - update session end time
   useEffect(() => {
     const handleBeforeUnload = () => {
       // Use sendBeacon to update session end time reliably on page leave

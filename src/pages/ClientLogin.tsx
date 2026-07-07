@@ -55,7 +55,7 @@ const ClientLogin = () => {
       if (!isAwaitingAuth) {
         setIsAuthLoading(false);
       }
-      // Otherwise keep loading — onAuthStateChange will handle it
+      // Otherwise keep loading - onAuthStateChange will handle it
     };
 
     checkSession();
@@ -77,7 +77,7 @@ const ClientLogin = () => {
         setIsAuthLoading(false);
         navigate("/dashboard");
       } else if (event === "INITIAL_SESSION") {
-        // Initial session loaded — if we're still waiting, check again
+        // Initial session loaded - if we're still waiting, check again
         if (session && setup === "password") {
           setViewMode("set-password");
           setIsAuthLoading(false);

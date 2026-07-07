@@ -51,7 +51,7 @@ const ServicePreview = () => {
   };
 
   return (
-    <section className="bg-plc-dark-secondary py-16">
+    <section className="bg-transparent py-16 relative z-10">
       <div className="container-custom">
         <motion.div 
           className="grid grid-cols-1 md:grid-cols-3 gap-6"

@@ -10,7 +10,7 @@ const CALENDAR_BOOKING_URL = "https://calendar.app.google/EgRs3h4riwwpo4cs6";
 
 const Contact = () => {
   return (
-    <section id="contact" className="section-padding bg-white">
+    <section id="contact" className="section-padding bg-transparent relative z-10">
       <div className="container-custom">
         <div className="max-w-5xl mx-auto">
           <CallToAction title="Book Your Strategy Call" />

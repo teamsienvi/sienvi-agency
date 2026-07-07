@@ -505,7 +505,7 @@ export const AddManualClientModal = ({
             {formData.plan === "amazon" ? (
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-sm font-medium text-foreground">Amazon Design Package</p>
-                <p className="text-sm text-muted-foreground">$999 one-time fee — Professional listing design and optimization</p>
+                <p className="text-sm text-muted-foreground">$999 one-time fee - Professional listing design and optimization</p>
               </div>
             ) : formData.plan === "custom" ? (
               <div className="space-y-4 w-full">
