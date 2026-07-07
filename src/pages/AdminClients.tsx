@@ -868,9 +868,8 @@ const AdminClients = () => {
           )}
         </motion.div>
 
-        {/* Client Details Modal */}
         <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Client Details</DialogTitle>
             </DialogHeader>
