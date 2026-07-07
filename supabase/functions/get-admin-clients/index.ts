@@ -110,6 +110,7 @@ serve(async (req) => {
         createdAt: profile.created_at,
         updatedAt: profile.updated_at,
         contractStatus: profile.contract_status,
+        contractDetails: profile.contract_details,
         onboardingStatus: profile.onboarding_status,
         accountStatus: profile.account_status,
       };

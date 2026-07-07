@@ -73,6 +73,8 @@ interface Client {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  contractStatus?: string | null;
+  contractDetails?: any;
 }
 
 const planPrices: Record<string, number> = {
@@ -734,6 +736,7 @@ const AdminClients = () => {
                           size="sm"
                           onClick={() => setSelectedClient(client)}
                           title="View Details"
+                          className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -742,6 +745,7 @@ const AdminClients = () => {
                           size="sm"
                           onClick={() => setEditClient(client)}
                           title="Edit Client"
+                          className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -836,6 +840,7 @@ const AdminClients = () => {
                               size="sm"
                               onClick={() => copyToClipboard(client.stripeCustomerId, client.id)}
                               title="Copy Customer ID"
+                              className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                             >
                               {copiedId === client.id ? (
                                 <Check className="w-4 h-4 text-green-500" />
@@ -848,6 +853,7 @@ const AdminClients = () => {
                               size="sm"
                               onClick={() => openStripeCustomer(client.stripeCustomerId)}
                               title="View in Stripe"
+                              className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </Button>
@@ -907,6 +913,16 @@ const AdminClients = () => {
                       )}
                     </div>
                   </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Contract</p>
+                    <div className="mt-1">
+                      {selectedClient.contractStatus === "signed" ? (
+                        <Badge className="bg-green-100 text-green-700">Signed</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">Not Signed</Badge>
+                      )}
+                    </div>
+                  </div>
                   {selectedClient.maxServices && (
                     <div>
                       <p className="text-sm text-muted-foreground">Max Services</p>
@@ -940,6 +956,71 @@ const AdminClients = () => {
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Internal Notes</p>
                     <p className="bg-muted p-3 rounded-lg text-sm">{selectedClient.notes}</p>
+                  </div>
+                )}
+
+                {selectedClient.contractStatus === "signed" && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold text-sm mb-3">Signed Contract Details</h4>
+                    {selectedClient.contractDetails?.uploadedContractUrl ? (
+                      <div className="bg-muted p-3 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ClipboardList className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-medium">
+                            {selectedClient.contractDetails.uploadedContractName || "custom-contract.pdf"}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(selectedClient.contractDetails.uploadedContractUrl, "_blank")}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Contract
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Effective Date</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.effectiveDate || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Client Legal Name</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.clientLegalName || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Trade Name (DBA)</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.clientTradeName || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Jurisdiction</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.clientJurisdiction || "-"}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Client Address</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.clientAddress || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Contact Name</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.clientContactName || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Contact Email</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.clientEmail || "-"}</p>
+                        </div>
+                        {selectedClient.contractDetails?.strategyPeriod && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Strategy Period</p>
+                            <p className="font-medium">{selectedClient.contractDetails.strategyPeriod}</p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs text-muted-foreground">Confidentiality Period</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.confidentialityPeriod || "-"}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
