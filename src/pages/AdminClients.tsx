@@ -686,7 +686,7 @@ const AdminClients = () => {
                     <TableCell>
                       <div>
                         <p className="font-medium">
-                          {client.clientName || "—"}
+                          {client.clientName || "-"}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {client.email || "No email"}
@@ -873,11 +873,11 @@ const AdminClients = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Client Name</p>
-                    <p className="font-medium">{selectedClient.clientName || "—"}</p>
+                    <p className="font-medium">{selectedClient.clientName || "-"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{selectedClient.email || "—"}</p>
+                    <p className="font-medium">{selectedClient.email || "-"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Plan</p>

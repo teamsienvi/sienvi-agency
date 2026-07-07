@@ -71,7 +71,7 @@ const Advertising = () => {
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Advertising Services</h2>
           <p className="max-w-2xl mx-auto text-muted-foreground text-lg">
-            Add professional advertising management to any automation package. Select the channels you need — each
+            Add professional advertising management to any automation package. Select the channels you need - each
             operates independently.
           </p>
         </motion.div>
@@ -299,7 +299,7 @@ const Advertising = () => {
                               className="w-full sm:w-auto border-primary/50 text-primary hover:bg-primary/10"
                             >
                               <Plus className="w-3.5 h-3.5 mr-1" />
-                              Select All Channels — ${ALL_CHANNELS_PRICE.toLocaleString()}/mo
+                              Select All Channels - ${ALL_CHANNELS_PRICE.toLocaleString()}/mo
                             </Button>
                           )}
                           

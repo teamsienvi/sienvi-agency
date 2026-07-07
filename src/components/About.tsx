@@ -10,20 +10,26 @@ const About = () => {
   ];
 
   return (
-    <section id="about" className="section-padding bg-white">
+    <section id="about" className="section-padding bg-transparent text-white">
       <div className="container-custom">
         {/* Hero heading */}
         <motion.div
-          className="max-w-3xl mx-auto text-center mb-16"
+          className="max-w-3xl mx-auto text-center mb-16 p-8 bg-card/85 border border-dashed border-border backdrop-blur-md rounded-xl relative shadow-xl"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h3 className="text-sm font-semibold text-plc-purple mb-3 uppercase tracking-wider">
+          {/* Corner Drafting Marks */}
+          <span className="absolute top-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute top-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute bottom-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute bottom-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+
+          <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">
             OUR STORY
           </h3>
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold mb-0 bg-sienvi-gradient bg-clip-text text-transparent inline-block">
             Building Businesses That Make an Impact
           </h2>
         </motion.div>
@@ -31,19 +37,26 @@ const About = () => {
         {/* Origin story */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-20">
           <motion.div
+            className="p-8 bg-card/85 border border-dashed border-border backdrop-blur-md rounded-xl relative shadow-xl"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
+            {/* Corner Drafting Marks */}
+            <span className="absolute top-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+            <span className="absolute top-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+            <span className="absolute bottom-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+            <span className="absolute bottom-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+
             <h3 className="text-2xl font-bold mb-4">
               Sienvi was built by operators, not spectators.
             </h3>
-            <p className="text-muted-foreground mb-4">
-              We started this agency for one reason: to help business owners turn big ideas into real, durable companies — without losing the soul of what they're building. We know what it's like to be in the trenches, making payroll, chasing growth, solving problems that don't show up on a spreadsheet, and trying to build something that lasts.
+            <p className="text-gray-300 mb-4 font-light leading-relaxed">
+              We started this agency for one reason: to help business owners turn big ideas into real, durable companies - without losing the soul of what they're building. We know what it's like to be in the trenches, making payroll, chasing growth, solving problems that don't show up on a spreadsheet, and trying to build something that lasts.
             </p>
-            <p className="text-muted-foreground">
-              Over the years, we've coached more than 750 entrepreneurs through 10,000+ hours of 1:1 coaching, and we've scaled businesses across e-commerce, education, tech, real estate development, entertainment, and rental and property management. We've worked with everyone from solo founders to publicly traded companies — which means we understand both the chaos of early-stage execution and the precision required at scale.
+            <p className="text-gray-300 font-light leading-relaxed">
+              Over the years, we've coached more than 750 entrepreneurs through 10,000+ hours of 1:1 coaching, and we've scaled businesses across e-commerce, education, tech, real estate development, entertainment, and rental and property management. We've worked with everyone from solo founders to publicly traded companies - which means we understand both the chaos of early-stage execution and the precision required at scale.
             </p>
           </motion.div>
 
@@ -63,14 +76,16 @@ const About = () => {
               ].map((stat, i) => (
                 <motion.div
                   key={i}
-                  className="bg-accent/50 rounded-xl p-6 text-center border border-border"
+                  className="bg-card/80 rounded-xl p-6 text-center border border-dashed border-border relative"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * i, duration: 0.5 }}
                   viewport={{ once: true }}
-                  whileHover={{ y: -4, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
+                  whileHover={{ y: -4, boxShadow: "0 8px 24px rgba(0,229,255,0.1)" }}
                 >
-                  <p className="text-3xl font-bold text-plc-purple mb-1">{stat.value}</p>
+                  <span className="absolute top-1 left-1.5 text-[8px] text-primary/30 font-mono">+</span>
+                  <span className="absolute bottom-1 right-1.5 text-[8px] text-primary/30 font-mono">+</span>
+                  <p className="text-3xl font-bold text-primary mb-1">{stat.value}</p>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                 </motion.div>
               ))}
@@ -80,12 +95,16 @@ const About = () => {
 
         {/* Growth systems */}
         <motion.div
-          className="bg-accent/30 rounded-2xl p-8 md:p-12 mb-20 border border-border"
+          className="bg-card/85 rounded-2xl p-8 md:p-12 mb-20 border border-dashed border-border backdrop-blur-md relative shadow-xl"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
+          <span className="absolute top-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute top-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute bottom-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute bottom-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
           <h3 className="text-2xl md:text-3xl font-bold mb-4">
             We Don't "Run Ads." We Engineer Growth Systems.
           </h3>
@@ -101,13 +120,13 @@ const About = () => {
               return (
                 <motion.div
                   key={i}
-                  className="flex items-start gap-3 bg-background rounded-lg p-4 border border-border"
+                  className="flex items-start gap-3 bg-background/50 rounded-lg p-4 border border-border"
                   initial={{ opacity: 0, x: -10 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * i, duration: 0.4 }}
                   viewport={{ once: true }}
                 >
-                  <Icon className="w-5 h-5 text-plc-purple mt-0.5 shrink-0" />
+                  <Icon className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                   <p className="text-sm text-muted-foreground">{item}</p>
                 </motion.div>
               );
@@ -115,31 +134,36 @@ const About = () => {
           </div>
 
           <p className="text-muted-foreground max-w-3xl">
-            We don't just work for you — we work <span className="font-semibold text-foreground">with</span> you. Our clients bring the assets: the offer, the audience, the product, the reputation. We bring the strategy, systems, creative execution, and performance thinking to unlock the next level.
+            We don't just work for you - we work <span className="font-semibold text-foreground">with</span> you. Our clients bring the assets: the offer, the audience, the product, the reputation. We bring the strategy, systems, creative execution, and performance thinking to unlock the next level.
           </p>
         </motion.div>
 
-        {/* Team extension + CTA */}
         <motion.div
-          className="max-w-3xl mx-auto text-center"
+          className="max-w-3xl mx-auto text-center p-8 bg-card/85 border border-dashed border-border backdrop-blur-md rounded-xl relative shadow-xl"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h3 className="text-2xl md:text-3xl font-bold mb-4">Our Team, Your Extension</h3>
-          <p className="text-muted-foreground mb-4">
+          {/* Corner Drafting Marks */}
+          <span className="absolute top-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute top-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute bottom-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+          <span className="absolute bottom-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+
+          <h3 className="text-2xl md:text-3xl font-bold mb-4 bg-sienvi-gradient bg-clip-text text-transparent inline-block">Our Team, Your Extension</h3>
+          <p className="text-gray-300 mb-4 font-light leading-relaxed">
             We're a team of strategists, builders, marketers, and systems thinkers who care about results and relationships. When we partner, we operate like an extension of your team: clear communication, high standards, and ownership over outcomes.
           </p>
-          <p className="text-muted-foreground mb-4 italic">
+          <p className="text-gray-300 mb-4 italic font-light">
             Because growth is not a single campaign. It's a machine.
           </p>
-          <p className="text-muted-foreground font-semibold mb-8">
+          <p className="text-gray-300 font-semibold mb-8">
             And we're here to help you build it.
           </p>
           <motion.a
             href="#contact"
-            className="inline-block bg-plc-purple text-white px-8 py-3 rounded-lg font-semibold hover:bg-plc-purple/90 transition-colors"
+            className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(0,229,255,0.2)]"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
           >

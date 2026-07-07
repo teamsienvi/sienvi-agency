@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ServiceFeature from "./ServiceFeature";
 
@@ -49,26 +48,15 @@ const ServiceCard = ({
   isAdvertising,
   isAmazon,
 }: ServiceCardProps) => {
-  const navigate = useNavigate();
+  const handleInquire = () => {
+    const subject = encodeURIComponent(`Inquiry about ${title}`);
+    const body = encodeURIComponent(`Hello Sienvi Team,\n\nI would like to inquire about the details and custom scoping for your "${title}" service.\n\nThank you!`);
+    window.location.href = `mailto:info@sienvi.com?subject=${subject}&body=${body}`;
+  };
 
   // Separate regular features from bundle suggestion
   const regularFeatures = features.filter((f) => !f.startsWith("💡"));
   const bundleFeature = features.find((f) => f.startsWith("💡"));
-
-  const handleGetStarted = () => {
-    if (isAdvertising) {
-      // Navigate to checkout summary for advertising channel selection
-      navigate("/checkout-summary?plan=advertising");
-      return;
-    }
-
-    // Store the selected service and navigate to checkout summary
-    if (serviceId) {
-      sessionStorage.setItem("preselected_service", serviceId);
-    }
-    // Navigate to checkout summary page with service pre-selected
-    navigate(`/checkout-summary?plan=single&service=${serviceId || ""}`);
-  };
 
   return (
     <motion.div
@@ -102,11 +90,11 @@ const ServiceCard = ({
           </div>
         )}
         <motion.div className="text-primary font-bold text-xl" whileHover={{ scale: 1.05 }}>
-          {price}{!isAdvertising && !isAmazon && '/month'}
+          {price}
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleGetStarted}>
-            Get Started
+          <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleInquire}>
+            Inquire for Details
           </Button>
         </motion.div>
       </div>

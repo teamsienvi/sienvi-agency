@@ -353,7 +353,7 @@ export const EditClientModal = ({
           {isAmazonPlan && (
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm font-medium">Amazon Design Package</p>
-              <p className="text-sm text-muted-foreground">$999 one-time fee — Professional listing design and optimization</p>
+              <p className="text-sm text-muted-foreground">$999 one-time fee - Professional listing design and optimization</p>
             </div>
           )}
 

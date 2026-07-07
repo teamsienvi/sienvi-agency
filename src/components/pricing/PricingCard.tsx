@@ -1,16 +1,8 @@
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { pricingVariants } from "./pricingAnimations";
 import PricingFeature from "./PricingFeature";
 import type { PricingTier } from "./pricingData";
-
-// Map priceId to plan slug
-const PRICE_TO_PLAN: Record<string, string> = {
-  "price_1SpFvwDnw1azoLSp17B18jKB": "single",
-  "price_1SpFwRDnw1azoLSpuZNVz26s": "triple",
-  "price_1SpFwgDnw1azoLSpFNy5x58Z": "full",
-};
 
 interface PricingCardProps extends PricingTier {
   index: number;
@@ -25,16 +17,16 @@ const PricingCard = ({
   priceId,
   index
 }: PricingCardProps) => {
-  const navigate = useNavigate();
 
-  const handleGetStarted = () => {
-    const plan = PRICE_TO_PLAN[priceId] || "single";
-    navigate(`/select-services?plan=${plan}`);
+  const handleInquire = () => {
+    const subject = encodeURIComponent(`Inquiry about ${title} Package`);
+    const body = encodeURIComponent(`Hello Sienvi Team,\n\nI would like to inquire about the details for your "${title}" package.\n\nThank you!`);
+    window.location.href = `mailto:info@sienvi.com?subject=${subject}&body=${body}`;
   };
 
   return (
     <motion.div 
-      className={`bg-white rounded-2xl shadow-lg border ${popular ? 'border-plc-purple relative' : 'border-gray-200'}`}
+      className={`bg-card/85 border border-dashed backdrop-blur-md rounded-2xl shadow-lg relative ${popular ? 'border-primary' : 'border-border'}`}
       variants={pricingVariants}
       initial="hidden"
       whileInView="visible"
@@ -42,9 +34,15 @@ const PricingCard = ({
       whileHover="hover"
       transition={{ delay: index * 0.1 }}
     >
+      {/* Corner Drafting Marks */}
+      <span className="absolute top-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+      <span className="absolute top-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+      <span className="absolute bottom-1.5 left-2 text-[10px] text-primary/30 font-mono">+</span>
+      <span className="absolute bottom-1.5 right-2 text-[10px] text-primary/30 font-mono">+</span>
+
       {popular && (
         <motion.div 
-          className="absolute -top-4 right-8 bg-plc-purple text-white text-xs font-bold py-1 px-3 rounded-full"
+          className="absolute -top-4 right-8 bg-primary text-primary-foreground text-xs font-bold py-1 px-3 rounded-full shadow-[0_0_10px_rgba(0,229,255,0.4)]"
           initial={{ opacity: 0, rotate: -5, scale: 0.8 }}
           animate={{ opacity: 1, rotate: 2, scale: 1 }}
           transition={{ 
@@ -63,10 +61,9 @@ const PricingCard = ({
           className="mb-4"
           whileHover={{ scale: 1.05 }}
         >
-          <span className="text-3xl font-bold">{price}</span>
-          <span className="text-gray-500 ml-1">per month</span>
+          <span className="text-3xl font-bold text-primary">Inquire for details</span>
         </motion.div>
-        <p className="text-gray-600 text-sm mb-6">{description}</p>
+        <p className="text-gray-300 text-sm mb-6 font-light">{description}</p>
         
         <ul className="space-y-3 mb-8">
           {features.map((feature, idx) => (
@@ -79,10 +76,10 @@ const PricingCard = ({
           whileTap={{ scale: 0.95 }}
         >
           <Button 
-            className={`w-full ${popular ? 'bg-plc-purple hover:bg-plc-purple/90 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
-            onClick={handleGetStarted}
+            className={`w-full ${popular ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-background border border-border text-foreground hover:bg-card'}`}
+            onClick={handleInquire}
           >
-            Get Started
+            Inquire for Details
           </Button>
         </motion.div>
       </div>

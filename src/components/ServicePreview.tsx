@@ -51,7 +51,7 @@ const ServicePreview = () => {
   };
 
   return (
-    <section className="bg-plc-dark-secondary py-16">
+    <section className="bg-transparent py-16">
       <div className="container-custom">
         <motion.div 
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -63,18 +63,18 @@ const ServicePreview = () => {
           {services.map((service, index) => (
             <motion.div 
               key={index} 
-              className="bg-plc-dark/50 backdrop-blur-sm rounded-xl p-6 border border-white/5"
+              className="bg-card/85 backdrop-blur-md rounded-xl p-6 border border-dashed border-border"
               variants={itemVariants}
               whileHover="hover"
             >
               <motion.h3 
-                className="text-plc-purple font-semibold mb-3"
+                className="text-primary font-semibold mb-3"
                 whileHover={{ scale: 1.05 }}
               >
                 {service.title}
               </motion.h3>
               <motion.p 
-                className="text-white/80 text-sm mb-0"
+                className="text-gray-300 text-sm mb-0 font-light"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 + index * 0.1 }}

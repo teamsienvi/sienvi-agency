@@ -20,7 +20,7 @@ const ServiceFeature = ({ feature, index }: ServiceFeatureProps) => {
   if (isBundle) {
     const bundleText = feature.replace("💡 ", "");
     // Split the text to style "Inquire for details" differently
-    const parts = bundleText.split(" — ");
+    const parts = bundleText.split(" - ");
     const bundleInfo = parts[0];
     const inquireText = parts[1] || "Inquire for details";
 

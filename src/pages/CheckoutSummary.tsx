@@ -414,7 +414,7 @@ const CheckoutSummary = () => {
                     className="w-full mb-4 border-primary/30 text-primary hover:bg-primary/5"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Select All Channels — ${PRICING.ALL_CHANNELS.toLocaleString()}/mo
+                    Select All Channels - ${PRICING.ALL_CHANNELS.toLocaleString()}/mo
                   </Button>
                 )}
 
