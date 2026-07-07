@@ -222,7 +222,7 @@ export const EditClientModal = ({
 
       // Handle contract file upload if a new file was selected
       let contractDetails: any = undefined; // undefined = don't update
-      if (formData.plan === "custom" && contractFile) {
+      if (contractFile) {
         toast.info("Uploading contract document...");
         const fileExt = contractFile.name.split(".").pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
@@ -376,6 +376,27 @@ export const EditClientModal = ({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2 col-span-2 mt-2">
+              <Label htmlFor="edit-contractFile" className="font-semibold text-sm">Upload/Replace Signed Contract (Optional)</Label>
+              {existingContractName && !contractFile && (
+                <p className="text-xs text-muted-foreground">Current: {existingContractName}</p>
+              )}
+              <Input
+                id="edit-contractFile"
+                type="file"
+                accept=".pdf"
+                onChange={(e) => {
+                  setContractFile(e.target.files?.[0] || null);
+                  if (e.target.files && e.target.files.length > 0) {
+                    setFormData((prev) => ({ ...prev, contractStatus: "signed" }));
+                  }
+                }}
+                className="bg-background cursor-pointer text-foreground file:text-foreground"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload a signed PDF contract. Selecting a file automatically marks the status as "Signed".
+              </p>
+            </div>
           </div>
 
           {/* Custom Plan Options */}
@@ -429,21 +450,6 @@ export const EditClientModal = ({
                   onChange={(e) => setAdditionalEmails(e.target.value)}
                   placeholder="email1@example.com, email2@example.com"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-contractFile">Upload Custom Contract (Optional)</Label>
-                {existingContractName && !contractFile && (
-                  <p className="text-xs text-muted-foreground">Current: {existingContractName}</p>
-                )}
-                <Input
-                  id="edit-contractFile"
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => setContractFile(e.target.files?.[0] || null)}
-                />
-                <p className="text-xs text-muted-foreground italic">
-                  Upload a new PDF to replace the current contract. Leave empty to keep the existing one.
-                </p>
               </div>
             </div>
           )}
