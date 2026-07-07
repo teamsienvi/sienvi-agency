@@ -61,7 +61,7 @@ const PricingCard = ({
           className="mb-4"
           whileHover={{ scale: 1.05 }}
         >
-          <span className="text-3xl font-bold text-primary">Inquire for details</span>
+          <span className="text-3xl font-bold text-primary">{price}</span>
         </motion.div>
         <p className="text-gray-300 text-sm mb-6 font-light">{description}</p>
         
@@ -79,7 +79,7 @@ const PricingCard = ({
             className={`w-full ${popular ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-background border border-border text-foreground hover:bg-card'}`}
             onClick={handleInquire}
           >
-            Inquire for Details
+            Inquire Now
           </Button>
         </motion.div>
       </div>

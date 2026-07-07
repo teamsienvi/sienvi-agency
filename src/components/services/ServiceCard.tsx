@@ -94,7 +94,7 @@ const ServiceCard = ({
         </motion.div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleInquire}>
-            Inquire for Details
+            Inquire Now
           </Button>
         </motion.div>
       </div>

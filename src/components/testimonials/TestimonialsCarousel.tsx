@@ -49,19 +49,22 @@ const TestimonialsCarousel = ({
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 300 : -300,
+      x: direction > 0 ? 200 : -200,
       opacity: 0,
-      scale: 0.95
+      scale: 0.95,
+      rotateY: direction > 0 ? 15 : -15,
     }),
     center: {
       x: 0,
       opacity: 1,
-      scale: 1
+      scale: 1,
+      rotateY: 0,
     },
     exit: (direction: number) => ({
-      x: direction < 0 ? 300 : -300,
+      x: direction < 0 ? 200 : -200,
       opacity: 0,
-      scale: 0.95
+      scale: 0.95,
+      rotateY: direction < 0 ? 15 : -15,
     })
   };
 
@@ -119,7 +122,7 @@ const TestimonialsCarousel = ({
           </button>
  
           {/* Testimonial Card */}
-          <div className="overflow-hidden min-h-[400px] flex items-center px-4">
+          <div className="overflow-hidden min-h-[400px] flex items-center px-4" style={{ perspective: "1000px" }}>
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={currentIndex}
@@ -128,7 +131,12 @@ const TestimonialsCarousel = ({
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.5, ease: "easeOut" }}
+                transition={{ 
+                  x: { type: "spring", stiffness: 220, damping: 26 },
+                  opacity: { duration: 0.35 },
+                  scale: { duration: 0.35 },
+                  rotateY: { type: "spring", stiffness: 220, damping: 26 }
+                }}
                 className="w-full"
               >
                 <div className="relative bg-card/85 backdrop-blur-md rounded-3xl shadow-2xl p-8 md:p-14 border border-dashed border-border overflow-hidden">
