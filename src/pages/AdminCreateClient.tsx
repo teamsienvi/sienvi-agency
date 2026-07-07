@@ -153,7 +153,7 @@ const AdminCreateClient = () => {
       let uploadedContractUrl = null;
       let uploadedContractName = null;
 
-      if (formData.plan === "custom" && contractFile) {
+      if (contractFile) {
         toast.info("Uploading contract document...");
         const fileExt = contractFile.name.split(".").pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
@@ -625,19 +625,6 @@ const AdminCreateClient = () => {
                         placeholder="email1@example.com, email2@example.com"
                       />
                     </div>
-                    <div className="space-y-2 border-t pt-4 mt-4">
-                      <Label htmlFor="contractFile" className="font-semibold text-sm">Upload Custom Contract (Optional)</Label>
-                      <Input
-                        id="contractFile"
-                        type="file"
-                        accept=".pdf"
-                        onChange={handleFileChange}
-                        className="bg-background cursor-pointer text-foreground file:text-foreground"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <strong>Note for Admins:</strong> This is for custom plans only. If you upload a custom PDF contract, it will be presented to the client during onboarding instead of the standard template.
-                      </p>
-                    </div>
                   </div>
                 )}
               </div>
@@ -682,6 +669,24 @@ const AdminCreateClient = () => {
                         <SelectItem value="completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2 col-span-2 mt-2">
+                    <Label htmlFor="contractFile" className="font-semibold text-sm">Upload Signed Contract Document (Optional)</Label>
+                    <Input
+                      id="contractFile"
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        handleFileChange(e);
+                        if (e.target.files && e.target.files.length > 0) {
+                          setFormData((prev) => ({ ...prev, contractStatus: "signed" }));
+                        }
+                      }}
+                      className="bg-background cursor-pointer text-foreground file:text-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      If the client signed their contract before profile creation, upload the PDF here. This links the document to their profile and automatically marks their contract status as "Signed".
+                    </p>
                   </div>
                 </div>
               </div>
