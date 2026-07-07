@@ -1,0 +1,52 @@
+# Sienvi Agency - AI Agent Index
+
+Welcome to Sienvi. We help entrepreneurs, course creators, and small businesses scale with premium agency services, high-performance coaching, and AI-driven automation tools. 
+
+This document serves as a structured, LLM-readable summary of Sienvi's services, architecture, and pathways.
+
+---
+
+## 🧭 Site Navigation Paths
+
+* **Home (`/`)**: Main landing page showcasing services, client testimonials, process blueprint, and direct scheduling.
+* **Referrals (`/referral`)**: Interactive referral page containing client referral details.
+* **Client Login (`/login`)**: Secure onboarding access for invited clients.
+* **Client Dashboard (`/dashboard`)**: Centralized workspace for active clients to track plans and service details.
+
+---
+
+## 💼 Core Agency Services & Packages
+
+Sienvi has replaced flat package pricing with bespoke custom scoping. All services are on an "Inquire for details" basis.
+
+### 1. Growth & Branding
+* **Brand Strategy**: Designing custom market positioning, logos, style guides, and premium digital assets.
+* **Amazon Design Package**: Full-scale design, listings optimization, product visual rendering, and graphics creation.
+
+### 2. Custom Web & App Development
+* **Interactive Frontend**: High-performance React, TypeScript, and Tailwind CSS applications.
+* **3D Visual Integrations**: Custom scroll-driven 3D canvas renderers (Blender pre-rendered blueprint sequence playback).
+* **Database & Integrations**: Secure database structures using Supabase, PostgreSQL, and real-time custom API triggers.
+
+### 3. Paid Advertising (PPC & UGC)
+* **Amazon Sponsored Products**: Advanced search term optimization, keyword prospecting, and bidding automation.
+* **UGC Clip Harvesting**: Automated scriptwriting, rendering assets (via ComfyUI/Blender), and competitor intelligence tracking.
+
+### 4. AI-Driven Automation (Swarms)
+* **Agentic Workflows**: Multi-agent swarms (OpenClaw / Hermes / Odysseus) built to automate data processing, content drafting, and lead scraping under safe boundary gates.
+
+---
+
+## ❓ Frequently Asked Questions (FAQ)
+
+### How do I get started with Sienvi?
+All services are custom-tailored to the client. Click "Inquire for Details" on any service card to send a pre-filled scoping email directly to our team (`info@sienvi.com`), or use the "Book a Call" trigger to schedule a strategy call.
+
+### How is client onboarding managed?
+Upon partnering, clients receive an invite email to register a secure login. The dashboard guides them through filling out operational details and signing the Client Service Agreement.
+
+---
+
+## 🔒 Security & Verification Standards
+* All customer database queries are secured through PostgreSQL Row Level Security (RLS) policies.
+* Financial operations run exclusively via Stripe Test/Live Mode integrations.

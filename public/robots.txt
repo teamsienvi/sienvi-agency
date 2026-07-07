@@ -1,14 +1,29 @@
+# Allow friendly search engines
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: Twitterbot
+# Allow friendly AI/LLM crawlers for citations
+User-agent: GPTBot
 Allow: /
 
-User-agent: facebookexternalhit
+User-agent: ClaudeBot
 Allow: /
 
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Gemini-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# General directives
 User-agent: *
 Allow: /
+
+# Sitemap mapping
+Sitemap: https://sienvi.com/sitemap.xml

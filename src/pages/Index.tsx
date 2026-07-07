@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import TestimonialsCarousel from "@/components/testimonials/TestimonialsCarousel";
 import { motion } from "framer-motion";
 import { BlueprintCanvas } from "@/components/BlueprintCanvas";
+import { useEffect } from "react";
 
 const testimonials = [
   {
@@ -45,6 +46,75 @@ const testimonials = [
 ];
 
 const Index = () => {
+  useEffect(() => {
+    const orgSchema = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Sienvi",
+      "url": "https://sienvi.com",
+      "logo": "https://sienvi.com/assets/sienvi_logo_text.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "info@sienvi.com",
+        "contactType": "customer support"
+      }
+    };
+
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I get started with Sienvi?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "All services are custom-tailored to the client. Click 'Inquire for Details' on any service card to send a pre-filled scoping email directly to our team (info@sienvi.com), or schedule a strategy call via the calendar booking button."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is client onboarding managed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Upon partnering, clients receive an invite email to register a secure login. The dashboard guides them through filling out operational details and signing the Client Service Agreement."
+          }
+        }
+      ]
+    };
+
+    const localBusinessSchema = {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Sienvi",
+      "image": "https://sienvi.com/assets/sienvi_logo_text.png",
+      "email": "info@sienvi.com",
+      "url": "https://sienvi.com",
+      "priceRange": "$$$"
+    };
+
+    const createScript = (id: string, schema: object) => {
+      let script = document.getElementById(id);
+      if (!script) {
+        script = document.createElement("script");
+        script.id = id;
+        script.setAttribute("type", "application/ld+json");
+        script.innerHTML = JSON.stringify(schema);
+        document.head.appendChild(script);
+      }
+    };
+
+    createScript("org-jsonld", orgSchema);
+    createScript("faq-jsonld", faqSchema);
+    createScript("business-jsonld", localBusinessSchema);
+
+    return () => {
+      document.getElementById("org-jsonld")?.remove();
+      document.getElementById("faq-jsonld")?.remove();
+      document.getElementById("business-jsonld")?.remove();
+    };
+  }, []);
+
   return (
     <motion.div 
       className="min-h-screen bg-transparent"
