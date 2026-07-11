@@ -161,16 +161,16 @@
   }
 }
 
-/* Light mode overrides for dark-themed color utilities */
-html:not(.dark) .text-white,
-html:not(.dark) [class*="text-white/"] {
+/* Light mode overrides for dark-themed color utilities, excluding elements inside dark containers or footers */
+html:not(.dark) .text-white:not(.dark):not(.dark *):not(footer):not(footer *),
+html:not(.dark) [class*="text-white/"]:not(.dark):not(.dark *):not(footer):not(footer *) {
   color: hsl(214, 73%, 12%) !important;
 }
 
-html:not(.dark) .text-gray-300,
-html:not(.dark) .text-gray-400,
-html:not(.dark) .text-gray-500,
-html:not(.dark) .text-slate-300,
-html:not(.dark) .text-slate-400 {
+html:not(.dark) .text-gray-300:not(.dark):not(.dark *):not(footer):not(footer *),
+html:not(.dark) .text-gray-400:not(.dark):not(.dark *):not(footer):not(footer *),
+html:not(.dark) .text-gray-500:not(.dark):not(.dark *):not(footer):not(footer *),
+html:not(.dark) .text-slate-300:not(.dark):not(.dark *):not(footer):not(footer *),
+html:not(.dark) .text-slate-400:not(.dark):not(.dark *):not(footer):not(footer *) {
   color: hsl(214, 73%, 20%) !important;
 }
