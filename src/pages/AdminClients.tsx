@@ -972,11 +972,33 @@ const AdminClients = () => {
                   </div>
                 )}
 
-                {selectedClient.contractStatus === "signed" && (
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-sm">Signed Contract Details</h4>
-                      {!selectedClient.contractDetails?.uploadedContractUrl && (
+                <div className="border-t pt-4 text-slate-900">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-sm">Contract Details</h4>
+                    <div className="flex gap-2">
+                      {selectedClient.contractStatus === "signed" ? (
+                        selectedClient.contractDetails?.uploadedContractUrl ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(selectedClient.contractDetails.uploadedContractUrl, "_blank")}
+                            className="h-8 text-xs"
+                          >
+                            <Download className="w-3.5 h-3.5 mr-1.5" />
+                            Download Contract
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(`/contract?view=true&clientId=${selectedClient.id}`, "_blank")}
+                            className="h-8 text-xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            View Signed Contract
+                          </Button>
+                        )
+                      ) : (
                         <Button
                           size="sm"
                           variant="outline"
@@ -984,29 +1006,28 @@ const AdminClients = () => {
                           className="h-8 text-xs"
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                          View Full Signed Contract
+                          Preview Draft Contract
                         </Button>
                       )}
                     </div>
-                    {selectedClient.contractDetails?.uploadedContractUrl ? (
-                      <div className="bg-muted p-3 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4 text-primary" />
-                          <span className="text-sm font-medium">
-                            {selectedClient.contractDetails.uploadedContractName || "custom-contract.pdf"}
-                          </span>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(selectedClient.contractDetails.uploadedContractUrl, "_blank")}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Contract
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg text-sm">
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Contract Template Type</p>
+                      <p className="font-medium text-slate-800">
+                        {selectedClient.contractDetails?.uploadedContractUrl
+                          ? `Custom Upload: ${selectedClient.contractDetails.uploadedContractName || "Uploaded PDF"}`
+                          : (selectedClient.plan === "amazon" || 
+                             selectedClient.selectedServices.includes("channel-amazon") || 
+                             selectedClient.selectedServices.includes("amazon-design"))
+                          ? "Business Agreement for Amazon Advertising Services"
+                          : "Client Service Agreement"}
+                      </p>
+                    </div>
+
+                    {selectedClient.contractStatus === "signed" && !selectedClient.contractDetails?.uploadedContractUrl && (
+                      <div className="grid grid-cols-2 gap-4 border-t pt-3 mt-3">
                         <div>
                           <p className="text-xs text-muted-foreground">Effective Date</p>
                           <p className="font-medium">{selectedClient.contractDetails?.effectiveDate || "-"}</p>
@@ -1059,8 +1080,14 @@ const AdminClients = () => {
                         </div>
                       </div>
                     )}
+
+                    {selectedClient.contractStatus !== "signed" && (
+                      <p className="text-xs text-muted-foreground border-t pt-3 mt-3">
+                        This client has not signed their agreement yet. You can preview the exact terms they will see by clicking the <strong>Preview Draft Contract</strong> button.
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") && (
                   <div className="border-t pt-4">
