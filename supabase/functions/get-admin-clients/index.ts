@@ -111,6 +111,8 @@ serve(async (req) => {
         updatedAt: profile.updated_at,
         contractStatus: profile.contract_status,
         contractDetails: profile.contract_details,
+        contractSignature: profile.contract_signature,
+        contractSignedAt: profile.contract_signed_at,
         onboardingStatus: profile.onboarding_status,
         accountStatus: profile.account_status,
       };

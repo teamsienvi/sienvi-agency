@@ -44,29 +44,55 @@ serve(async (req) => {
 
     const isAdmin = !!roleData;
 
-    // Get client profile by user_id first, then by email
-    let { data: profile, error: profileError } = await supabaseAdmin
-      .from("client_profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
+    // Check if a specific client ID was requested (only allowed for admin)
+    let requestedClientId: string | null = null;
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        requestedClientId = body.clientId || null;
+      } catch (e) {
+        console.log("No JSON body or parse error in POST request");
+      }
+    }
 
-    // If not found by user_id, try by email
-    if (profileError || !profile) {
-      const { data: profileByEmail, error: emailError } = await supabaseAdmin
+    let profile = null;
+    let profileError = null;
+
+    if (isAdmin && requestedClientId) {
+      const { data: clientProfile, error: err } = await supabaseAdmin
         .from("client_profiles")
         .select("*")
-        .eq("email", user.email?.toLowerCase())
+        .eq("id", requestedClientId)
         .single();
-      
-      if (!emailError && profileByEmail) {
-        profile = profileByEmail;
-        
-        // Link user_id to the profile
-        await supabaseAdmin
+      profile = clientProfile;
+      profileError = err;
+    } else {
+      // Get client profile by user_id first, then by email
+      const { data: clientProfile, error: err } = await supabaseAdmin
+        .from("client_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      profile = clientProfile;
+      profileError = err;
+
+      // If not found by user_id, try by email
+      if (profileError || !profile) {
+        const { data: profileByEmail, error: emailError } = await supabaseAdmin
           .from("client_profiles")
-          .update({ user_id: user.id })
-          .eq("id", profileByEmail.id);
+          .select("*")
+          .eq("email", user.email?.toLowerCase())
+          .single();
+        
+        if (!emailError && profileByEmail) {
+          profile = profileByEmail;
+          
+          // Link user_id to the profile
+          await supabaseAdmin
+            .from("client_profiles")
+            .update({ user_id: user.id })
+            .eq("id", profileByEmail.id);
+        }
       }
     }
 

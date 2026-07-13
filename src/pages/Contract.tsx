@@ -76,7 +76,10 @@ const Contract = () => {
         return;
       }
 
+      const paramClientId = searchParams.get("clientId");
       const response = await supabase.functions.invoke("get-client-profile", {
+        method: "POST",
+        body: { clientId: paramClientId },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

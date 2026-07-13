@@ -45,6 +45,7 @@ import {
   CreditCard,
   Send,
   Download,
+  FileSignature,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,6 +76,8 @@ interface Client {
   updatedAt: string;
   contractStatus?: string | null;
   contractDetails?: any;
+  contractSignature?: string | null;
+  contractSignedAt?: string | null;
 }
 
 const planPrices: Record<string, number> = {
@@ -833,6 +836,17 @@ const AdminClients = () => {
                             <ClipboardList className="w-4 h-4" />
                           </Button>
                         )}
+                        {client.contractStatus === "signed" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`/contract?view=true&clientId=${client.id}`, "_blank")}
+                            title="View Signed Contract"
+                            className="text-indigo-600 hover:text-indigo-700"
+                          >
+                            <FileSignature className="w-4 h-4" />
+                          </Button>
+                        )}
                         {client.stripeCustomerId && !client.stripeCustomerId.startsWith("pending_") && (
                           <>
                             <Button
@@ -960,7 +974,20 @@ const AdminClients = () => {
 
                 {selectedClient.contractStatus === "signed" && (
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold text-sm mb-3">Signed Contract Details</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-sm">Signed Contract Details</h4>
+                      {!selectedClient.contractDetails?.uploadedContractUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/contract?view=true&clientId=${selectedClient.id}`, "_blank")}
+                          className="h-8 text-xs"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                          View Full Signed Contract
+                        </Button>
+                      )}
+                    </div>
                     {selectedClient.contractDetails?.uploadedContractUrl ? (
                       <div className="bg-muted p-3 rounded-lg flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1017,6 +1044,18 @@ const AdminClients = () => {
                         <div>
                           <p className="text-xs text-muted-foreground">Confidentiality Period</p>
                           <p className="font-medium">{selectedClient.contractDetails?.confidentialityPeriod || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground text-indigo-600">Digitally Signed Name</p>
+                          <p className="font-medium text-indigo-700 font-serif italic">{selectedClient.contractSignature || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Signed At</p>
+                          <p className="font-medium">
+                            {selectedClient.contractSignedAt 
+                              ? new Date(selectedClient.contractSignedAt).toLocaleString() 
+                              : "-"}
+                          </p>
                         </div>
                       </div>
                     )}
