@@ -788,11 +788,24 @@ serve(async (req) => {
         }
       }
 
+      let advertisingData = advertisingRes.data;
+      if (advertisingData && advertisingData.additional_notes) {
+        try {
+          const parsed = JSON.parse(advertisingData.additional_notes);
+          if (parsed && typeof parsed === "object") {
+            advertisingData = { ...advertisingData, ...parsed };
+            delete advertisingData.additional_notes;
+          }
+        } catch (e) {
+          // not JSON, keep as is
+        }
+      }
+
       const onboardingData = {
         goals: goalsRes.data,
         avatars: avatarsRes.data,
         questionnaire: questionnaireData,
-        advertising: advertisingRes.data,
+        advertising: advertisingData,
         amazon: amazonRes.data,
       };
       // Send both client and admin emails for onboarding completion

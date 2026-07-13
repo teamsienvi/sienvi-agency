@@ -72,11 +72,23 @@ export const OnboardingResponsesModal = ({
         }
       }
 
+      let adData = advertisingRes.data;
+      if (adData && adData.additional_notes) {
+        try {
+          const parsed = JSON.parse(adData.additional_notes);
+          if (parsed && typeof parsed === "object") {
+            adData = { ...adData, ...parsed };
+          }
+        } catch (e) {
+          console.error("Error parsing advertising additional_notes:", e);
+        }
+      }
+
       setGoals(goalsRes.data);
       setAvatars(avatarsRes.data);
       setQuestionnaire(qData);
       setAmazon(amazonRes.data);
-      setAdvertising(advertisingRes.data);
+      setAdvertising(adData);
 
       if (profileRes.data) {
         const services = profileRes.data.selected_services || [];
@@ -347,81 +359,136 @@ export const OnboardingResponsesModal = ({
 
     if (onboardingType === "advertising" && advertising) {
       let adHtml = "";
+      const isAmazonAds = advertising.selected_channels?.includes("amazon") || advertising.products_list_asin_sku || advertising.daily_budget;
 
-      let overview = "";
-      overview += renderPrintField("Business Name", advertising.business_name);
-      overview += renderPrintField("Primary Contact Name", advertising.primary_contact_name);
-      overview += renderPrintField("Email Address", advertising.email_address);
-      overview += renderPrintField("Industry/Niche", advertising.industry_niche);
-      if (advertising.selected_channels?.length > 0) {
-        overview += renderPrintField("Advertising Channels", advertising.selected_channels.join(", "));
+      if (isAmazonAds) {
+        let contact = "";
+        contact += renderPrintField("Brand Name", advertising.business_name);
+        contact += renderPrintField("Contact Name", advertising.primary_contact_name);
+        contact += renderPrintField("Email Address", advertising.email_address);
+        contact += renderPrintField("Website or Social Media", advertising.website_or_social_page);
+        contact += renderPrintField("Amazon Marketplace", advertising.target_locations);
+        adHtml += renderPrintCard("Contact Information", contact);
+
+        let goals = "";
+        goals += renderPrintField("Main Goal with Amazon Ads", advertising.primary_campaign_goal);
+        goals += renderPrintField("Outcome in 2-3 Months", advertising.expected_results_timeline);
+        adHtml += renderPrintCard("Goals", goals);
+
+        let products = "";
+        products += renderPrintField("Products List (Link | ASIN | SKU)", advertising.products_list_asin_sku);
+        products += renderPrintField("Products to Advertise First", advertising.products_to_advertise_first);
+        products += renderPrintField("Top Priority Products", advertising.top_priority_products);
+        products += renderPrintField("Are Products Live?", advertising.are_products_live_on_amazon);
+        adHtml += renderPrintCard("Products", products);
+
+        let budget = "";
+        budget += renderPrintField("Monthly Ad Budget", advertising.monthly_budget_range);
+        budget += renderPrintField("Daily Budget", advertising.daily_budget);
+        budget += renderPrintField("Start Strategy", advertising.how_do_you_want_to_start);
+        adHtml += renderPrintCard("Budget & Strategy", budget);
+
+        let pricing = "";
+        pricing += renderPrintField("Selling Price of Main Product", advertising.selling_price_of_main_product);
+        pricing += renderPrintField("Units in Stock", advertising.units_in_stock);
+        pricing += renderPrintField("Products Low on Stock?", advertising.products_low_on_stock);
+        adHtml += renderPrintCard("Pricing & Inventory", pricing);
+
+        let keywords = "";
+        keywords += renderPrintField("Suggested Search Keywords", advertising.suggested_search_keywords);
+        keywords += renderPrintField("Main Competitors", advertising.main_competitors);
+        adHtml += renderPrintCard("Keywords & Competitors", keywords);
+
+        let positioning = "";
+        positioning += renderPrintField("What makes product different/better?", advertising.differentiation_strategy);
+        positioning += renderPrintField("Ideal Customer", advertising.ideal_customer);
+        adHtml += renderPrintCard("Product Positioning", positioning);
+
+        let notes = "";
+        notes += renderPrintField("Running Coupons or Promotions?", advertising.running_coupons_or_promotions);
+        notes += renderPrintField("Anything Important to Know?", advertising.anything_important_to_know);
+        adHtml += renderPrintCard("Final Notes", notes);
+        
+        reportContent += `
+          <div class="section-title page-break">Amazon Advertising Onboarding Questionnaire</div>
+          ${adHtml}
+        `;
+      } else {
+        let overview = "";
+        overview += renderPrintField("Business Name", advertising.business_name);
+        overview += renderPrintField("Primary Contact Name", advertising.primary_contact_name);
+        overview += renderPrintField("Email Address", advertising.email_address);
+        overview += renderPrintField("Industry/Niche", advertising.industry_niche);
+        if (advertising.selected_channels?.length > 0) {
+          overview += renderPrintField("Advertising Channels", advertising.selected_channels.join(", "));
+        }
+        adHtml += renderPrintCard("Business & Campaign Overview", overview);
+
+        let goalsSec = "";
+        goalsSec += renderPrintField("Primary Campaign Goal", advertising.primary_campaign_goal);
+        if (advertising.secondary_goals?.length > 0) {
+          goalsSec += renderPrintField("Secondary Goals", advertising.secondary_goals.join(", "));
+        }
+        goalsSec += renderPrintField("Target KPIs", advertising.target_kpis);
+        goalsSec += renderPrintField("Monthly Advertising Budget Range", advertising.monthly_budget_range);
+        adHtml += renderPrintCard("Campaign Goals", goalsSec);
+
+        let aud = "";
+        aud += renderPrintField("Target Demographics", advertising.target_demographics);
+        aud += renderPrintField("Target Locations", advertising.target_locations);
+        aud += renderPrintField("Target Interests & Behaviors", advertising.target_interests);
+        aud += renderPrintField("Audience Personas", advertising.audience_personas);
+        aud += renderPrintField("Retargeting Audiences", advertising.retargeting_audiences);
+        adHtml += renderPrintCard("Target Audience", aud);
+
+        let statusSec = "";
+        statusSec += renderPrintField("Previous Advertising Experience", advertising.previous_advertising_experience);
+        statusSec += renderPrintField("Current Ad Accounts", advertising.current_ad_accounts);
+        statusSec += renderPrintField("Historical Performance Summary", advertising.historical_performance);
+        statusSec += renderPrintField("What Has Worked Well?", advertising.what_worked);
+        statusSec += renderPrintField("What Hasn't Worked?", advertising.what_didnt_work);
+        adHtml += renderPrintCard("Current Advertising Status", statusSec);
+
+        let creativeSec = "";
+        creativeSec += renderPrintField("Has Existing Ad Creatives", advertising.existing_ad_creatives ? "Yes" : "No");
+        creativeSec += renderPrintField("Brand Voice", advertising.brand_voice);
+        creativeSec += renderPrintField("Key Messaging Points", advertising.key_messaging_points);
+        creativeSec += renderPrintField("Unique Selling Propositions (USPs)", advertising.unique_selling_propositions);
+        creativeSec += renderPrintField("Promotional Offers or Incentives", advertising.promotional_offers);
+        adHtml += renderPrintCard("Creative & Messaging", creativeSec);
+
+        let landing = "";
+        landing += renderPrintField("Landing Page URLs", advertising.landing_page_urls);
+        landing += renderPrintField("Conversion Tracking Setup", advertising.conversion_tracking_setup ? "Yes" : "No");
+        landing += renderPrintField("Conversion Actions to Track", advertising.conversion_actions);
+        adHtml += renderPrintCard("Landing Pages & Conversion", landing);
+
+        let comp = "";
+        comp += renderPrintField("Main Competitors", advertising.main_competitors);
+        comp += renderPrintField("Competitor Ad Examples", advertising.competitor_ad_examples);
+        comp += renderPrintField("How You Want to Differentiate", advertising.differentiation_strategy);
+        adHtml += renderPrintCard("Competitor Analysis", comp);
+
+        let timeline = "";
+        timeline += renderPrintField("Desired Start Date", advertising.campaign_start_date);
+        timeline += renderPrintField("Campaign Duration", advertising.campaign_duration);
+        timeline += renderPrintField("Expected Results Timeline", advertising.expected_results_timeline);
+        timeline += renderPrintField("Reporting Preferences", advertising.reporting_preferences);
+        adHtml += renderPrintCard("Timeline & Expectations", timeline);
+
+        let assets = "";
+        assets += renderPrintField("Has Ad Accounts to Grant Access", advertising.has_ad_accounts ? "Yes" : "No");
+        assets += renderPrintField("Ad Account Access Details", advertising.ad_account_access_details);
+        assets += renderPrintField("Creative Assets Available", advertising.creative_assets_available);
+        adHtml += renderPrintCard("Assets & Access", assets);
+
+        adHtml += renderPrintField("Additional Notes", advertising.additional_notes);
+
+        reportContent += `
+          <div class="section-title page-break">Advertising Campaign Questionnaire</div>
+          ${adHtml}
+        `;
       }
-      adHtml += renderPrintCard("Business & Campaign Overview", overview);
-
-      let goalsSec = "";
-      goalsSec += renderPrintField("Primary Campaign Goal", advertising.primary_campaign_goal);
-      if (advertising.secondary_goals?.length > 0) {
-        goalsSec += renderPrintField("Secondary Goals", advertising.secondary_goals.join(", "));
-      }
-      goalsSec += renderPrintField("Target KPIs", advertising.target_kpis);
-      goalsSec += renderPrintField("Monthly Advertising Budget Range", advertising.monthly_budget_range);
-      adHtml += renderPrintCard("Campaign Goals", goalsSec);
-
-      let aud = "";
-      aud += renderPrintField("Target Demographics", advertising.target_demographics);
-      aud += renderPrintField("Target Locations", advertising.target_locations);
-      aud += renderPrintField("Target Interests & Behaviors", advertising.target_interests);
-      aud += renderPrintField("Audience Personas", advertising.audience_personas);
-      aud += renderPrintField("Retargeting Audiences", advertising.retargeting_audiences);
-      adHtml += renderPrintCard("Target Audience", aud);
-
-      let statusSec = "";
-      statusSec += renderPrintField("Previous Advertising Experience", advertising.previous_advertising_experience);
-      statusSec += renderPrintField("Current Ad Accounts", advertising.current_ad_accounts);
-      statusSec += renderPrintField("Historical Performance Summary", advertising.historical_performance);
-      statusSec += renderPrintField("What Has Worked Well?", advertising.what_worked);
-      statusSec += renderPrintField("What Hasn't Worked?", advertising.what_didnt_work);
-      adHtml += renderPrintCard("Current Advertising Status", statusSec);
-
-      let creativeSec = "";
-      creativeSec += renderPrintField("Has Existing Ad Creatives", advertising.existing_ad_creatives ? "Yes" : "No");
-      creativeSec += renderPrintField("Brand Voice", advertising.brand_voice);
-      creativeSec += renderPrintField("Key Messaging Points", advertising.key_messaging_points);
-      creativeSec += renderPrintField("Unique Selling Propositions (USPs)", advertising.unique_selling_propositions);
-      creativeSec += renderPrintField("Promotional Offers or Incentives", advertising.promotional_offers);
-      adHtml += renderPrintCard("Creative & Messaging", creativeSec);
-
-      let landing = "";
-      landing += renderPrintField("Landing Page URLs", advertising.landing_page_urls);
-      landing += renderPrintField("Conversion Tracking Setup", advertising.conversion_tracking_setup ? "Yes" : "No");
-      landing += renderPrintField("Conversion Actions to Track", advertising.conversion_actions);
-      adHtml += renderPrintCard("Landing Pages & Conversion", landing);
-
-      let comp = "";
-      comp += renderPrintField("Main Competitors", advertising.main_competitors);
-      comp += renderPrintField("Competitor Ad Examples", advertising.competitor_ad_examples);
-      comp += renderPrintField("How You Want to Differentiate", advertising.differentiation_strategy);
-      adHtml += renderPrintCard("Competitor Analysis", comp);
-
-      let timeline = "";
-      timeline += renderPrintField("Desired Start Date", advertising.campaign_start_date);
-      timeline += renderPrintField("Campaign Duration", advertising.campaign_duration);
-      timeline += renderPrintField("Expected Results Timeline", advertising.expected_results_timeline);
-      timeline += renderPrintField("Reporting Preferences", advertising.reporting_preferences);
-      adHtml += renderPrintCard("Timeline & Expectations", timeline);
-
-      let assets = "";
-      assets += renderPrintField("Has Ad Accounts to Grant Access", advertising.has_ad_accounts ? "Yes" : "No");
-      assets += renderPrintField("Ad Account Access Details", advertising.ad_account_access_details);
-      assets += renderPrintField("Creative Assets Available", advertising.creative_assets_available);
-      adHtml += renderPrintCard("Assets & Access", assets);
-
-      adHtml += renderPrintField("Additional Notes", advertising.additional_notes);
-
-      reportContent += `
-        <div class="section-title page-break">Advertising Campaign Questionnaire</div>
-        ${adHtml}
-      `;
     }
 
     if (onboardingType !== "amazon" && onboardingType !== "advertising" && questionnaire) {
@@ -1556,108 +1623,186 @@ export const OnboardingResponsesModal = ({
                 {!advertising ? (
                   <Card><CardContent className="py-8 text-center text-muted-foreground">No advertising campaign questionnaire submitted yet</CardContent></Card>
                 ) : (
-                  <>
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Business & Campaign Overview</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Business Name", advertising.business_name)}
-                        {renderField("Primary Contact Name", advertising.primary_contact_name)}
-                        {renderField("Email Address", advertising.email_address)}
-                        {renderField("Industry/Niche", advertising.industry_niche)}
-                        {advertising.selected_channels?.length > 0 && renderField("Advertising Channels", advertising.selected_channels.join(", "))}
-                      </CardContent>
-                    </Card>
+                  (() => {
+                    const isAmazonAds = advertising.selected_channels?.includes("amazon") || advertising.products_list_asin_sku || advertising.daily_budget;
+                    return isAmazonAds ? (
+                      <>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Contact Information</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Brand Name", advertising.business_name)}
+                            {renderField("Contact Name", advertising.primary_contact_name)}
+                            {renderField("Email Address", advertising.email_address)}
+                            {renderField("Website or Social Media", advertising.website_or_social_page)}
+                            {renderField("Amazon Marketplace", advertising.target_locations)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Campaign Goals</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Primary Campaign Goal", advertising.primary_campaign_goal)}
-                        {advertising.secondary_goals?.length > 0 && renderField("Secondary Goals", advertising.secondary_goals.join(", "))}
-                        {renderField("Target KPIs", advertising.target_kpis)}
-                        {renderField("Monthly Advertising Budget Range", advertising.monthly_budget_range)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Goals</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Main Goal with Amazon Ads", advertising.primary_campaign_goal)}
+                            {renderField("Outcome in 2-3 Months", advertising.expected_results_timeline)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Target Audience</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Target Demographics", advertising.target_demographics)}
-                        {renderField("Target Locations", advertising.target_locations)}
-                        {renderField("Target Interests & Behaviors", advertising.target_interests)}
-                        {renderField("Audience Personas", advertising.audience_personas)}
-                        {renderField("Retargeting Audiences", advertising.retargeting_audiences)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Products</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Products List (Link | ASIN | SKU)", advertising.products_list_asin_sku)}
+                            {renderField("Products to Advertise First", advertising.products_to_advertise_first)}
+                            {renderField("Top Priority Products", advertising.top_priority_products)}
+                            {renderField("Are Products Live?", advertising.are_products_live_on_amazon)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Current Advertising Status</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Previous Advertising Experience", advertising.previous_advertising_experience)}
-                        {renderField("Current Ad Accounts", advertising.current_ad_accounts)}
-                        {renderField("Historical Performance Summary", advertising.historical_performance)}
-                        {renderField("What Has Worked Well?", advertising.what_worked)}
-                        {renderField("What Hasn't Worked?", advertising.what_didnt_work)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Budget & Strategy</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Monthly Ad Budget", advertising.monthly_budget_range)}
+                            {renderField("Daily Budget", advertising.daily_budget)}
+                            {renderField("Start Strategy", advertising.how_do_you_want_to_start)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Creative & Messaging</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="text-sm font-medium text-muted-foreground">Has Existing Ad Creatives</p>
-                        <p className="text-sm mb-3">{advertising.existing_ad_creatives ? "Yes" : "No"}</p>
-                        {renderField("Brand Voice", advertising.brand_voice)}
-                        {renderField("Key Messaging Points", advertising.key_messaging_points)}
-                        {renderField("Unique Selling Propositions (USPs)", advertising.unique_selling_propositions)}
-                        {renderField("Promotional Offers or Incentives", advertising.promotional_offers)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Pricing & Inventory</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Selling Price of Main Product", advertising.selling_price_of_main_product)}
+                            {renderField("Units in Stock", advertising.units_in_stock)}
+                            {renderField("Products Low on Stock?", advertising.products_low_on_stock)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Landing Pages & Conversion</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Landing Page URLs", advertising.landing_page_urls)}
-                        <p className="text-sm font-medium text-muted-foreground">Conversion Tracking Setup</p>
-                        <p className="text-sm mb-3">{advertising.conversion_tracking_setup ? "Yes" : "No"}</p>
-                        {renderField("Conversion Actions to Track", advertising.conversion_actions)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Keywords & Competitors</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Suggested Search Keywords", advertising.suggested_search_keywords)}
+                            {renderField("Main Competitors", advertising.main_competitors)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Competitor Analysis</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Main Competitors", advertising.main_competitors)}
-                        {renderField("Competitor Ad Examples", advertising.competitor_ad_examples)}
-                        {renderField("How You Want to Differentiate", advertising.differentiation_strategy)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Product Positioning</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("What makes product different/better?", advertising.differentiation_strategy)}
+                            {renderField("Ideal Customer", advertising.ideal_customer)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Timeline & Expectations</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Desired Start Date", advertising.campaign_start_date)}
-                        {renderField("Campaign Duration", advertising.campaign_duration)}
-                        {renderField("Expected Results Timeline", advertising.expected_results_timeline)}
-                        {renderField("Reporting Preferences", advertising.reporting_preferences)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Final Notes</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Running Coupons or Promotions?", advertising.running_coupons_or_promotions)}
+                            {renderField("Anything Important to Know?", advertising.anything_important_to_know)}
+                          </CardContent>
+                        </Card>
+                      </>
+                    ) : (
+                      <>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Business & Campaign Overview</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Business Name", advertising.business_name)}
+                            {renderField("Primary Contact Name", advertising.primary_contact_name)}
+                            {renderField("Email Address", advertising.email_address)}
+                            {renderField("Industry/Niche", advertising.industry_niche)}
+                            {advertising.selected_channels?.length > 0 && renderField("Advertising Channels", advertising.selected_channels.join(", "))}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Assets & Access</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="text-sm font-medium text-muted-foreground">Has Ad Accounts to Grant Access</p>
-                        <p className="text-sm mb-3">{advertising.has_ad_accounts ? "Yes" : "No"}</p>
-                        {renderField("Ad Account Access Details", advertising.ad_account_access_details)}
-                        {renderField("Creative Assets Available", advertising.creative_assets_available)}
-                      </CardContent>
-                    </Card>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Campaign Goals</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Primary Campaign Goal", advertising.primary_campaign_goal)}
+                            {advertising.secondary_goals?.length > 0 && renderField("Secondary Goals", advertising.secondary_goals.join(", "))}
+                            {renderField("Target KPIs", advertising.target_kpis)}
+                            {renderField("Monthly Advertising Budget Range", advertising.monthly_budget_range)}
+                          </CardContent>
+                        </Card>
 
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">Additional Information</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Additional Notes", advertising.additional_notes)}
-                      </CardContent>
-                    </Card>
-                  </>
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Target Audience</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Target Demographics", advertising.target_demographics)}
+                            {renderField("Target Locations", advertising.target_locations)}
+                            {renderField("Target Interests & Behaviors", advertising.target_interests)}
+                            {renderField("Audience Personas", advertising.audience_personas)}
+                            {renderField("Retargeting Audiences", advertising.retargeting_audiences)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Current Advertising Status</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Previous Advertising Experience", advertising.previous_advertising_experience)}
+                            {renderField("Current Ad Accounts", advertising.current_ad_accounts)}
+                            {renderField("Historical Performance Summary", advertising.historical_performance)}
+                            {renderField("What Has Worked Well?", advertising.what_worked)}
+                            {renderField("What Hasn't Worked?", advertising.what_didnt_work)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Creative & Messaging</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            <p className="text-sm font-medium text-muted-foreground">Has Existing Ad Creatives</p>
+                            <p className="text-sm mb-3">{advertising.existing_ad_creatives ? "Yes" : "No"}</p>
+                            {renderField("Brand Voice", advertising.brand_voice)}
+                            {renderField("Key Messaging Points", advertising.key_messaging_points)}
+                            {renderField("Unique Selling Propositions (USPs)", advertising.unique_selling_propositions)}
+                            {renderField("Promotional Offers or Incentives", advertising.promotional_offers)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Landing Pages & Conversion</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Landing Page URLs", advertising.landing_page_urls)}
+                            <p className="text-sm font-medium text-muted-foreground">Conversion Tracking Setup</p>
+                            <p className="text-sm mb-3">{advertising.conversion_tracking_setup ? "Yes" : "No"}</p>
+                            {renderField("Conversion Actions to Track", advertising.conversion_actions)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Competitor Analysis</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Main Competitors", advertising.main_competitors)}
+                            {renderField("Competitor Ad Examples", advertising.competitor_ad_examples)}
+                            {renderField("How You Want to Differentiate", advertising.differentiation_strategy)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Timeline & Expectations</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Desired Start Date", advertising.campaign_start_date)}
+                            {renderField("Campaign Duration", advertising.campaign_duration)}
+                            {renderField("Expected Results Timeline", advertising.expected_results_timeline)}
+                            {renderField("Reporting Preferences", advertising.reporting_preferences)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Assets & Access</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            <p className="text-sm font-medium text-muted-foreground">Has Ad Accounts to Grant Access</p>
+                            <p className="text-sm mb-3">{advertising.has_ad_accounts ? "Yes" : "No"}</p>
+                            {renderField("Ad Account Access Details", advertising.ad_account_access_details)}
+                            {renderField("Creative Assets Available", advertising.creative_assets_available)}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader><CardTitle className="text-base">Additional Information</CardTitle></CardHeader>
+                          <CardContent className="space-y-3">
+                            {renderField("Additional Notes", advertising.additional_notes)}
+                          </CardContent>
+                        </Card>
+                      </>
+                    );
+                  })()
                 )}
               </TabsContent>
             </ScrollArea>

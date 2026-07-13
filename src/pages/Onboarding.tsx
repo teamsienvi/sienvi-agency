@@ -25,6 +25,7 @@ import { QuestionnaireForm } from "@/components/onboarding/QuestionnaireForm";
 import { AmazonOnboardingForm } from "@/components/onboarding/AmazonOnboardingForm";
 import { AdvertisingOnboardingForm } from "@/components/onboarding/AdvertisingOnboardingForm";
 import { BusinessAdminOnboardingForm } from "@/components/onboarding/BusinessAdminOnboardingForm";
+import { AmazonAdsOnboardingForm } from "@/components/onboarding/AmazonAdsOnboardingForm";
 
 interface StepData {
   goals: any;
@@ -130,6 +131,19 @@ const Onboarding = () => {
         }
       }
 
+      // Parse JSON from additional_notes for advertising questionnaire if present
+      let adData = advertisingRes.data;
+      if (adData && adData.additional_notes) {
+        try {
+          const parsed = JSON.parse(adData.additional_notes);
+          if (parsed && typeof parsed === "object") {
+            adData = { ...adData, ...parsed };
+          }
+        } catch (e) {
+          console.error("Error parsing advertising additional_notes:", e);
+        }
+      }
+
       // Determine completed steps based on active services
       let completed: boolean[];
       if (type === "discovery") {
@@ -159,7 +173,7 @@ const Onboarding = () => {
         avatars: avatarsRes.data,
         questionnaire: qData,
         amazon: amazonRes.data,
-        advertising: advertisingRes.data,
+        advertising: adData,
       });
 
       const firstIncomplete = completed.findIndex(c => !c);
@@ -338,12 +352,20 @@ const Onboarding = () => {
               )}
 
               {steps[currentStep]?.id === "advertising-questionnaire" && (
-                <AdvertisingOnboardingForm
-                  clientProfileId={clientProfileId}
-                  onComplete={() => handleStepComplete(currentStep)}
-                  initialData={stepData.advertising}
-                  selectedChannels={selectedServices.filter(s => s.startsWith("channel-"))}
-                />
+                selectedServices.includes("channel-amazon") ? (
+                  <AmazonAdsOnboardingForm
+                    clientProfileId={clientProfileId}
+                    onComplete={() => handleStepComplete(currentStep)}
+                    initialData={stepData.advertising}
+                  />
+                ) : (
+                  <AdvertisingOnboardingForm
+                    clientProfileId={clientProfileId}
+                    onComplete={() => handleStepComplete(currentStep)}
+                    initialData={stepData.advertising}
+                    selectedChannels={selectedServices.filter(s => s.startsWith("channel-"))}
+                  />
+                )
               )}
             </div>
           )}
