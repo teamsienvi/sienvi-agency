@@ -241,6 +241,68 @@ const AdminClients = () => {
     return planPrices[plan || ""] || 0;
   };
 
+  const getOnboardingType = (client: Client) => {
+    const services = client.selectedServices || [];
+    const plan = client.plan;
+    
+    if (services.includes("custom-tool") || plan === "custom-lms" || plan === "discovery") {
+      return "discovery";
+    }
+    if (services.includes("amazon-design") || plan === "amazon") {
+      return "amazon";
+    }
+    
+    const hasAdvertising = plan === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
+    const hasGeneral = services.some((s: string) => !s.startsWith("channel-") && s !== "advertising-package" && s !== "amazon-design" && s !== "custom-tool");
+    
+    if (hasGeneral && hasAdvertising) {
+      return "standard";
+    }
+    if (hasAdvertising) {
+      return "advertising";
+    }
+    return "standard";
+  };
+
+  const getOnboardingTypeDisplay = (client: Client) => {
+    const type = getOnboardingType(client);
+    switch (type) {
+      case "discovery":
+        return "Business Admin Onboarding";
+      case "amazon":
+        return "Amazon Listing Design Onboarding";
+      case "advertising":
+        return "Advertising Campaign Onboarding";
+      case "standard":
+        return "Standard Client Onboarding";
+      default:
+        return "Standard Client Onboarding";
+    }
+  };
+
+  const getRequiredOnboardingForms = (client: Client) => {
+    const type = getOnboardingType(client);
+    if (type === "discovery") {
+      return ["Business Admin Onboarding Questionnaire"];
+    }
+    if (type === "amazon") {
+      return ["Amazon Listing Design Questionnaire"];
+    }
+    
+    const baseForms = ["SMART Goal Sheet", "Customer Avatar Profiles"];
+    const services = client.selectedServices || [];
+    const hasGeneral = services.some((s: string) => !s.startsWith("channel-") && s !== "advertising-package" && s !== "amazon-design" && s !== "custom-tool");
+    const hasAdvertising = type === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
+    
+    if (hasGeneral && hasAdvertising) {
+      return [...baseForms, "General Onboarding Questionnaire", "Advertising Campaign Questionnaire"];
+    } else if (hasAdvertising) {
+      return [...baseForms, "Advertising Campaign Questionnaire"];
+    } else {
+      return [...baseForms, "General Onboarding Questionnaire"];
+    }
+  };
+
   const copyToClipboard = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -825,17 +887,15 @@ const AdminClients = () => {
                             <Mail className="w-4 h-4" />
                           )}
                         </Button>
-                        {client.onboardingCompleted && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setOnboardingViewClient(client)}
-                            title="View Onboarding Responses"
-                            className="text-purple-600 hover:text-purple-700"
-                          >
-                            <ClipboardList className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setOnboardingViewClient(client)}
+                          title={client.onboardingCompleted ? "View Onboarding Responses" : "Preview / View Onboarding"}
+                          className={client.onboardingCompleted ? "text-purple-600 hover:text-purple-700" : "text-slate-400 hover:text-slate-600"}
+                        >
+                          <ClipboardList className="w-4 h-4" />
+                        </Button>
                         {client.contractStatus === "signed" && (
                           <Button
                             variant="ghost"
@@ -1089,6 +1149,53 @@ const AdminClients = () => {
                   </div>
                 </div>
 
+                <div className="border-t pt-4 text-slate-900">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-sm">Onboarding Details</h4>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setOnboardingViewClient(selectedClient)}
+                        className="h-8 text-xs"
+                      >
+                        <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
+                        {selectedClient.onboardingCompleted ? "View Onboarding Responses" : "Preview Onboarding Forms"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Onboarding Type</p>
+                      <p className="font-medium text-slate-800">
+                        {getOnboardingTypeDisplay(selectedClient)}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs text-muted-foreground">Required Onboarding Forms</p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {getRequiredOnboardingForms(selectedClient).map((formName, idx) => (
+                          <Badge key={idx} variant="secondary" className="bg-slate-200 text-slate-700">
+                            {formName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedClient.onboardingCompleted ? (
+                      <p className="text-xs text-green-600 border-t pt-3 mt-3">
+                        This client has completed all onboarding forms. Click the button above to view their responses.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground border-t pt-3 mt-3">
+                        This client's onboarding is pending. You can preview the forms they will see or view any partially submitted responses by clicking the button above.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 {selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") && (
                   <div className="border-t pt-4">
                     <p className="text-sm text-muted-foreground mb-2">Stripe IDs</p>
@@ -1183,15 +1290,13 @@ const AdminClients = () => {
                     )}
                     Send Login Invite
                   </Button>
-                  {selectedClient.onboardingCompleted && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setOnboardingViewClient(selectedClient)}
-                    >
-                      <ClipboardList className="w-4 h-4 mr-2" />
-                      View Onboarding
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setOnboardingViewClient(selectedClient)}
+                  >
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    {selectedClient.onboardingCompleted ? "View Onboarding" : "Preview / View Onboarding"}
+                  </Button>
                 </div>
               </div>
             )}
