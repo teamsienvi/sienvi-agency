@@ -45,7 +45,7 @@ const Hero = () => {
                 stiffness: 50
               }}
             >
-              Turn Your Vision Into{" "}
+              Sienvi Agency: Turn Your Vision Into{" "}
               <motion.span 
                 className="bg-sienvi-gradient bg-clip-text text-transparent"
                 initial={{ opacity: 0 }}

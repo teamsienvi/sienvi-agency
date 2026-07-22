@@ -16,6 +16,7 @@ import {
 import { advertisingChannels } from "@/components/advertising/advertisingData";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 
 // Price ID mapping (Test Mode)
 const PLAN_PRICE_IDS: Record<string, string> = {
@@ -187,6 +188,11 @@ const SelectServices = () => {
   if (isAdvertisingOnly) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SEOHead 
+          title="Select Advertising Package | Sienvi Agency"
+          description="Configure your advertising campaign channels across Meta, Google, TikTok, Amazon, LinkedIn, and YouTube."
+          canonical="https://sienvi.com/select-services"
+        />
         <Navbar />
         <main className="flex-1 py-12 md:py-20">
           <div className="container-custom max-w-4xl">

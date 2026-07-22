@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 
 interface ClientProfile {
   id: string;
@@ -315,6 +316,7 @@ const ClientDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      <SEOHead title="Client Dashboard | Sienvi" description="Client Workspace Dashboard" noindex={true} />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">
         <motion.div

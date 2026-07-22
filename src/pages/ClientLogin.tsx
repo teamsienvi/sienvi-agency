@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, Mail, ArrowLeft, KeyRound, CheckCircle, Loader2 } from "lucide-react";
+import { Lock, Mail, ArrowLeft, KeyRound, CheckCircle, Loader2, ShieldCheck, HelpCircle, BarChart3, FileText, Calendar } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEOHead from "@/components/SEOHead";
 
 type ViewMode = "login" | "reset-request" | "reset-confirm" | "set-password";
 
@@ -478,7 +479,7 @@ const ClientLogin = () => {
       case "set-password":
         return "Set Your Password";
       default:
-        return "Client Login";
+        return "Client Portal & Member Sign In";
     }
   };
 
@@ -498,6 +499,11 @@ const ClientLogin = () => {
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex flex-col">
+        <SEOHead 
+          title="Sign In | Sienvi Client & Member Portal" 
+          description="Access your Sienvi client dashboard to manage ad analytics, track project progress, complete onboarding, and access secure agency resources."
+          canonical="https://sienvi.com/login"
+        />
         <Navbar />
         <main className="flex-1 hero-gradient flex items-center justify-center px-4 py-20">
           <div className="w-full max-w-md">
@@ -518,18 +524,23 @@ const ClientLogin = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead 
+        title="Sign In | Sienvi Client & Member Portal" 
+        description="Access your Sienvi client dashboard to manage ad analytics, track project progress, complete onboarding, and access secure agency resources."
+        canonical="https://sienvi.com/login"
+      />
       <Navbar />
-      <main className="flex-1 hero-gradient flex items-center justify-center px-4 py-20">
+      <main className="flex-1 hero-gradient flex flex-col items-center justify-center px-4 py-20">
         <div className="w-full max-w-md">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
                 {getIcon()}
               </div>
-              <h1 className="text-2xl font-bold text-white">{getTitle()}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{getTitle()}</h1>
               {viewMode === "login" && (
-                <p className="text-white/60 mt-2">Access your client dashboard</p>
+                <p className="text-white/70 mt-2 text-sm font-light">Access your custom agency workspace & real-time analytics</p>
               )}
             </div>
 
@@ -541,10 +552,72 @@ const ClientLogin = () => {
 
           {viewMode === "login" && (
             <p className="text-center text-white/50 mt-6 text-sm">
-              New client? You'll receive an invite email after signing up.
+              New client? You'll receive an invitation link after signing up.
             </p>
           )}
         </div>
+
+        {/* Informational SEO & Portal Features Section */}
+        <section className="w-full max-w-4xl mt-20 px-4">
+          <div className="bg-card/85 border border-dashed border-border backdrop-blur-md rounded-2xl p-8 md:p-12 shadow-xl">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl font-bold text-white mb-3 flex items-center justify-center gap-2">
+                <ShieldCheck className="h-6 w-6 text-primary" />
+                Sienvi Client & Partner Portal Features
+              </h2>
+              <p className="text-gray-300 text-sm font-light max-w-xl mx-auto">
+                Our secure client portal provides full transparency and real-time oversight for all your agency projects, ad campaigns, and automated workflows.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                <BarChart3 className="h-8 w-8 text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-2">Live Performance Analytics</h3>
+                <p className="text-xs text-gray-400 font-light leading-relaxed">
+                  Monitor campaign metrics across Meta, Google, TikTok, and Amazon Ads with real-time KPI tracking and transparent ROI reports.
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                <FileText className="h-8 w-8 text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-2">Service Scoping & Contracts</h3>
+                <p className="text-xs text-gray-400 font-light leading-relaxed">
+                  Review service level agreements, submit onboarding discovery forms, and approve deliverables seamlessly online.
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+                <Calendar className="h-8 w-8 text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-white mb-2">Direct Strategy Booking</h3>
+                <p className="text-xs text-gray-400 font-light leading-relaxed">
+                  Schedule one-on-one strategic consulting sessions and connect directly with your dedicated account leads.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 pt-8">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-primary" />
+                Frequently Asked Portal Questions
+              </h3>
+              <div className="space-y-4 text-sm font-light">
+                <div>
+                  <h4 className="font-medium text-white">How do I obtain my Sienvi portal login credentials?</h4>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Upon partnering with Sienvi, an invitation email with a secure setup link is dispatched to set your account password and access your dashboard.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-white">Need help logging into your client dashboard?</h4>
+                  <p className="text-gray-400 text-xs mt-1">
+                    If you forgot your password or need access permissions updated, click "Forgot your password?" above or contact our team directly at <a href="mailto:info@sienvi.com" className="text-primary hover:underline">info@sienvi.com</a>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
       <Footer />
     </div>

@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { BlueprintCanvas } from "@/components/BlueprintCanvas";
-import { Gift, Users, DollarSign, Infinity, CheckCircle, ArrowRight, Mail } from "lucide-react";
+import { Gift, Users, DollarSign, Infinity, CheckCircle, ArrowRight, Mail, HelpCircle } from "lucide-react";
+import SEOHead from "@/components/SEOHead";
 
 const REFERRAL_EMAIL_1 = "sienvifba@gmail.com";
 const REFERRAL_EMAIL_2 = "teamsienvi@gmail.com";
@@ -58,6 +59,11 @@ const stagger = {
 const Referral = () => {
   return (
     <div className="min-h-screen bg-transparent relative">
+      <SEOHead 
+        title="Client Referral Program & Monthly Invoice Credits | Sienvi Agency"
+        description="Earn $250/month in recurring invoice credits for every business owner you refer to Sienvi. Unlimited referrals, zero cap on savings."
+        canonical="https://sienvi.com/referral"
+      />
       <BlueprintCanvas />
       <Navbar />
 
@@ -82,7 +88,7 @@ const Referral = () => {
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-              Help Someone Win -{" "}
+              Sienvi Referral Program: Help Someone Win,{" "}
               <span className="bg-sienvi-gradient bg-clip-text text-transparent">Win With Them</span>
             </motion.h1>
 
@@ -351,6 +357,47 @@ const Referral = () => {
               </a>
             </motion.div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Referral Program FAQ Section */}
+      <section className="section-padding bg-transparent">
+        <div className="container-custom">
+          <div className="max-w-3xl mx-auto p-8 bg-card/85 border border-dashed border-border backdrop-blur-md rounded-xl shadow-xl">
+            <h3 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
+              <HelpCircle className="w-6 h-6 text-primary" />
+              Referral Program Details & FAQ
+            </h3>
+            <div className="space-y-6 text-sm font-light text-muted-foreground">
+              <div>
+                <h4 className="font-semibold text-foreground text-base">How does the $250/month referral discount work?</h4>
+                <p className="mt-1 leading-relaxed">
+                  When your referred business owner partners with Sienvi on an active service package ($1,000/mo minimum), a $250 credit is automatically applied to your monthly invoice. As long as your referral remains an active client, your $250/month credit recurs indefinitely.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-foreground text-base">Is there any cap on how many clients I can refer?</h4>
+                <p className="mt-1 leading-relaxed">
+                  No! There is zero cap on referrals or total invoice savings. If you refer 4 active clients, you receive $1,000/month in credits off your agency services.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-foreground text-base">What services qualify for the Sienvi Referral Program?</h4>
+                <p className="mt-1 leading-relaxed">
+                  All core Sienvi agency services quality, including AI System Development, Full-Funnel Advertising (Meta, Google, TikTok, Amazon), Social Media Management, Web Development, Brand Media & Production, and Strategic Consulting.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-foreground text-base">How do I submit my referral?</h4>
+                <p className="mt-1 leading-relaxed">
+                  Simply email your referral introduction to <a href={`mailto:${REFERRAL_EMAIL_1}`} className="text-primary hover:underline">{REFERRAL_EMAIL_1}</a> or <a href={`mailto:${REFERRAL_EMAIL_2}`} className="text-primary hover:underline">{REFERRAL_EMAIL_2}</a>, or introduce us directly via email or call.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -11,6 +11,7 @@ import TestimonialsCarousel from "@/components/testimonials/TestimonialsCarousel
 import { motion } from "framer-motion";
 import { BlueprintCanvas } from "@/components/BlueprintCanvas";
 import { useEffect } from "react";
+import SEOHead from "@/components/SEOHead";
 
 const testimonials = [
   {
@@ -123,6 +124,11 @@ const Index = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
+      <SEOHead 
+        title="Sienvi Agency | AI Automation, Strategic Coaching & Growth Support"
+        description="Scale your business with AI-first systems, automation, content, and strategic consulting. Premium agency services for entrepreneurs."
+        canonical="https://sienvi.com/"
+      />
       <BlueprintCanvas />
       <Navbar />
       <Hero />
