@@ -90,7 +90,7 @@ serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" });
-    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly } = await req.json();
+    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly, customPrice, customerEmail } = await req.json();
     const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
 
     // ========================================
@@ -232,6 +232,92 @@ serve(async (req) => {
       });
 
       console.log(`Single service checkout session created: ${session.id} (${isOneTimePayment ? 'one-time' : 'subscription'})`);
+      return new Response(
+        JSON.stringify({ url: session.url }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ========================================
+    // CUSTOM PLAN CHECKOUT (admin-created custom pricing)
+    // ========================================
+    if (plan === "custom") {
+      const price = customPrice || PRICING.SINGLE_SERVICE;
+      
+      console.log(`Custom plan checkout: price=$${price}`);
+
+      const customer = await stripe.customers.create({
+        email: customerEmail || undefined,
+        metadata: { source: "checkout_session", plan: "custom" },
+      });
+
+      // Build service description
+      const SERVICE_LABELS: Record<string, string> = {
+        "social-media-suite": "Social Media Suite",
+        "ecommerce-operations": "E-Commerce Operations",
+        "custom-website": "Custom Website Development",
+        "seo-aeo": "SEO/AEO Package",
+        "custom-lms": "Custom LMS Package",
+        "custom-gpt": "Custom GPT Product",
+        "custom-tool": "Custom Tool",
+        "custom-ai-assistant": "Custom AI Assistant",
+        "amazon-design": "Amazon Design Package",
+      };
+      const serviceNames = (selectedServices || [])
+        .filter((s: string) => !s.startsWith("channel-"))
+        .map((s: string) => SERVICE_LABELS[s] || s)
+        .join(", ");
+
+      const dynamicPrice = await stripe.prices.create({
+        unit_amount: Math.round(price * 100),
+        currency: "usd",
+        recurring: { interval: "month" },
+        product_data: {
+          name: `Sienvi Custom Plan${serviceNames ? ` (${serviceNames})` : ""}`,
+        },
+      });
+
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        { price: dynamicPrice.id, quantity: 1 },
+      ];
+
+      // Add advertising if selected
+      if (advertisingChannels && advertisingChannels.length > 0) {
+        const channelCount = Math.min(advertisingChannels.length, 7);
+        const { total, savings } = calculateAdvertisingCost(channelCount);
+        const adPriceId = ADVERTISING_PRICE_IDS[channelCount];
+        if (adPriceId) {
+          lineItems.push({ price: adPriceId, quantity: 1 });
+        } else {
+          const adPrice = await stripe.prices.create({
+            unit_amount: total * 100,
+            currency: "usd",
+            recurring: { interval: "month" },
+            product_data: {
+              name: `Advertising Package (${channelCount} Channel${channelCount > 1 ? 's' : ''})${savings > 0 ? ' - Bundle Savings' : ''}`,
+            },
+          });
+          lineItems.push({ price: adPrice.id, quantity: 1 });
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        payment_method_types: ["card"],
+        customer: customer.id,
+        line_items: lineItems,
+        metadata: {
+          product: "sienvi_automation",
+          plan: "custom",
+          custom_price: price.toString(),
+          selected_services: selectedServices ? JSON.stringify(selectedServices) : "",
+          advertising_channels: advertisingChannels ? JSON.stringify(advertisingChannels) : "",
+        },
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/dashboard`,
+      });
+
+      console.log(`Custom plan checkout session created: ${session.id}`);
       return new Response(
         JSON.stringify({ url: session.url }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

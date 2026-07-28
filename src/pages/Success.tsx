@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, ArrowRight, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ const Success = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState<{
     email: string;
     plan: string;
@@ -19,6 +20,10 @@ const Success = () => {
   
   useEffect(() => {
     const handleRedirect = async () => {
+      // Check auth status
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+
       const sessionId = searchParams.get("session_id");
       
       if (sessionId) {
@@ -120,12 +125,27 @@ const Success = () => {
             </motion.div>
           )}
           
-          <Button
-            onClick={() => navigate("/")}
-            className="bg-primary hover:bg-primary/90"
-          >
-            Return to Home
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {isAuthenticated ? (
+              <Button
+                size="lg"
+                onClick={() => navigate("/dashboard")}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Go to Dashboard
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                onClick={() => navigate("/")}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Return to Home
+              </Button>
+            )}
+          </div>
         </motion.div>
       </main>
       <Footer />

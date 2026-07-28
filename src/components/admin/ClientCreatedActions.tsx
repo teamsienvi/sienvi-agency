@@ -24,11 +24,13 @@ interface ClientCreatedActionsProps {
 export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsProps) => {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
+  const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [checkoutLink, setCheckoutLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCheckout, setCopiedCheckout] = useState(false);
 
-  const handleSendInvite = async () => {
+  const handleGenerateOnboardingLink = async () => {
     setSendingInvite(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -47,14 +49,33 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
-      if (response.data.error) throw new Error(response.data.error);
+      if (response.error) {
+        let errMsg = response.error.message;
+        try {
+          const errorContext = (response.error as any).context;
+          if (errorContext && typeof errorContext.json === "function") {
+            const body = await errorContext.json();
+            if (body?.error) errMsg = body.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+      if (response.data?.error) throw new Error(response.data.error);
 
-      toast.success("Login invite sent to " + client.email);
+      const generatedUrl = response.data.loginUrl;
+      if (generatedUrl) {
+        setOnboardingLink(generatedUrl);
+        await navigator.clipboard.writeText(generatedUrl);
+        setCopiedLink(true);
+        toast.success("1-Click Onboarding Link copied to clipboard!");
+        setTimeout(() => setCopiedLink(false), 3000);
+      } else {
+        toast.success(response.data.message || "Invite created!");
+      }
       setInviteSent(true);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to send invite";
-      console.error("Error sending invite:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate onboarding link";
+      console.error("Error generating onboarding link:", error);
       toast.error(message);
     } finally {
       setSendingInvite(false);
@@ -94,12 +115,20 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
     }
   };
 
-  const copyToClipboard = async () => {
+  const copyOnboardingToClipboard = async () => {
+    if (!onboardingLink) return;
+    await navigator.clipboard.writeText(onboardingLink);
+    setCopiedLink(true);
+    toast.success("Onboarding link copied to clipboard");
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const copyCheckoutToClipboard = async () => {
     if (!checkoutLink) return;
     await navigator.clipboard.writeText(checkoutLink);
-    setCopied(true);
-    toast.success("Link copied to clipboard");
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedCheckout(true);
+    toast.success("Checkout link copied to clipboard");
+    setTimeout(() => setCopiedCheckout(false), 2000);
   };
 
   const clientName = [client.firstName, client.lastName].filter(Boolean).join(" ") || client.email;
@@ -125,20 +154,49 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
           <p className="text-sm font-medium">What would you like to do next?</p>
           
           <Button
-            onClick={handleSendInvite}
-            disabled={sendingInvite || inviteSent}
-            className="w-full justify-start"
-            variant={inviteSent ? "outline" : "default"}
+            onClick={handleGenerateOnboardingLink}
+            disabled={sendingInvite}
+            className="w-full justify-start bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             {sendingInvite ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : inviteSent ? (
-              <Check className="w-4 h-4 mr-2 text-green-500" />
+            ) : onboardingLink ? (
+              <Check className="w-4 h-4 mr-2 text-green-400" />
             ) : (
-              <Mail className="w-4 h-4 mr-2" />
+              <Link className="w-4 h-4 mr-2" />
             )}
-            {inviteSent ? "Invite Sent!" : "Send Login Invite Email"}
+            {onboardingLink ? "Copy Onboarding Link Again" : "Generate 1-Click Client Onboarding Link"}
           </Button>
+
+          {onboardingLink && (
+            <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-indigo-900">1-Click Client Onboarding URL:</span>
+                <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
+                  Sign Up ➔ Contract ➔ Payment ➔ Access
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <code className="flex-1 text-xs bg-white p-2 rounded border border-indigo-200 text-indigo-950 font-mono break-all max-h-20 overflow-y-auto">
+                  {onboardingLink}
+                </code>
+                <Button size="sm" variant="outline" onClick={copyOnboardingToClipboard} className="bg-white">
+                  {copiedLink ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="bg-white"
+                  onClick={() => window.open(onboardingLink, "_blank")}
+                >
+                  <ExternalLink className="w-4 h-4 text-indigo-600" />
+                </Button>
+              </div>
+              <p className="text-[11px] text-indigo-700 font-light">
+                Send this single link directly to your client via chat or email.
+              </p>
+            </div>
+          )}
 
           {client.subscriptionStatus === "pending_payment" && (
             <>
@@ -153,7 +211,7 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
                 ) : (
                   <Link className="w-4 h-4 mr-2" />
                 )}
-                {checkoutLink ? "Checkout Link Ready" : "Generate Checkout Link"}
+                {checkoutLink ? "Checkout Link Ready" : "Generate Checkout Link Only"}
               </Button>
 
               {checkoutLink && (
@@ -163,8 +221,8 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
                     <code className="flex-1 text-xs bg-background p-2 rounded break-all">
                       {checkoutLink}
                     </code>
-                    <Button size="sm" variant="ghost" onClick={copyToClipboard}>
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <Button size="sm" variant="ghost" onClick={copyCheckoutToClipboard}>
+                      {copiedCheckout ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </Button>
                     <Button 
                       size="sm" 

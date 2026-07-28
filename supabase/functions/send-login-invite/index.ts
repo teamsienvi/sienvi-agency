@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 function parseAdditionalEmails(notes: string | null | undefined): string[] {
   if (!notes) return [];
   const match = notes.match(/\[Additional\s+Emails:\s*([^\]]+)\]/i);
@@ -36,6 +34,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY environment variable is missing in Edge Function secrets");
+    }
+
+    const resend = new Resend(resendApiKey);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -122,60 +127,104 @@ serve(async (req) => {
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
 
-    // Treat as a new user if:
-    // - No auth record exists at all, OR
-    // - The user exists but has never signed in AND has no confirmed email
-    //   (i.e. they were created/invited but never actually set up their account)
     const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
     const hasConfirmedEmail = !!existingAuthUser?.email_confirmed_at;
     const isNewUser = !existingAuthUser || (!hasSignedIn && !hasConfirmedEmail);
 
     if (isNewUser) {
       redirectPath = "/login?setup=password";
-      actionMessage = "Set Your Password";
-      emailSubject = "Welcome to Sienvi";
+      actionMessage = "Set Password & Review Contract";
+      emailSubject = "Welcome to Sienvi — Set Up Your Account";
       headerTitle = "Welcome to Sienvi";
-      emailIntro = "Your account has been created. Set up your password to get started.";
-      tipText = "After clicking the link, you'll create a password for easier future logins.";
-    } else if (clientStatus.subscriptionStatus === "pending_payment") {
-      tipText = "Complete your payment to unlock all features.";
-    } else if (clientStatus.subscriptionStatus === "active" && clientStatus.contractStatus === "not_signed") {
+      emailIntro = "Your account has been created. Set up your password to review your service agreement and activate your workspace.";
+      tipText = "After setting your password, you'll review and sign your service agreement.";
+    } else if (clientStatus.contractStatus === "not_signed") {
       redirectPath = "/contract";
-      actionMessage = "Sign Agreement";
+      actionMessage = "Sign Service Agreement";
+      emailSubject = "Sienvi Service Agreement";
+      headerTitle = "Review & Sign Agreement";
+      emailIntro = "Please review and sign your service agreement to proceed to payment.";
       tipText = "Your next step is to review and sign the service agreement.";
+    } else if (clientStatus.subscriptionStatus === "pending_payment") {
+      redirectPath = "/checkout-summary";
+      actionMessage = "Complete Subscription Payment";
+      emailSubject = "Complete Your Subscription";
+      headerTitle = "Complete Your Subscription";
+      emailIntro = "Agreement signed! Complete your payment to activate your workspace.";
+      tipText = "Complete your payment to unlock full workspace features.";
     } else if (clientStatus.contractStatus === "signed" && clientStatus.onboardingStatus !== "completed") {
       redirectPath = "/onboarding";
-      actionMessage = "Continue Setup";
+      actionMessage = "Continue Onboarding";
       tipText = "Complete your onboarding to help us get started on your automations.";
     }
 
-    // Use 'invite' only when there is truly no auth record (creates a new account).
-    // If the user record already exists but is unconfirmed, use 'magiclink' to avoid
-    // a conflict — the email will still show the "Set Your Password" new-user messaging.
-    const linkType = !existingAuthUser ? "invite" : "magiclink";
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: linkType,
+    // Try generating link with preferred type ('invite' for new users, 'magiclink' for existing).
+    // If that fails (e.g. user already registered or user not found), fall back to opposite link type.
+    let preferredLinkType: "invite" | "magiclink" = !existingAuthUser ? "invite" : "magiclink";
+    let linkData: any = null;
+    let linkError: any = null;
+
+    const firstAttempt = await supabaseAdmin.auth.admin.generateLink({
+      type: preferredLinkType,
       email: targetEmail,
       options: {
         redirectTo: `${baseUrl}${redirectPath}`,
       },
     });
 
-    if (linkError) {
-      console.error("Error generating magic link:", linkError);
-      throw new Error("Failed to generate login link");
+    if (!firstAttempt.error && firstAttempt.data) {
+      linkData = firstAttempt.data;
+    } else {
+      linkError = firstAttempt.error;
+      console.warn(`generateLink (${preferredLinkType}) failed: ${linkError?.message || JSON.stringify(linkError)}. Trying fallback...`);
+      
+      const fallbackLinkType = preferredLinkType === "invite" ? "magiclink" : "invite";
+      const fallbackAttempt = await supabaseAdmin.auth.admin.generateLink({
+        type: fallbackLinkType,
+        email: targetEmail,
+        options: {
+          redirectTo: `${baseUrl}${redirectPath}`,
+        },
+      });
+
+      if (!fallbackAttempt.error && fallbackAttempt.data) {
+        linkData = fallbackAttempt.data;
+        linkError = null;
+        console.log(`Fallback generateLink (${fallbackLinkType}) succeeded for ${targetEmail}`);
+      } else {
+        console.error(`Fallback generateLink (${fallbackLinkType}) also failed:`, fallbackAttempt.error);
+        linkError = fallbackAttempt.error || linkError;
+      }
+    }
+
+    if (linkError || !linkData) {
+      const errorDetail = linkError?.message || JSON.stringify(linkError);
+      console.error("Error generating login link:", linkError);
+      throw new Error(`Failed to generate login link: ${errorDetail}`);
     }
 
     const loginUrl = linkData.properties?.action_link || "";
+    if (!loginUrl) {
+      throw new Error("Action link was not returned by Supabase Auth");
+    }
+
     const displayName = clientName || targetEmail.split("@")[0];
+    const recipients = [...new Set([targetEmail, ...additionalEmails])].filter(
+      (email) => email && typeof email === "string" && email.includes("@")
+    );
 
-    const recipients = [...new Set([targetEmail, ...additionalEmails])];
+    let emailSent = false;
+    let emailId = null;
+    let emailError = null;
 
-    const emailResponse = await resend.emails.send({
-      from: "Sienvi <info@sienvi.com>",
-      to: recipients,
-      subject: emailSubject,
-      html: `
+    if (resendApiKey && recipients.length > 0) {
+      try {
+        const resend = new Resend(resendApiKey);
+        const emailResponse = await resend.emails.send({
+          from: "Sienvi <info@sienvi.com>",
+          to: recipients,
+          subject: emailSubject,
+          html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -243,34 +292,44 @@ serve(async (req) => {
   </table>
 </body>
 </html>
-      `,
-    });
+          `,
+        });
 
-    // Resend v2 returns { data, error } — check for failure
-    const resendError = (emailResponse as any).error;
-    if (resendError) {
-      console.error("Resend rejected the email:", JSON.stringify(resendError));
-      throw new Error(`Email delivery failed: ${resendError.message || JSON.stringify(resendError)}`);
+        const resErr = (emailResponse as any)?.error;
+        if (!resErr) {
+          emailSent = true;
+          emailId = (emailResponse as any)?.data?.id || (emailResponse as any)?.id || null;
+        } else {
+          emailError = resErr.message || JSON.stringify(resErr);
+          console.warn("Resend email delivery skipped (account issue):", emailError);
+        }
+      } catch (err: any) {
+        emailError = err.message || String(err);
+        console.warn("Resend email attempt caught error (bypassing email requirement):", emailError);
+      }
     }
 
-    const emailId = (emailResponse as any).data?.id || (emailResponse as any).id || null;
-
-    console.log("Login invite sent to:", recipients, "emailId:", emailId, "Redirect:", redirectPath);
+    console.log("Generated 1-Click Onboarding Link for:", targetEmail, "loginUrl:", loginUrl, "emailSent:", emailSent);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Login invite sent successfully",
+        message: emailSent ? "Login invite sent via email" : "1-Click Onboarding Link generated!",
+        loginUrl,
+        emailSent,
+        emailError,
         emailId,
         redirectPath,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Error sending login invite:", error);
+    const errorMsg = error?.message || String(error);
+    console.error("Error sending login invite:", errorMsg);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMsg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
+

@@ -16,7 +16,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, UserPlus, Link, Mail, Copy, Check } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, Link, Mail, Copy, Check, ExternalLink } from "lucide-react";
 
 const automationServices = [
   { id: "social-media-suite", label: "Social Media Suite" },
@@ -58,6 +58,8 @@ const AdminCreateClient = () => {
   const [sendingLoginInvite, setSendingLoginInvite] = useState(false);
   const [sendingCheckoutEmail, setSendingCheckoutEmail] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
+  const [copiedOnboarding, setCopiedOnboarding] = useState(false);
   
   const [additionalEmails, setAdditionalEmails] = useState("");
   const [contractFile, setContractFile] = useState<File | null>(null);
@@ -247,7 +249,7 @@ const AdminCreateClient = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSendLoginInvite = async () => {
+  const handleGenerateOnboardingLink = async () => {
     if (!createdClient) return;
     
     setSendingLoginInvite(true);
@@ -266,16 +268,43 @@ const AdminCreateClient = () => {
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
-      if (response.data.error) throw new Error(response.data.error);
+      if (response.error) {
+        let errMsg = response.error.message;
+        try {
+          const errorContext = (response.error as any).context;
+          if (errorContext && typeof errorContext.json === "function") {
+            const body = await errorContext.json();
+            if (body?.error) errMsg = body.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+      if (response.data?.error) throw new Error(response.data.error);
 
-      toast.success("Login invite sent successfully!");
+      const generatedUrl = response.data?.loginUrl;
+      if (generatedUrl) {
+        setOnboardingLink(generatedUrl);
+        await navigator.clipboard.writeText(generatedUrl);
+        setCopiedOnboarding(true);
+        toast.success("1-Click Onboarding Link copied to clipboard!");
+        setTimeout(() => setCopiedOnboarding(false), 3000);
+      } else {
+        toast.success(response.data?.message || "Invite processed!");
+      }
     } catch (error: any) {
-      console.error("Error sending login invite:", error);
-      toast.error(error.message || "Failed to send login invite");
+      console.error("Error generating onboarding link:", error);
+      toast.error(error.message || "Failed to generate onboarding link");
     } finally {
       setSendingLoginInvite(false);
     }
+  };
+
+  const copyOnboardingLink = async () => {
+    if (!onboardingLink) return;
+    await navigator.clipboard.writeText(onboardingLink);
+    setCopiedOnboarding(true);
+    toast.success("Onboarding link copied to clipboard!");
+    setTimeout(() => setCopiedOnboarding(false), 2000);
   };
 
   const handleSendCheckoutEmail = async () => {
@@ -407,18 +436,49 @@ const AdminCreateClient = () => {
                   )}
 
                   <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleSendLoginInvite}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" 
+                    onClick={handleGenerateOnboardingLink}
                     disabled={sendingLoginInvite}
                   >
                     {sendingLoginInvite ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : onboardingLink ? (
+                      <Check className="w-4 h-4 mr-2 text-green-400" />
                     ) : (
-                      <Mail className="w-4 h-4 mr-2" />
+                      <Link className="w-4 h-4 mr-2" />
                     )}
-                    Send Login Invite
+                    {onboardingLink ? "Regenerate Onboarding Link" : "Generate 1-Click Client Onboarding Link"}
                   </Button>
+
+                  {onboardingLink && (
+                    <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-indigo-900">1-Click Client Onboarding URL:</span>
+                        <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
+                          Sign Up ➔ Contract ➔ Payment ➔ Access
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <code className="flex-1 text-xs bg-white p-2 rounded border border-indigo-200 text-indigo-950 font-mono break-all max-h-20 overflow-y-auto">
+                          {onboardingLink}
+                        </code>
+                        <Button size="sm" variant="outline" onClick={copyOnboardingLink} className="bg-white">
+                          {copiedOnboarding ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-white"
+                          onClick={() => window.open(onboardingLink, "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4 text-indigo-600" />
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-indigo-700 font-light">
+                        Send this single link directly to your client via chat or email.
+                      </p>
+                    </div>
+                  )}
 
                   <Button 
                     variant="secondary" 

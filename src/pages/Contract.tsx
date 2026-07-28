@@ -95,13 +95,6 @@ const Contract = () => {
       const profile = response.data.profile;
       setProfile(profile);
       
-      // Check if payment is complete
-      if (profile.subscriptionStatus !== "active" && !isViewMode) {
-        toast.error("Please complete payment first");
-        navigate("/dashboard");
-        return;
-      }
-
       // Check if already signed
       if (profile.contractStatus === "signed" && !isViewMode) {
         setAlreadySigned(true);
@@ -224,8 +217,18 @@ const Contract = () => {
       if (response.error) throw new Error(response.error.message);
       if (response.data.error) throw new Error(response.data.error);
 
-      toast.success("Contract signed successfully!");
-      navigate("/onboarding");
+      toast.success("Agreement signed successfully! Proceeding to payment...");
+
+      // Smooth progression: Contract -> Payment -> Full Access
+      if (profile?.subscriptionStatus === "pending_payment") {
+        if (profile?.plan && profile.plan !== "custom") {
+          navigate(`/checkout-summary?plan=${profile.plan}`);
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        navigate("/onboarding");
+      }
     } catch (error: any) {
       console.error("Error signing contract:", error);
       toast.error(error.message || "Failed to sign contract");

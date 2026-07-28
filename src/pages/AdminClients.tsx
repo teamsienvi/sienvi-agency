@@ -174,6 +174,9 @@ const AdminClients = () => {
   };
 
   const getStatusBadge = (client: Client) => {
+    if (client.contractStatus === "not_signed" && client.plan !== "advertising") {
+      return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Contract</Badge>;
+    }
     if (client.subscriptionStatus === "pending_payment") {
       return <Badge className="bg-orange-500 hover:bg-orange-600">Awaiting Payment</Badge>;
     }
@@ -458,10 +461,25 @@ const AdminClients = () => {
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
-      if (response.data.error) throw new Error(response.data.error);
+      if (response.error) {
+        let errMsg = response.error.message;
+        try {
+          const errorContext = (response.error as any).context;
+          if (errorContext && typeof errorContext.json === "function") {
+            const body = await errorContext.json();
+            if (body?.error) errMsg = body.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+      if (response.data?.error) throw new Error(response.data.error);
 
-      toast.success("Login invite sent to " + client.email);
+      if (response.data?.loginUrl) {
+        await navigator.clipboard.writeText(response.data.loginUrl);
+        toast.success("1-Click Onboarding Link copied to clipboard for " + client.email);
+      } else {
+        toast.success("Login invite processed for " + client.email);
+      }
     } catch (error: any) {
       console.error("Error sending login invite:", error);
       toast.error(error.message || "Failed to send login invite");

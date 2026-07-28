@@ -104,6 +104,15 @@ const ClientDashboard = () => {
 
   useEffect(() => {
     checkAuthAndFetchProfile();
+
+    // Auto-refresh profile when tab regains focus (e.g. after Stripe payment in new tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !loading) {
+        checkAuthAndFetchProfile();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   const checkAuthAndFetchProfile = async () => {
@@ -141,18 +150,14 @@ const ClientDashboard = () => {
       setProfile(clientProfile);
       setIsAdmin(response.data.isAdmin);
 
-      // Route users based on their status - enforce step completion
-      // Advertising clients skip contract and onboarding
+      // Route users based on onboarding sequence: Unique sign-up link -> Contract -> Payment -> Full Access
       const isAdvertising = clientProfile.plan === "advertising";
       
-      if (clientProfile.subscriptionStatus === "pending_payment") {
-        // User needs to complete payment - stay on dashboard to show payment CTA
-      } else if (!isAdvertising && clientProfile.subscriptionStatus === "active" && clientProfile.contractStatus === "not_signed") {
-        // User paid but hasn't signed contract - they can stay here or go to contract
-      } else if (!isAdvertising && clientProfile.contractStatus === "signed" && clientProfile.onboardingStatus !== "completed") {
-        // User signed contract but hasn't completed onboarding
+      if (!isAdvertising && !isDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
+        // Step 2: Enforce Contract Signing before Payment & Full Access
+        navigate("/contract");
+        return;
       }
-      // If all complete, just show the dashboard
     } catch (error: any) {
       console.error("Error fetching profile:", error);
       toast.error("Failed to load profile");
@@ -187,20 +192,82 @@ const ClientDashboard = () => {
     }
   };
 
+  const handleCompletePayment = async () => {
+    if (!profile) return;
+    
+    setManagingBilling(true);
+    try {
+      const plan = profile.plan || "single";
+      const services = profile.selectedServices || [];
+      const adChannels = services.filter(s => s.startsWith("channel-"));
+      const regularServices = services.filter(s => !s.startsWith("channel-"));
+      
+      // For standard plans (single, triple, full) with proper services, use the checkout summary page
+      if (["single", "triple", "full"].includes(plan)) {
+        const singleService = plan === "single" && regularServices.length === 1 ? regularServices[0] : null;
+        const url = singleService 
+          ? `/checkout-summary?plan=${plan}&service=${singleService}`
+          : `/checkout-summary?plan=${plan}`;
+        navigate(url);
+        return;
+      }
+      
+      if (plan === "advertising") {
+        // Store ad channels in session storage for checkout summary
+        sessionStorage.setItem('selectedAdvertisingChannels', JSON.stringify(adChannels));
+        navigate("/checkout-summary?plan=advertising");
+        return;
+      }
+      
+      if (plan === "amazon") {
+        navigate("/checkout-summary?plan=single&service=amazon-design");
+        return;
+      }
+      
+      // For custom plans: create Stripe session directly via create-checkout-session
+      const customPrice = profile.customPrice || 888;
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: {
+          plan: "custom",
+          customPrice,
+          customerEmail: profile.email,
+          selectedServices: services,
+          advertisingChannels: adChannels.length > 0 ? adChannels : undefined,
+        },
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (data?.url) {
+        window.open(data.url, "_blank");
+        toast.success("Stripe checkout opened in a new tab");
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error: any) {
+      console.error("Error starting checkout:", error);
+      toast.error(error.message || "Unable to start checkout. Please contact support.");
+    } finally {
+      setManagingBilling(false);
+    }
+  };
+
   const getStatusBadge = () => {
     if (!profile) return null;
     
+    if (!isDiscovery && profile.plan !== "advertising" && profile.contractStatus === "not_signed") {
+      return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Contract</Badge>;
+    }
     if (profile.subscriptionStatus === "pending_payment") {
-      return <Badge className="bg-orange-500">Awaiting Payment</Badge>;
+      return <Badge className="bg-orange-500 hover:bg-orange-600">Awaiting Payment</Badge>;
     }
-    if (!isDiscovery && profile.subscriptionStatus === "active" && profile.contractStatus === "not_signed") {
-      return <Badge className="bg-blue-500">Awaiting Contract</Badge>;
-    }
-    if ((isDiscovery || profile.contractStatus === "signed") && profile.onboardingStatus !== "completed") {
-      return <Badge className="bg-purple-500">Onboarding In Progress</Badge>;
+    if (profile.onboardingStatus !== "completed") {
+      return <Badge className="bg-purple-500 hover:bg-purple-600">Onboarding In Progress</Badge>;
     }
     if (profile.onboardingStatus === "completed") {
-      return <Badge className="bg-green-500">Active</Badge>;
+      return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
     }
     return <Badge variant="outline">Unknown</Badge>;
   };
@@ -208,15 +275,15 @@ const ClientDashboard = () => {
   const getProgress = () => {
     if (!profile) return 0;
     if (isDiscovery) {
-      // Discovery skips contract: 3 steps (account + payment + onboarding)
       let completed = 1;
       if (profile.subscriptionStatus === "active") completed++;
       if (profile.onboardingStatus === "completed") completed++;
       return (completed / 3) * 100;
     }
+    // Progression: 1. Account Created -> 2. Contract Signed -> 3. Payment Active -> 4. Workspace Access & Onboarding
     let completed = 1;
-    if (profile.subscriptionStatus === "active") completed++;
     if (profile.contractStatus === "signed") completed++;
+    if (profile.subscriptionStatus === "active") completed++;
     if (profile.onboardingStatus === "completed") completed++;
     return (completed / 4) * 100;
   };
@@ -224,34 +291,43 @@ const ClientDashboard = () => {
   const getPrimaryCTA = () => {
     if (!profile) return null;
     
+    // Step 2: Contract Signing
+    if (profile.contractStatus === "not_signed" && !isDiscovery && profile.plan !== "advertising") {
+      return (
+        <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" onClick={() => navigate("/contract")}>
+          <FileSignature className="w-5 h-5 mr-2" />
+          Review & Sign Service Agreement
+        </Button>
+      );
+    }
+
+    // Step 3: Payment
     if (profile.subscriptionStatus === "pending_payment") {
       return (
         <div className="space-y-3">
-          <Button size="lg" className="w-full" disabled>
-            <CreditCard className="w-5 h-5 mr-2" />
-            Complete Payment (Check Email for Link)
+          <Button size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium" onClick={handleCompletePayment} disabled={managingBilling}>
+            {managingBilling ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <CreditCard className="w-5 h-5 mr-2" />
+            )}
+            Complete Payment
           </Button>
           <p className="text-sm text-muted-foreground text-center">
-            An admin will send you a payment link via email. Contact support if you haven't received it.
+            {profile.contractStatus === "signed" 
+              ? "Agreement signed! Complete your payment to unlock full workspace access."
+              : "Complete your payment to continue onboarding."}
           </p>
         </div>
       );
     }
     
-    if (profile.contractStatus === "not_signed" && !isDiscovery) {
-      return (
-        <Button size="lg" className="w-full" onClick={() => navigate("/contract")}>
-          <FileSignature className="w-5 h-5 mr-2" />
-          Sign Contract
-        </Button>
-      );
-    }
-    
+    // Step 4: Full Access / Onboarding
     if (profile.onboardingStatus !== "completed") {
       return (
         <Button size="lg" className="w-full" onClick={() => navigate("/onboarding")}>
           <ClipboardList className="w-5 h-5 mr-2" />
-          {profile.onboardingStatus === "not_started" ? "Start Onboarding" : "Continue Onboarding"}
+          {profile.onboardingStatus === "not_started" ? "Start Onboarding Questionnaire" : "Continue Onboarding"}
         </Button>
       );
     }
@@ -443,24 +519,7 @@ const ClientDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Step 2: Payment */}
-                  <div className="flex items-center gap-3">
-                    {profile.subscriptionStatus === "active" ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">Payment Completed</p>
-                      <p className="text-xs text-muted-foreground">
-                        {profile.subscriptionStatus === "active" 
-                          ? "Subscription active"
-                          : "Awaiting payment"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Step 3: Contract - hidden for discovery */}
+                  {/* Step 2: Contract Signed - hidden for discovery */}
                   {!isDiscovery && (
                     <div className="flex items-center gap-3">
                       {profile.contractStatus === "signed" ? (
@@ -479,26 +538,41 @@ const ClientDashboard = () => {
                     </div>
                   )}
 
-                  {/* Step 4: Onboarding */}
-                  {true && (
-                    <div className="flex items-center gap-3">
-                      {profile.onboardingStatus === "completed" ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Onboarding Completed</p>
-                        <p className="text-xs text-muted-foreground">
-                          {profile.onboardingStatus === "completed"
-                            ? "All set!"
-                            : profile.onboardingStatus === "in_progress"
-                            ? "In progress..."
-                            : "Not started"}
-                        </p>
-                      </div>
+                  {/* Step 3: Payment Completed */}
+                  <div className="flex items-center gap-3">
+                    {profile.subscriptionStatus === "active" ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Payment Completed</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile.subscriptionStatus === "active" 
+                          ? "Subscription active"
+                          : "Awaiting payment"}
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Step 4: Onboarding */}
+                  <div className="flex items-center gap-3">
+                    {profile.onboardingStatus === "completed" ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Onboarding Completed</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile.onboardingStatus === "completed"
+                          ? "All set!"
+                          : profile.onboardingStatus === "in_progress"
+                          ? "In progress..."
+                          : "Not started"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -589,12 +663,10 @@ const ClientDashboard = () => {
                       </Button>
                       <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
                     </div>
-                  ) : profile.subscriptionStatus === "active" ? (
+                  ) : (
                     <Button size="sm" onClick={() => navigate("/contract")}>
                       Sign Now
                     </Button>
-                  ) : (
-                    <Badge variant="outline">Complete payment first</Badge>
                   )}
                 </div>
               </CardContent>

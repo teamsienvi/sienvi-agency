@@ -694,12 +694,6 @@ serve(async (req) => {
 
     switch (action) {
       case "sign_contract":
-        if (profile.subscription_status !== "active") {
-          return new Response(
-            JSON.stringify({ error: "Payment must be completed before signing contract" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
         updateData = {
           contract_status: "signed",
           contract_signed_at: signedAt,
