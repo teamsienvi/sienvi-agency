@@ -45,6 +45,8 @@ const Contract = () => {
   const [clientEmail, setClientEmail] = useState("");
   const [strategyPeriod, setStrategyPeriod] = useState("");
   const [confidentialityPeriod, setConfidentialityPeriod] = useState("5 years");
+  const [approvedWebsites, setApprovedWebsites] = useState("");
+  const [shopifySite, setShopifySite] = useState("");
   const [pdfNumPages, setPdfNumPages] = useState<number>(0);
 
   const onPdfLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
@@ -116,6 +118,8 @@ const Contract = () => {
       setClientEmail(details.clientEmail || profile.email || "");
       setStrategyPeriod(details.strategyPeriod || "");
       setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
+      setApprovedWebsites(details.approvedWebsites || "");
+      setShopifySite(details.shopifySite || "");
 
     } catch (error: any) {
       console.error("Error checking access:", error);
@@ -198,6 +202,8 @@ const Contract = () => {
         clientAddress: clientAddress.trim(),
         clientContactName: clientContactName.trim(),
         clientEmail: clientEmail.trim(),
+        approvedWebsites: approvedWebsites.trim(),
+        shopifySite: shopifySite.trim(),
         strategyPeriod: strategyPeriod.trim(),
         confidentialityPeriod: confidentialityPeriod.trim(),
         uploadedContractUrl: profile?.contractDetails?.uploadedContractUrl || null,
@@ -273,6 +279,18 @@ const Contract = () => {
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Email</td>
                 <td className="px-4 py-3 text-slate-800">{clientEmail}</td>
               </tr>
+              {approvedWebsites && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Approved Website(s)</td>
+                  <td className="px-4 py-3 text-slate-800">{approvedWebsites}</td>
+                </tr>
+              )}
+              {shopifySite && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Shopify Site for AI Assistant</td>
+                  <td className="px-4 py-3 text-slate-800">{shopifySite}</td>
+                </tr>
+              )}
               <tr className="bg-slate-50/30 print:bg-transparent">
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Legal Name</td>
                 <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
@@ -435,6 +453,32 @@ const Contract = () => {
                 />
               </td>
             </tr>
+            {profile?.contractDetails?.uploadedContractUrl && (
+              <>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600">Approved Website(s)</td>
+                  <td className="px-4 py-2">
+                    <Input
+                      placeholder="e.g., www.example.com"
+                      value={approvedWebsites}
+                      onChange={(e) => setApprovedWebsites(e.target.value)}
+                      className="max-w-md h-9 text-sm"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600">Shopify Site for AI Assistant</td>
+                  <td className="px-4 py-2">
+                    <Input
+                      placeholder="e.g., mystore.myshopify.com"
+                      value={shopifySite}
+                      onChange={(e) => setShopifySite(e.target.value)}
+                      className="max-w-md h-9 text-sm"
+                    />
+                  </td>
+                </tr>
+              </>
+            )}
             <tr className="bg-slate-50/30">
               <td className="px-4 py-3 font-semibold text-slate-600">Agency Legal Name</td>
               <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
