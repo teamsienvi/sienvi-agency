@@ -208,6 +208,23 @@ serve(async (req) => {
       throw new Error("Action link was not returned by Supabase Auth");
     }
 
+    // Generate short code and save to client_profiles notes
+    const shortCode = Math.random().toString(36).substring(2, 8);
+    const shortUrl = `${baseUrl}/join?c=${shortCode}`;
+
+    if (profile && (clientId || targetEmail)) {
+      const existingNotes = profile.notes || "";
+      // Remove previous MagicUrl tag if present
+      const cleanedNotes = existingNotes.replace(/\[MagicUrl:[^\]]+\]/g, "").trim();
+      const updatedNotes = `${cleanedNotes} [MagicUrl:${shortCode}:${loginUrl}]`.trim();
+
+      const query = clientId
+        ? supabaseAdmin.from("client_profiles").update({ notes: updatedNotes }).eq("id", clientId)
+        : supabaseAdmin.from("client_profiles").update({ notes: updatedNotes }).eq("email", targetEmail);
+
+      await query;
+    }
+
     const displayName = clientName || targetEmail.split("@")[0];
     const recipients = [...new Set([targetEmail, ...additionalEmails])].filter(
       (email) => email && typeof email === "string" && email.includes("@")
@@ -309,13 +326,15 @@ serve(async (req) => {
       }
     }
 
-    console.log("Generated 1-Click Onboarding Link for:", targetEmail, "loginUrl:", loginUrl, "emailSent:", emailSent);
+    console.log("Generated 1-Click Onboarding Link for:", targetEmail, "shortUrl:", shortUrl, "loginUrl:", loginUrl, "emailSent:", emailSent);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: emailSent ? "Login invite sent via email" : "1-Click Onboarding Link generated!",
-        loginUrl,
+        loginUrl: shortUrl || loginUrl,
+        rawUrl: loginUrl,
+        shortUrl,
         emailSent,
         emailError,
         emailId,

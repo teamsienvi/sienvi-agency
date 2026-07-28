@@ -18,7 +18,7 @@ import ClientDashboard from "./pages/ClientDashboard";
 import ClientLogin from "./pages/ClientLogin";
 import Onboarding from "./pages/Onboarding";
 import Contract from "./pages/Contract";
-import Referral from "./pages/Referral";
+import Join from "./pages/Join";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +32,7 @@ const App = () => (
           <AuthErrorHandler />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/join" element={<Join />} />
             <Route path="/success" element={<Success />} />
             <Route path="/select-services" element={<SelectServices />} />
             <Route path="/checkout-summary" element={<CheckoutSummary />} />
