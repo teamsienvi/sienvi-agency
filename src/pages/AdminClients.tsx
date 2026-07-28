@@ -114,6 +114,8 @@ const AdminClients = () => {
   const [emailingCheckoutLink, setEmailingCheckoutLink] = useState<string | null>(null);
   const [migratingToStripe, setMigratingToStripe] = useState<string | null>(null);
   const [onboardingViewClient, setOnboardingViewClient] = useState<Client | null>(null);
+  const [onboardingLinks, setOnboardingLinks] = useState<Record<string, string>>({});
+  const [generatingOnboardingLink, setGeneratingOnboardingLink] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -479,6 +481,7 @@ const AdminClients = () => {
       if (response.data?.error) throw new Error(response.data.error);
 
       if (response.data?.loginUrl) {
+        setOnboardingLinks((prev) => ({ ...prev, [client.id]: response.data.loginUrl }));
         await navigator.clipboard.writeText(response.data.loginUrl);
         toast.success("1-Click Onboarding Link copied to clipboard for " + client.email);
       } else {
@@ -489,6 +492,54 @@ const AdminClients = () => {
       toast.error(error.message || "Failed to send login invite");
     } finally {
       setSendingEmail(null);
+    }
+  };
+
+  const handleGenerateOnboardingLink = async (client: Client) => {
+    if (generatingOnboardingLink) return;
+    
+    setGeneratingOnboardingLink(client.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("send-login-invite", {
+        body: {
+          clientId: client.id,
+          clientEmail: client.email,
+          clientName: client.clientName,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        let errMsg = response.error.message;
+        try {
+          const errorContext = (response.error as any).context;
+          if (errorContext && typeof errorContext.json === "function") {
+            const body = await errorContext.json();
+            if (body?.error) errMsg = body.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+      if (response.data?.error) throw new Error(response.data.error);
+
+      const generatedUrl = response.data?.loginUrl;
+      if (generatedUrl) {
+        setOnboardingLinks((prev) => ({ ...prev, [client.id]: generatedUrl }));
+        await navigator.clipboard.writeText(generatedUrl);
+        toast.success("1-Click Onboarding Link copied to clipboard!");
+      } else {
+        toast.success(response.data?.message || "Link generated");
+      }
+    } catch (error: any) {
+      console.error("Error generating onboarding link:", error);
+      toast.error(error.message || "Failed to generate onboarding link");
+    } finally {
+      setGeneratingOnboardingLink(null);
     }
   };
 
@@ -898,8 +949,22 @@ const AdminClients = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleGenerateOnboardingLink(client)}
+                          title="Generate & Copy 1-Click Client Link"
+                          className="text-indigo-600 hover:text-indigo-700"
+                          disabled={generatingOnboardingLink === client.id}
+                        >
+                          {generatingOnboardingLink === client.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Link className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleSendLoginInvite(client)}
-                          title="Send Login Invite"
+                          title="Send Email Login Invite"
                           className="text-green-600 hover:text-green-700"
                           disabled={sendingEmail === client.id}
                         >
@@ -1218,6 +1283,80 @@ const AdminClients = () => {
                   </div>
                 </div>
 
+                <div className="border-t pt-4 text-slate-900">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-sm">1-Click Client Access & Onboarding Link</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Single setup URL: Sign Up ➔ Contract ➔ Payment ➔ Onboarding Access
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                      onClick={() => handleGenerateOnboardingLink(selectedClient)}
+                      disabled={generatingOnboardingLink === selectedClient.id}
+                    >
+                      {generatingOnboardingLink === selectedClient.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : onboardingLinks[selectedClient.id] ? (
+                        <Check className="w-3.5 h-3.5 mr-1.5 text-green-300" />
+                      ) : (
+                        <Link className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      {onboardingLinks[selectedClient.id] ? "Regenerate 1-Click Link" : "Generate 1-Click Link"}
+                    </Button>
+                  </div>
+
+                  {onboardingLinks[selectedClient.id] ? (
+                    <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-indigo-900">1-Click Client Onboarding URL:</span>
+                        <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
+                          Sign Up ➔ Contract ➔ Payment ➔ Access
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <code className="flex-1 text-xs bg-white p-2 rounded border border-indigo-200 text-indigo-950 font-mono break-all max-h-20 overflow-y-auto">
+                          {onboardingLinks[selectedClient.id]}
+                        </code>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(onboardingLinks[selectedClient.id], "modal-onboarding-link")}
+                          className="bg-white"
+                        >
+                          {copiedId === "modal-onboarding-link" ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-white"
+                          onClick={() => window.open(onboardingLinks[selectedClient.id], "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4 text-indigo-600" />
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-indigo-700 font-light">
+                        Send this single link directly to your client via chat, SMS, or email.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-muted/50 p-3 rounded-lg text-xs text-muted-foreground flex items-center justify-between">
+                      <span>Generate a single 1-Click link for this client to easily send over Slack, SMS, or Email.</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold"
+                        onClick={() => handleGenerateOnboardingLink(selectedClient)}
+                        disabled={generatingOnboardingLink === selectedClient.id}
+                      >
+                        Generate Now
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 {selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") && (
                   <div className="border-t pt-4">
                     <p className="text-sm text-muted-foreground mb-2">Stripe IDs</p>
@@ -1301,6 +1440,18 @@ const AdminClients = () => {
                     </Button>
                   ) : null}
                   <Button
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={() => handleGenerateOnboardingLink(selectedClient)}
+                    disabled={generatingOnboardingLink === selectedClient.id}
+                  >
+                    {generatingOnboardingLink === selectedClient.id ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Link className="w-4 h-4 mr-2" />
+                    )}
+                    {onboardingLinks[selectedClient.id] ? "Copy 1-Click Link" : "Generate 1-Click Link"}
+                  </Button>
+                  <Button
                     variant="outline"
                     onClick={() => handleSendLoginInvite(selectedClient)}
                     disabled={sendingEmail === selectedClient.id}
@@ -1310,7 +1461,7 @@ const AdminClients = () => {
                     ) : (
                       <Mail className="w-4 h-4 mr-2" />
                     )}
-                    Send Login Invite
+                    Send Email Invite
                   </Button>
                   <Button
                     variant="outline"
