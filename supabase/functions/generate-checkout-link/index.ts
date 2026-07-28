@@ -142,12 +142,39 @@ serve(async (req) => {
       const amazonPriceId = SERVICE_PRICE_IDS["amazon-design"];
       lineItems = [{ price: amazonPriceId, quantity: 1 }];
     } else if (plan === "custom" && customPrice) {
+      // Build human-readable service list for the checkout description
+      const SERVICE_LABELS: Record<string, string> = {
+        "social-media-suite": "Social Media Suite",
+        "ecommerce-operations": "E-Commerce Operations",
+        "custom-website": "Custom Website Development",
+        "seo-aeo": "SEO/AEO Package",
+        "custom-lms": "Custom LMS Package",
+        "custom-gpt": "Custom GPT Product",
+        "custom-tool": "Custom Tool",
+        "advertising-package": "Advertising",
+        "amazon-design": "Amazon Design Package",
+        "custom-ai-assistant": "Custom AI Assistant",
+        "channel-google": "Google Ads",
+        "channel-meta": "Meta Ads",
+        "channel-tiktok": "TikTok Ads",
+        "channel-linkedin": "LinkedIn Ads",
+        "channel-youtube": "YouTube Ads",
+        "channel-pinterest": "Pinterest Ads",
+        "channel-x": "X (Twitter) Ads",
+        "channel-amazon": "Amazon Ads",
+      };
+      const serviceList = (selectedServices || [])
+        .map((s: string) => SERVICE_LABELS[s] || s)
+        .filter(Boolean);
+      const servicesSummary = serviceList.length > 0 ? serviceList.join(", ") : "Custom Services";
+
       const price = await stripe.prices.create({
         unit_amount: Math.round(customPrice * 100),
         currency: "usd",
         recurring: { interval: "month" },
         product_data: {
           name: `Custom Plan - ${clientEmail}`,
+          description: servicesSummary,
         },
       });
       lineItems = [{ price: price.id, quantity: 1 }];
