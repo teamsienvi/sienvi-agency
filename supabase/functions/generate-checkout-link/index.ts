@@ -173,8 +173,7 @@ serve(async (req) => {
         currency: "usd",
         recurring: { interval: "month" },
         product_data: {
-          name: `Custom Plan - ${clientEmail}`,
-          description: servicesSummary,
+          name: `Custom Plan - ${clientEmail} (${servicesSummary})`,
         },
       });
       lineItems = [{ price: price.id, quantity: 1 }];
