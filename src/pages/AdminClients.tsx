@@ -174,14 +174,17 @@ const AdminClients = () => {
   };
 
   const getStatusBadge = (client: Client) => {
-    // Canceled/inactive takes priority over all other statuses
-    if (!client.isActive || client.subscriptionStatus === "canceled") {
+    // Explicitly canceled subscription takes highest priority
+    if (client.subscriptionStatus === "canceled") {
       return <Badge variant="destructive">Canceled</Badge>;
     }
     if (client.subscriptionStatus === "past_due") {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Past Due</Badge>;
     }
     if (client.subscriptionStatus === "pending_payment") {
+      if (client.contractStatus === "not_signed" && client.plan !== "advertising") {
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Contract</Badge>;
+      }
       return <Badge className="bg-orange-500 hover:bg-orange-600">Awaiting Payment</Badge>;
     }
     if (client.contractStatus === "not_signed" && client.plan !== "advertising") {
