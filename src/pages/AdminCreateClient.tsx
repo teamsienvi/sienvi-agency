@@ -671,21 +671,18 @@ const AdminCreateClient = () => {
                     </Select>
                   </div>
                   <div className="space-y-2 col-span-2 mt-2">
-                    <Label htmlFor="contractFile" className="font-semibold text-sm">Upload Signed Contract Document (Optional)</Label>
+                    <Label htmlFor="contractFile" className="font-semibold text-sm">Upload Contract Document (Optional)</Label>
                     <Input
                       id="contractFile"
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,.doc,.docx"
                       onChange={(e) => {
                         handleFileChange(e);
-                        if (e.target.files && e.target.files.length > 0) {
-                          setFormData((prev) => ({ ...prev, contractStatus: "signed" }));
-                        }
                       }}
                       className="bg-background cursor-pointer text-foreground file:text-foreground"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      If the client signed their contract before profile creation, upload the PDF here. This links the document to their profile and automatically marks their contract status as "Signed".
+                      Upload a contract document (PDF or Word). This can be a signed copy or a template for the client to review and sign during onboarding.
                     </p>
                   </div>
                 </div>
