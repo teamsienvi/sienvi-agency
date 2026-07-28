@@ -19,6 +19,7 @@ import ClientLogin from "./pages/ClientLogin";
 import Onboarding from "./pages/Onboarding";
 import Contract from "./pages/Contract";
 import Join from "./pages/Join";
+import Referral from "./pages/Referral";
 
 const queryClient = new QueryClient();
 
