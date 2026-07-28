@@ -785,14 +785,15 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
         </CardContent>
       </Card>
 
-      {/* Submit Button */}
-      <div className="flex justify-end gap-4">
+      {/* Submit */}
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
         <Button 
           type="button" 
           variant="outline" 
           size="lg" 
           disabled={saving} 
           onClick={handleSaveDraft}
+          className="w-full sm:w-auto"
         >
           {saving ? (
             <>
@@ -803,7 +804,7 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
             "Save Draft"
           )}
         </Button>
-        <Button type="submit" size="lg" disabled={saving} className="bg-orange-600 hover:bg-orange-700">
+        <Button type="submit" disabled={saving} size="lg" className="w-full sm:w-auto">
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -812,7 +813,7 @@ export const AmazonOnboardingForm = ({ clientProfileId, onComplete, initialData 
           ) : (
             <>
               <CheckCircle2 className="w-4 h-4 mr-2" />
-              Complete Amazon Questionnaire
+              Complete Onboarding
             </>
           )}
         </Button>

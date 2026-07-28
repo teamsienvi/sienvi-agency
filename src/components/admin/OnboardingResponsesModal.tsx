@@ -935,15 +935,15 @@ export const OnboardingResponsesModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto text-slate-900">
-        <DialogHeader className="flex flex-row items-center justify-between pr-6 border-b pb-4 mb-4">
-          <DialogTitle className="text-xl font-bold">Onboarding Responses - {clientName}</DialogTitle>
+      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto text-slate-900 p-4 sm:p-6">
+        <DialogHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-4 mb-4 pr-6 sm:pr-0">
+          <DialogTitle className="text-lg sm:text-xl font-bold">Onboarding Responses - {clientName}</DialogTitle>
           {!loading && (
             <Button
               onClick={handleDownloadPDF}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2 border-primary/20 hover:border-primary/50 text-primary hover:bg-primary/5 hover:text-primary-dark transition-colors"
+              className="flex items-center gap-2 border-primary/20 hover:border-primary/50 text-primary hover:bg-primary/5 hover:text-primary-dark transition-colors w-full sm:w-auto justify-center"
             >
               <Download className="w-4 h-4" />
               Download PDF
@@ -957,7 +957,7 @@ export const OnboardingResponsesModal = ({
           </div>
         ) : (
           <Tabs defaultValue={onboardingType === "amazon" ? "amazon" : onboardingType === "discovery" ? "questionnaire" : "goals"} className="w-full">
-            <TabsList className={`grid w-full ${onboardingType === "amazon" || onboardingType === "discovery" ? "grid-cols-1" : "grid-cols-3"}`}>
+            <TabsList className={`grid w-full h-auto ${onboardingType === "amazon" || onboardingType === "discovery" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-0"}`}>
               {onboardingType === "amazon" ? (
                 <TabsTrigger value="amazon" className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4" />

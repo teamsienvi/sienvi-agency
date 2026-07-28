@@ -537,12 +537,12 @@ export const AmazonAdsOnboardingForm = ({ clientProfileId, onComplete, initialDa
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex justify-between items-center">
-        <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={saving}>
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-between items-stretch sm:items-center gap-3 w-full">
+        <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={saving} className="w-full sm:w-auto">
           {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Save Draft
         </Button>
-        <Button type="submit" disabled={saving}>
+        <Button type="submit" disabled={saving} className="w-full sm:w-auto">
           {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Submit & Complete Onboarding
         </Button>

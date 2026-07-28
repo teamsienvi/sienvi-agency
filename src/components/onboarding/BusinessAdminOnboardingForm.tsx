@@ -534,13 +534,13 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
       </Card>
 
       {/* Progress Wizard */}
-      <div className="flex flex-wrap justify-between items-center gap-2 border-b pb-4">
+      <div className="flex overflow-x-auto no-scrollbar gap-2 border-b pb-3 py-1 font-medium -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-between">
         {steps.map((step, idx) => (
           <button
             key={step.id}
             type="button"
             onClick={() => setActiveStep(idx)}
-            className={`px-3 py-1.5 rounded-lg text-sm transition-all font-medium ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-all font-medium ${
               activeStep === idx
                 ? "bg-indigo-600 text-white shadow-sm"
                 : idx < activeStep
@@ -1115,23 +1115,25 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
       </div>
 
       {/* Control Buttons */}
-      <div className="flex justify-between items-center pt-6 border-t">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-between items-stretch sm:items-center gap-3 pt-6 border-t">
         <Button
           type="button"
           variant="outline"
           onClick={prevStep}
           disabled={activeStep === 0 || saving}
+          className="w-full sm:w-auto"
         >
           <ChevronLeft className="w-4 h-4 mr-2" />
           Previous
         </Button>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
           <Button
             type="button"
             variant="outline"
             disabled={saving}
             onClick={handleSaveDraft}
+            className="w-full sm:w-auto"
           >
             {saving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1144,7 +1146,7 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
               type="button"
               onClick={nextStep}
               disabled={saving}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto"
             >
               Next
               <ChevronRight className="w-4 h-4 ml-2" />
@@ -1153,7 +1155,7 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
             <Button
               type="submit"
               disabled={saving}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
             >
               {saving ? (
                 <>

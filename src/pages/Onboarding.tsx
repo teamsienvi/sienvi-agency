@@ -274,37 +274,37 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-6">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              Back to Dashboard
             </Button>
           </div>
 
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-1.5 sm:space-y-2">
             <Badge className="bg-primary">Onboarding</Badge>
-            <h1 className="text-3xl font-bold">Complete Your Onboarding</h1>
-            <p className="text-muted-foreground">Step {currentStep + 1} of {totalSteps}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Complete Your Onboarding</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Step {currentStep + 1} of {totalSteps}: <span className="font-semibold text-foreground">{steps[currentStep]?.title}</span></p>
           </div>
 
-          <div className="flex justify-center gap-4">
+          <div className="flex overflow-x-auto no-scrollbar gap-2 sm:gap-4 justify-start sm:justify-center py-2 px-1 max-w-full">
             {steps.map((step, index) => (
               <button
                 key={step.id}
                 onClick={() => (completedSteps[index] || index <= completedSteps.filter(Boolean).length) && setCurrentStep(index)}
                 disabled={index > completedSteps.filter(Boolean).length}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg transition-all shrink-0 text-xs sm:text-sm font-medium ${
                   currentStep === index
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : completedSteps[index]
                     ? "bg-green-100 text-green-700"
                     : "bg-muted text-muted-foreground"
                 } ${index > completedSteps.filter(Boolean).length ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:opacity-80"}`}
               >
-                {completedSteps[index] ? <CheckCircle2 className="w-5 h-5" /> : index > completedSteps.filter(Boolean).length ? <Lock className="w-5 h-5" /> : step.icon}
-                <span className="hidden sm:inline">{step.title}</span>
+                {completedSteps[index] ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-green-600" /> : index > completedSteps.filter(Boolean).length ? <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> : <span className="shrink-0">{step.icon}</span>}
+                <span className="whitespace-nowrap">{step.title}</span>
               </button>
             ))}
           </div>

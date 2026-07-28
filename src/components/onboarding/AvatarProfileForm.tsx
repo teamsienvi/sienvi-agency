@@ -449,13 +449,14 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
       </Card>
 
       {/* Submit */}
-      <div className="flex justify-end gap-4">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
         <Button 
           type="button" 
           variant="outline" 
           size="lg" 
           disabled={saving} 
           onClick={handleSaveDraft}
+          className="w-full sm:w-auto"
         >
           {saving ? (
             <>
@@ -466,7 +467,7 @@ export const AvatarProfileForm = ({ clientProfileId, onComplete, initialData }: 
             "Save Draft"
           )}
         </Button>
-        <Button type="submit" disabled={saving} size="lg">
+        <Button type="submit" disabled={saving} size="lg" className="w-full sm:w-auto">
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
