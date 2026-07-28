@@ -476,7 +476,7 @@ const ClientDashboard = () => {
                       Need to add more details? Feel free to contact our specialists directly.
                     </p>
                     <a
-                      href="mailto:teamsienvi@gmail.com"
+                      href="mailto:info@sienvi.com,teamsienvi@gmail.com"
                       className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-white hover:bg-slate-50 h-10 px-4 py-2 text-indigo-600 font-semibold shadow-sm"
                     >
                       Email Support Team
@@ -704,9 +704,12 @@ const ClientDashboard = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-2">
-                <p className="font-medium">Need Help?</p>
-                <p className="text-sm text-muted-foreground">
-                  Contact us at <a href="mailto:support@sienvi.com" className="text-primary hover:underline">support@sienvi.com</a>
+                <p className="font-medium text-slate-800">Need Help?</p>
+                <p className="text-sm text-muted-foreground flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+                  <span>Contact us at</span>
+                  <a href="mailto:info@sienvi.com" className="text-primary font-medium hover:underline">info@sienvi.com</a>
+                  <span>or</span>
+                  <a href="mailto:teamsienvi@gmail.com" className="text-primary font-medium hover:underline">teamsienvi@gmail.com</a>
                 </p>
               </div>
             </CardContent>

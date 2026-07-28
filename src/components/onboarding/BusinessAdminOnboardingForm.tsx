@@ -262,6 +262,10 @@ export const BusinessAdminOnboardingForm = ({ clientProfileId, onComplete, initi
   const [saving, setSaving] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }, [activeStep]);
+
   const { register, handleSubmit, formState: { errors }, watch, setValue, getValues } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {

@@ -52,6 +52,10 @@ const Onboarding = () => {
     checkAccessAndLoadData();
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }, [currentStep]);
+
   const checkAccessAndLoadData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
