@@ -173,6 +173,11 @@
   .blueprint-light-filter {
     filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.05);
   }
+
+  /* Hide scrollbar for horizontal scroll containers */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Light mode overrides for dark-themed color utilities, excluding elements inside dark containers or footers */

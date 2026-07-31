@@ -8,6 +8,7 @@ import Pricing from "@/components/Pricing";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 import TestimonialsCarousel from "@/components/testimonials/TestimonialsCarousel";
+import SocialEducation from "@/components/SocialEducation";
 import { motion } from "framer-motion";
 import { BlueprintCanvas } from "@/components/BlueprintCanvas";
 import { useEffect } from "react";
@@ -136,6 +137,7 @@ const Index = () => {
       <Services />
       <About />
       <TestimonialsCarousel testimonials={testimonials} />
+      <SocialEducation />
       <Process />
       <Pricing />
       <Contact />
