@@ -94,10 +94,12 @@ serve(async (req) => {
       });
 
       if (!probe.error && probe.data?.user) {
-        const hasSignedIn = !!probe.data.user.last_sign_in_at;
-        if (!hasSignedIn) {
-          // Never signed in → new user → password setup
-          // MUST use "invite" type so the auth redirect hash contains type=invite,
+        // Check user_metadata.password_set (set by the password setup form).
+        // We DON'T use last_sign_in_at because admin test clicks contaminate it.
+        const hasSetPassword = !!probe.data.user.user_metadata?.password_set;
+        if (!hasSetPassword) {
+          // Password not yet set → password setup first
+          // Use "invite" type so auth redirect hash contains type=invite,
           // which AuthErrorHandler catches and routes to /login?setup=password
           redirectPath = "/login?setup=password";
           linkType = "invite";

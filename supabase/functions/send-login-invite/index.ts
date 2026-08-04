@@ -127,8 +127,8 @@ serve(async (req) => {
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
 
-    const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
-    const isNewUser = !existingAuthUser || !hasSignedIn;
+    const hasSetPassword = !!existingAuthUser?.user_metadata?.password_set;
+    const isNewUser = !existingAuthUser || !hasSetPassword;
 
     if (isNewUser) {
       redirectPath = "/login?setup=password";

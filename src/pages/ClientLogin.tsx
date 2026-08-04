@@ -208,6 +208,7 @@ const ClientLogin = () => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
+        data: { password_set: true },
       });
 
       if (error) {
