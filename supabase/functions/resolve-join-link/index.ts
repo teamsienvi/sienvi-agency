@@ -64,19 +64,7 @@ serve(async (req) => {
 
     const targetEmail = profile.email.split(/[,;]/)[0].trim().toLowerCase();
 
-    // --- Check auth status ---
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const existingAuthUser = authUsers?.users?.find(
-      (u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase()
-    );
-    const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
-    // Only use last_sign_in_at to determine new user status.
-    // email_confirmed_at is unreliable because admin.generateLink({ type: "invite" })
-    // automatically confirms the email when the auth user is created.
-    const isNewUser = !existingAuthUser || !hasSignedIn;
-
-    // --- Account "fully set up" check ---
-    // Only expire once the entire flow is done: contract signed + paid + onboarding complete
+    // --- Account "fully set up" check (from profile data, no auth call needed) ---
     const isFullySetUp =
       profile.contract_status === "signed" &&
       profile.subscription_status !== "pending_payment" &&
@@ -89,48 +77,65 @@ serve(async (req) => {
       );
     }
 
-    // --- Dynamically derive redirect path from current client status ---
-    // This ensures the link always sends the client to the correct step, no matter when they click
+    // --- Derive redirect path from profile status ---
+    // For most steps, the profile data alone tells us the redirect. The only ambiguous case
+    // is when contract_status="not_signed" — could be a brand-new user needing password setup
+    // or an existing user who needs to sign their contract. We resolve this by trying
+    // generateLink(magiclink) — if it succeeds, the user exists and we check last_sign_in_at.
     let redirectPath = "/dashboard";
-    if (isNewUser) {
-      redirectPath = "/login?setup=password";
-    } else if (profile.contract_status === "not_signed") {
-      redirectPath = "/contract";
+    let linkType: "invite" | "magiclink" = "magiclink";
+
+    if (profile.contract_status === "not_signed") {
+      // Ambiguous: new user or needs contract? Try magiclink to find out.
+      const probe = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: targetEmail,
+        options: { redirectTo: "https://sienvi.com/contract" },
+      });
+
+      if (!probe.error && probe.data?.user) {
+        const hasSignedIn = !!probe.data.user.last_sign_in_at;
+        if (!hasSignedIn) {
+          // Never signed in → new user → password setup
+          redirectPath = "/login?setup=password";
+          linkType = "magiclink"; // user exists (created by invite) but never signed in
+        } else {
+          redirectPath = "/contract";
+          linkType = "magiclink";
+        }
+      } else {
+        // User doesn't exist at all → brand new → invite + password setup
+        redirectPath = "/login?setup=password";
+        linkType = "invite";
+      }
     } else if (profile.subscription_status === "pending_payment") {
       redirectPath = profile.plan ? `/checkout-summary?plan=${profile.plan}` : "/checkout-summary";
     } else if (profile.contract_status === "signed" && profile.onboarding_status !== "completed") {
       redirectPath = "/onboarding";
     }
 
-    // --- Generate a fresh magic link on-the-fly (never stale) ---
-    const linkType: "invite" | "magiclink" = !existingAuthUser ? "invite" : "magiclink";
+    // --- Generate the final magic link with the correct redirect ---
     let linkData: any = null;
-
-    const firstAttempt = await supabaseAdmin.auth.admin.generateLink({
+    const attempt = await supabaseAdmin.auth.admin.generateLink({
       type: linkType,
       email: targetEmail,
-      options: {
-        redirectTo: `https://sienvi.com${redirectPath}`,
-      },
+      options: { redirectTo: `https://sienvi.com${redirectPath}` },
     });
 
-    if (!firstAttempt.error && firstAttempt.data) {
-      linkData = firstAttempt.data;
+    if (!attempt.error && attempt.data) {
+      linkData = attempt.data;
     } else {
-      // Fallback to opposite link type
+      // Fallback to opposite type
       const fallbackType = linkType === "invite" ? "magiclink" : "invite";
-      const fallbackAttempt = await supabaseAdmin.auth.admin.generateLink({
+      const fallback = await supabaseAdmin.auth.admin.generateLink({
         type: fallbackType,
         email: targetEmail,
-        options: {
-          redirectTo: `https://sienvi.com${redirectPath}`,
-        },
+        options: { redirectTo: `https://sienvi.com${redirectPath}` },
       });
-
-      if (!fallbackAttempt.error && fallbackAttempt.data) {
-        linkData = fallbackAttempt.data;
+      if (!fallback.error && fallback.data) {
+        linkData = fallback.data;
       } else {
-        console.error("Failed to generate fresh link:", firstAttempt.error, fallbackAttempt.error);
+        console.error("Failed to generate link:", attempt.error, fallback.error);
         return new Response(
           JSON.stringify({ error: "Unable to generate login link. Please contact support." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -146,7 +151,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Resolved join link for:", targetEmail, "→", redirectPath, "(linkType:", linkType, ")");
+    console.log("Resolved join link for:", targetEmail, "→", redirectPath);
 
     return new Response(
       JSON.stringify({ targetUrl, clientEmail: targetEmail, redirectPath }),
