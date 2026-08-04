@@ -91,6 +91,12 @@ export const EditClientModal = ({
   const [additionalEmails, setAdditionalEmails] = useState("");
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [existingContractName, setExistingContractName] = useState<string | null>(null);
+  const [contractTerms, setContractTerms] = useState({
+    initialTerm: "6 months",
+    noticePeriod: "30 days",
+    billingTerms: "Initial payment due upon full execution; recurring invoices monthly from Effective Date",
+    serviceDelivery: "Remote unless otherwise agreed in writing",
+  });
   const [formData, setFormData] = useState({
     clientName: "",
     email: "",
@@ -138,8 +144,15 @@ export const EditClientModal = ({
         contractStatus: client.contractStatus || "not_signed",
       });
 
-      // Load existing contract name if available
-      setExistingContractName((client as any).contractDetails?.uploadedContractName || null);
+      // Load existing contract name and terms if available
+      const cd = (client as any).contractDetails || {};
+      setExistingContractName(cd.uploadedContractName || null);
+      setContractTerms({
+        initialTerm: cd.initialTerm || "6 months",
+        noticePeriod: cd.noticePeriod || "30 days",
+        billingTerms: cd.billingTerms || "Initial payment due upon full execution; recurring invoices monthly from Effective Date",
+        serviceDelivery: cd.serviceDelivery || "Remote unless otherwise agreed in writing",
+      });
       setContractFile(null);
     }
   }, [client]);
@@ -242,6 +255,13 @@ export const EditClientModal = ({
         contractDetails = {
           uploadedContractUrl: urlData?.publicUrl || null,
           uploadedContractName: contractFile.name,
+          ...contractTerms,
+        };
+      } else {
+        // Even without a new file upload, always send contract terms
+        contractDetails = {
+          ...((client as any)?.contractDetails || {}),
+          ...contractTerms,
         };
       }
 
@@ -393,6 +413,48 @@ export const EditClientModal = ({
               <p className="text-xs text-muted-foreground mt-1">
                 Upload a contract document (PDF or Word). This can be a signed copy or a template for the client to review and sign.
               </p>
+            </div>
+            {/* Contract Terms */}
+            <div className="col-span-2 space-y-3 mt-2 p-4 bg-muted/50 rounded-lg border">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contract Terms</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-initialTerm">Initial Term</Label>
+                  <Input
+                    id="edit-initialTerm"
+                    value={contractTerms.initialTerm}
+                    onChange={(e) => setContractTerms((prev) => ({ ...prev, initialTerm: e.target.value }))}
+                    placeholder="e.g., 6 months"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-noticePeriod">Notice Period</Label>
+                  <Input
+                    id="edit-noticePeriod"
+                    value={contractTerms.noticePeriod}
+                    onChange={(e) => setContractTerms((prev) => ({ ...prev, noticePeriod: e.target.value }))}
+                    placeholder="e.g., 30 days"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-billingTerms">Billing and Due Date</Label>
+                <Input
+                  id="edit-billingTerms"
+                  value={contractTerms.billingTerms}
+                  onChange={(e) => setContractTerms((prev) => ({ ...prev, billingTerms: e.target.value }))}
+                  placeholder="e.g., Initial payment due upon full execution..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-serviceDelivery">Service Delivery</Label>
+                <Input
+                  id="edit-serviceDelivery"
+                  value={contractTerms.serviceDelivery}
+                  onChange={(e) => setContractTerms((prev) => ({ ...prev, serviceDelivery: e.target.value }))}
+                  placeholder="e.g., Remote unless otherwise agreed in writing"
+                />
+              </div>
             </div>
           </div>
 

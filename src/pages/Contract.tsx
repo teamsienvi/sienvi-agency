@@ -65,6 +65,13 @@ const Contract = () => {
   const monthlyPrice = profile?.customPrice ?? profile?.custom_price ?? planDefaultPrices[profile?.plan] ?? 0;
   const formattedPrice = `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
 
+  // Contract terms — per-client values from contractDetails, with sensible defaults
+  const cd = profile?.contractDetails || {};
+  const initialTerm = cd.initialTerm || "6 months";
+  const noticePeriod = cd.noticePeriod || "30 days";
+  const billingTerms = cd.billingTerms || "Initial payment due upon full execution; recurring invoices monthly from Effective Date";
+  const serviceDelivery = cd.serviceDelivery || "Remote unless otherwise agreed in writing";
+
   useEffect(() => {
     checkAccess();
   }, []);
@@ -316,7 +323,7 @@ const Contract = () => {
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Initial Term</td>
-                <td className="px-4 py-3 text-slate-800">6 months</td>
+                <td className="px-4 py-3 text-slate-800">{initialTerm}</td>
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Month-to-Month Renewal</td>
@@ -328,11 +335,11 @@ const Contract = () => {
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Billing and Due Date</td>
-                <td className="px-4 py-3 text-slate-800">Initial payment due upon full execution; recurring invoices monthly from Effective Date</td>
+                <td className="px-4 py-3 text-slate-800">{billingTerms}</td>
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Service Delivery</td>
-                <td className="px-4 py-3 text-slate-800">Remote unless otherwise agreed in writing</td>
+                <td className="px-4 py-3 text-slate-800">{serviceDelivery}</td>
               </tr>
               {strategyPeriod && (
                 <tr>
@@ -504,7 +511,7 @@ const Contract = () => {
             </tr>
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Initial Term</td>
-              <td className="px-4 py-3 text-slate-800">6 months</td>
+              <td className="px-4 py-3 text-slate-800">{initialTerm}</td>
             </tr>
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Month-to-Month Renewal</td>
@@ -516,11 +523,11 @@ const Contract = () => {
             </tr>
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Billing and Due Date</td>
-              <td className="px-4 py-3 text-slate-800">Initial payment due upon full execution; recurring invoices monthly from Effective Date</td>
+              <td className="px-4 py-3 text-slate-800">{billingTerms}</td>
             </tr>
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Service Delivery</td>
-              <td className="px-4 py-3 text-slate-800">Remote unless otherwise agreed in writing</td>
+              <td className="px-4 py-3 text-slate-800">{serviceDelivery}</td>
             </tr>
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Strategy Discussion Date / Period</td>
@@ -761,8 +768,8 @@ const Contract = () => {
 
                   <h4 className="font-semibold mt-4">3. Term and Termination</h4>
                   <p>
-                    This Agreement shall commence on the date of signing and continue in effect for the Initial Term of 6 months and on a 
-                    month-to-month basis thereafter, unless terminated earlier by either party with 30 days written notice.
+                    This Agreement shall commence on the date of signing and continue in effect for the Initial Term of {initialTerm} and on a 
+                    month-to-month basis thereafter, unless terminated earlier by either party with {noticePeriod} written notice.
                   </p>
 
                   <h4 className="font-semibold mt-4">4. Confidentiality</h4>
@@ -811,7 +818,7 @@ const Contract = () => {
                   <div className="border-t pt-4 mt-6">
                     <h3 className="font-semibold text-base mb-2">Exhibit B: Payment Terms</h3>
                     <ul className="list-disc pl-5 space-y-1">
-                      <li><strong>Fee Structure:</strong> {formattedPrice} for 6 months.</li>
+                      <li><strong>Fee Structure:</strong> {formattedPrice} for {initialTerm}.</li>
                       <li><strong>Payment Schedule:</strong> Payments to be made on a monthly basis, within 7 days of invoice receipt on the 7th of each month.</li>
                       <li><strong>Late Payment:</strong> Late payments may incur a late fee of 2% per month on the overdue amount.</li>
                       <li><strong>Expenses:</strong> The Client is responsible for any additional costs agreed upon for all payments to be made directly to third-party vendors unless otherwise agreed. This includes PPC costs on all applicable advertising platforms such as Amazon and other related e-commerce and social channels.</li>
