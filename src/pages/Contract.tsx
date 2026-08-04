@@ -330,6 +330,10 @@ const Contract = () => {
                 <td className="px-4 py-3 text-slate-800">Yes, after the Initial Term</td>
               </tr>
               <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Notice Period</td>
+                <td className="px-4 py-3 text-slate-800">{noticePeriod} written notice</td>
+              </tr>
+              <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Monthly Fee</td>
                 <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{getPlanPrice()}</td>
               </tr>
@@ -516,6 +520,10 @@ const Contract = () => {
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Month-to-Month Renewal</td>
               <td className="px-4 py-3 text-slate-800">Yes, after the Initial Term</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600">Notice Period</td>
+              <td className="px-4 py-3 text-slate-800">{noticePeriod} written notice</td>
             </tr>
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Monthly Fee</td>
