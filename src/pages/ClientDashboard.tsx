@@ -151,9 +151,10 @@ const ClientDashboard = () => {
       setIsAdmin(response.data.isAdmin);
 
       // Route users based on onboarding sequence: Unique sign-up link -> Contract -> Payment -> Full Access
+      // Skip enforcement for admins so they don't get stuck when testing client links
       const isAdvertising = clientProfile.plan === "advertising";
       
-      if (!isAdvertising && !isDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
+      if (!response.data.isAdmin && !isAdvertising && !isDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
         // Step 2: Enforce Contract Signing before Payment & Full Access
         navigate("/contract");
         return;

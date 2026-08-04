@@ -216,7 +216,7 @@ serve(async (req) => {
       const existingNotes = profile.notes || "";
       // Remove previous MagicUrl tag if present
       const cleanedNotes = existingNotes.replace(/\[MagicUrl:[^\]]+\]/g, "").trim();
-      const updatedNotes = `${cleanedNotes} [MagicUrl:${shortCode}:${loginUrl}]`.trim();
+      const updatedNotes = `${cleanedNotes} [MagicUrl:${shortCode}:${redirectPath}]`.trim();
 
       const query = clientId
         ? supabaseAdmin.from("client_profiles").update({ notes: updatedNotes }).eq("id", clientId)
@@ -288,7 +288,7 @@ serve(async (req) => {
                 </div>
                 ` : ''}
                 
-                <p style="margin: 20px 0 0 0; font-size: 12px; color: #9ca3af; text-align: center;">This link expires in 24 hours. If you didn't request this, you can ignore this email.</p>
+                <p style="margin: 20px 0 0 0; font-size: 12px; color: #9ca3af; text-align: center;">If you didn't request this, you can ignore this email.</p>
               </div>
             </td>
           </tr>

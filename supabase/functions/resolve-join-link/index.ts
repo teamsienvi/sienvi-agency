@@ -32,27 +32,28 @@ serve(async (req) => {
     if (code) {
       const { data } = await supabaseAdmin
         .from("client_profiles")
-        .select("id, email, notes")
+        .select("id, email, notes, contract_status, subscription_status, onboarding_status")
         .ilike("notes", `%[MagicUrl:${code}:%`)
         .maybeSingle();
       profile = data;
     } else if (clientId) {
       const { data } = await supabaseAdmin
         .from("client_profiles")
-        .select("id, email, notes")
+        .select("id, email, notes, contract_status, subscription_status, onboarding_status")
         .eq("id", clientId)
         .maybeSingle();
       profile = data;
     }
 
-    if (!profile || !profile.notes) {
+    if (!profile || !profile.notes || !profile.email) {
       return new Response(
         JSON.stringify({ error: "Link expired or invalid. Please request a new invite link from support." }),
         { status: 444, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Extract the magic link from notes: [MagicUrl:code:URL]
+    // Extract the stored redirect path from notes: [MagicUrl:code:redirectPath]
+    // Legacy format also supported: [MagicUrl:code:https://...]
     const match = profile.notes.match(/\[MagicUrl:(?:[^:]+):([^\]]+)\]/);
     if (!match || !match[1]) {
       return new Response(
@@ -61,10 +62,92 @@ serve(async (req) => {
       );
     }
 
-    const targetUrl = match[1];
+    const targetEmail = profile.email.split(/[,;]/)[0].trim().toLowerCase();
+
+    // --- Check auth status ---
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const existingAuthUser = authUsers?.users?.find(
+      (u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase()
+    );
+    const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
+    const hasConfirmedEmail = !!existingAuthUser?.email_confirmed_at;
+    const isNewUser = !existingAuthUser || (!hasSignedIn && !hasConfirmedEmail);
+
+    // --- Account "fully set up" check ---
+    // Only expire once the entire flow is done: contract signed + paid + onboarding complete
+    const isFullySetUp =
+      profile.contract_status === "signed" &&
+      profile.subscription_status !== "pending_payment" &&
+      profile.onboarding_status === "completed";
+
+    if (isFullySetUp) {
+      return new Response(
+        JSON.stringify({ error: "Your account has already been set up! Please sign in directly at sienvi.com/login" }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --- Dynamically derive redirect path from current client status ---
+    // This ensures the link always sends the client to the correct step, no matter when they click
+    let redirectPath = "/dashboard";
+    if (isNewUser) {
+      redirectPath = "/login?setup=password";
+    } else if (profile.contract_status === "not_signed") {
+      redirectPath = "/contract";
+    } else if (profile.subscription_status === "pending_payment") {
+      redirectPath = "/checkout-summary";
+    } else if (profile.contract_status === "signed" && profile.onboarding_status !== "completed") {
+      redirectPath = "/onboarding";
+    }
+
+    // --- Generate a fresh magic link on-the-fly (never stale) ---
+    const linkType: "invite" | "magiclink" = !existingAuthUser ? "invite" : "magiclink";
+    let linkData: any = null;
+
+    const firstAttempt = await supabaseAdmin.auth.admin.generateLink({
+      type: linkType,
+      email: targetEmail,
+      options: {
+        redirectTo: `https://sienvi.com${redirectPath}`,
+      },
+    });
+
+    if (!firstAttempt.error && firstAttempt.data) {
+      linkData = firstAttempt.data;
+    } else {
+      // Fallback to opposite link type
+      const fallbackType = linkType === "invite" ? "magiclink" : "invite";
+      const fallbackAttempt = await supabaseAdmin.auth.admin.generateLink({
+        type: fallbackType,
+        email: targetEmail,
+        options: {
+          redirectTo: `https://sienvi.com${redirectPath}`,
+        },
+      });
+
+      if (!fallbackAttempt.error && fallbackAttempt.data) {
+        linkData = fallbackAttempt.data;
+      } else {
+        console.error("Failed to generate fresh link:", firstAttempt.error, fallbackAttempt.error);
+        return new Response(
+          JSON.stringify({ error: "Unable to generate login link. Please contact support." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    const targetUrl = linkData.properties?.action_link || "";
+    if (!targetUrl) {
+      return new Response(
+        JSON.stringify({ error: "Failed to create authentication link. Please contact support." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Resolved join link for:", targetEmail, "→", redirectPath, "(linkType:", linkType, ")");
 
     return new Response(
-      JSON.stringify({ targetUrl }),
+      JSON.stringify({ targetUrl, clientEmail: targetEmail, redirectPath }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
