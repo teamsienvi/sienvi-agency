@@ -86,7 +86,7 @@ serve(async (req) => {
     let linkType: "invite" | "magiclink" = "magiclink";
 
     if (profile.contract_status === "not_signed") {
-      // Ambiguous: new user or needs contract? Try magiclink to find out.
+      // Ambiguous: new user or needs contract? Try magiclink to probe user state.
       const probe = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
         email: targetEmail,
@@ -97,8 +97,10 @@ serve(async (req) => {
         const hasSignedIn = !!probe.data.user.last_sign_in_at;
         if (!hasSignedIn) {
           // Never signed in → new user → password setup
+          // MUST use "invite" type so the auth redirect hash contains type=invite,
+          // which AuthErrorHandler catches and routes to /login?setup=password
           redirectPath = "/login?setup=password";
-          linkType = "magiclink"; // user exists (created by invite) but never signed in
+          linkType = "invite";
         } else {
           redirectPath = "/contract";
           linkType = "magiclink";
