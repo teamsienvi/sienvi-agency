@@ -39,8 +39,8 @@ const ClientLogin = () => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session && setup === "password") {
-        // Session already exists and we need password setup
+      if (session && (setup === "password" || !session.user?.user_metadata?.password_set)) {
+        // Session exists but password not set — force password setup
         setViewMode("set-password");
         setIsAuthLoading(false);
         return;
@@ -69,17 +69,23 @@ const ClientLogin = () => {
       if (event === "PASSWORD_RECOVERY") {
         setViewMode("reset-confirm");
         setIsAuthLoading(false);
-      } else if (event === "SIGNED_IN" && setup === "password") {
-        // User just signed in via invite/magic link and needs to set password
-        setViewMode("set-password");
-        setIsAuthLoading(false);
-      } else if (event === "SIGNED_IN" && !setup) {
-        // Regular sign-in via magic link (no password setup needed)
-        setIsAuthLoading(false);
-        navigate("/dashboard");
+      } else if (event === "SIGNED_IN") {
+        // Check user_metadata.password_set as the source of truth.
+        // If the user hasn't set a password yet, ALWAYS show the setup form
+        // regardless of URL params (which can get stripped by Supabase redirects).
+        const needsPasswordSetup = !session?.user?.user_metadata?.password_set;
+        if (setup === "password" || needsPasswordSetup) {
+          setViewMode("set-password");
+          setIsAuthLoading(false);
+        } else {
+          // Regular sign-in — password already set
+          setIsAuthLoading(false);
+          navigate("/dashboard");
+        }
       } else if (event === "INITIAL_SESSION") {
         // Initial session loaded - if we're still waiting, check again
-        if (session && setup === "password") {
+        const needsPasswordSetup = session && !session.user?.user_metadata?.password_set;
+        if (session && (setup === "password" || needsPasswordSetup)) {
           setViewMode("set-password");
           setIsAuthLoading(false);
         } else if (!isAwaitingAuth) {
