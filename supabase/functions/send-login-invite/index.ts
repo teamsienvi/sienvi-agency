@@ -128,8 +128,7 @@ serve(async (req) => {
     const existingAuthUser = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
 
     const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
-    const hasConfirmedEmail = !!existingAuthUser?.email_confirmed_at;
-    const isNewUser = !existingAuthUser || (!hasSignedIn && !hasConfirmedEmail);
+    const isNewUser = !existingAuthUser || !hasSignedIn;
 
     if (isNewUser) {
       redirectPath = "/login?setup=password";

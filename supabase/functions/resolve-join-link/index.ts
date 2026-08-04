@@ -32,7 +32,7 @@ serve(async (req) => {
     if (code) {
       const { data } = await supabaseAdmin
         .from("client_profiles")
-        .select("id, email, notes, contract_status, subscription_status, onboarding_status")
+        .select("id, email, notes, contract_status, subscription_status, onboarding_status, plan")
         .ilike("notes", `%[MagicUrl:${code}:%`)
         .maybeSingle();
       profile = data;
@@ -70,8 +70,10 @@ serve(async (req) => {
       (u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase()
     );
     const hasSignedIn = !!existingAuthUser?.last_sign_in_at;
-    const hasConfirmedEmail = !!existingAuthUser?.email_confirmed_at;
-    const isNewUser = !existingAuthUser || (!hasSignedIn && !hasConfirmedEmail);
+    // Only use last_sign_in_at to determine new user status.
+    // email_confirmed_at is unreliable because admin.generateLink({ type: "invite" })
+    // automatically confirms the email when the auth user is created.
+    const isNewUser = !existingAuthUser || !hasSignedIn;
 
     // --- Account "fully set up" check ---
     // Only expire once the entire flow is done: contract signed + paid + onboarding complete
@@ -95,7 +97,7 @@ serve(async (req) => {
     } else if (profile.contract_status === "not_signed") {
       redirectPath = "/contract";
     } else if (profile.subscription_status === "pending_payment") {
-      redirectPath = "/checkout-summary";
+      redirectPath = profile.plan ? `/checkout-summary?plan=${profile.plan}` : "/checkout-summary";
     } else if (profile.contract_status === "signed" && profile.onboarding_status !== "completed") {
       redirectPath = "/onboarding";
     }
