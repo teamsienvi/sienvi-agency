@@ -1124,17 +1124,18 @@ const AdminClients = () => {
                     <h4 className="font-semibold text-sm">Contract Details</h4>
                     <div className="flex gap-2">
                       {selectedClient.contractStatus === "signed" ? (
-                        selectedClient.contractDetails?.uploadedContractUrl ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(selectedClient.contractDetails.uploadedContractUrl, "_blank")}
-                            className="h-8 text-xs"
-                          >
-                            <Download className="w-3.5 h-3.5 mr-1.5" />
-                            Download Contract
-                          </Button>
-                        ) : (
+                        <>
+                          {selectedClient.contractDetails?.uploadedContractUrl && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(selectedClient.contractDetails.uploadedContractUrl, "_blank")}
+                              className="h-8 text-xs"
+                            >
+                              <Download className="w-3.5 h-3.5 mr-1.5" />
+                              Download Original
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -1142,9 +1143,9 @@ const AdminClients = () => {
                             className="h-8 text-xs"
                           >
                             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                            View Signed Contract
+                            View Signed Web Contract
                           </Button>
-                        )
+                        </>
                       ) : (
                         <Button
                           size="sm"
