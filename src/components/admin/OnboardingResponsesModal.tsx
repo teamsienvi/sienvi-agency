@@ -84,11 +84,11 @@ export const OnboardingResponsesModal = ({
         }
       }
 
-      setGoals(goalsRes.data);
-      setAvatars(avatarsRes.data);
-      setQuestionnaire(qData);
-      setAmazon(amazonRes.data);
-      setAdvertising(adData);
+      setGoals(goalsRes.data || {});
+      setAvatars(avatarsRes.data || {});
+      setQuestionnaire(qData || {});
+      setAmazon(amazonRes.data || {});
+      setAdvertising(adData || {});
 
       if (profileRes.data) {
         const services = profileRes.data.selected_services || [];
@@ -134,7 +134,14 @@ export const OnboardingResponsesModal = ({
     `;
 
     const renderPrintField = (label: string, value: any) => {
-      if (!value) return "";
+      if (!value) {
+        return `
+          <div class="field">
+            <div class="field-label">${label}</div>
+            <div class="field-value" style="color:#94a3b8; font-style:italic;">Not answered</div>
+          </div>
+        `;
+      }
       const formattedValue = typeof value === "string" ? value.replace(/\n/g, "<br/>") : JSON.stringify(value);
       return `
         <div class="field">
@@ -918,7 +925,14 @@ export const OnboardingResponsesModal = ({
   };
 
   const renderField = (label: string, value: any) => {
-    if (!value) return null;
+    if (!value) {
+      return (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-slate-700">{label}</p>
+          <p className="text-sm text-slate-400 italic">Not answered</p>
+        </div>
+      );
+    }
     return (
       <div className="space-y-1">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
