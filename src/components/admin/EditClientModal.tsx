@@ -256,6 +256,7 @@ export const EditClientModal = ({
           .getPublicUrl(fileName);
 
         contractDetails = {
+          ...((client as any)?.contractDetails || {}),
           uploadedContractUrl: urlData?.publicUrl || null,
           uploadedContractName: contractFile.name,
           ...contractTerms,
