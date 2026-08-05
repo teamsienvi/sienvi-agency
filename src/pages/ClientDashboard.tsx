@@ -69,6 +69,9 @@ const serviceLabels: Record<string, string> = {
   "custom-gpt": "Custom GPT Product",
   "custom-ai-assistant": "Custom AI Assistant",
   "custom-tool": "Custom Tool",
+  "custom-agent": "Custom Agent",
+  "custom-project-management": "Custom Project Management System",
+  "custom-data-dashboard": "Custom Data Dashboard",
   "amazon-design": "Amazon Design Package",
   
   // Advertising Channels

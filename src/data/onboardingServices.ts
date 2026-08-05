@@ -1,4 +1,4 @@
-import { PenTool, Globe, Search, BookOpen, Bot, ShoppingBag, Wrench, LucideIcon } from "lucide-react";
+import { PenTool, Globe, Search, BookOpen, Bot, ShoppingBag, Wrench, UserCog, Kanban, BarChart3, LucideIcon } from "lucide-react";
 
 export interface OnboardingService {
   id: string;
@@ -49,12 +49,31 @@ export const onboardingServices: OnboardingService[] = [
     icon: Wrench,
   },
   {
-    id: "amazon-design",
-    title: "Amazon Design Package",
-    description: "Professional Amazon listing design and optimization",
-    icon: ShoppingBag,
-    hasSpecialOnboarding: true, // Uses Amazon-specific questionnaire
+    id: "custom-agent",
+    title: "Custom Agent",
+    description: "Autonomous AI agents that handle complex workflows end-to-end",
+    icon: UserCog,
   },
+  {
+    id: "custom-project-management",
+    title: "Custom Project Management System",
+    description: "Tailored project management platform built for your team",
+    icon: Kanban,
+  },
+  {
+    id: "custom-data-dashboard",
+    title: "Custom Data Dashboard",
+    description: "Real-time data visualization and business intelligence",
+    icon: BarChart3,
+  },
+  // NOTE: Amazon Design Package is temporarily hidden
+  // {
+  //   id: "amazon-design",
+  //   title: "Amazon Design Package",
+  //   description: "Professional Amazon listing design and optimization",
+  //   icon: ShoppingBag,
+  //   hasSpecialOnboarding: true,
+  // },
 ];
 
 // Premium services that cost $2450 (excluded from single/triple bundles)

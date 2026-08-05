@@ -31,6 +31,9 @@ const automationServices = [
   { id: "custom-gpt", label: "Custom GPT Product", price: 888 },
   { id: "custom-tool", label: "Custom Tool", price: 888 },
   { id: "custom-ai-assistant", label: "Custom AI Assistant", price: 888 },
+  { id: "custom-agent", label: "Custom Agent", price: 888 },
+  { id: "custom-project-management", label: "Custom Project Management System", price: 888 },
+  { id: "custom-data-dashboard", label: "Custom Data Dashboard", price: 888 },
   { id: "advertising-package", label: "Advertising", price: 999 },
 ];
 

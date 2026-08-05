@@ -31,6 +31,9 @@ const automationServices = [
   { id: "custom-lms", label: "Custom LMS Package" },
   { id: "custom-gpt", label: "Custom GPT Product" },
   { id: "custom-tool", label: "Custom Tool" },
+  { id: "custom-agent", label: "Custom Agent" },
+  { id: "custom-project-management", label: "Custom Project Management System" },
+  { id: "custom-data-dashboard", label: "Custom Data Dashboard" },
   { id: "advertising-package", label: "Advertising" },
 ];
 

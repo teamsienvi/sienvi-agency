@@ -1,4 +1,4 @@
-import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon, ShoppingBagIcon } from "lucide-react";
+import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon, ShoppingBagIcon, UserCogIcon, KanbanIcon, BarChart3Icon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
@@ -9,6 +9,9 @@ const BookOpenIcon2 = (props: any) => React.createElement(BookOpenIcon, props);
 const BotIcon2 = (props: any) => React.createElement(BotIcon, props);
 const MegaphoneIcon2 = (props: any) => React.createElement(MegaphoneIcon, props);
 const ShoppingBagIcon2 = (props: any) => React.createElement(ShoppingBagIcon, props);
+const UserCogIcon2 = (props: any) => React.createElement(UserCogIcon, props);
+const KanbanIcon2 = (props: any) => React.createElement(KanbanIcon, props);
+const BarChart3Icon2 = (props: any) => React.createElement(BarChart3Icon, props);
 
 export const services = [
   // Row 1: Custom LMS, Social Media Suite, Advertising
@@ -114,21 +117,71 @@ export const services = [
     price: "Custom Pricing"
   },
   {
-    id: "amazon-design",
-    icon: ShoppingBagIcon2,
-    title: "Amazon Design Package",
-    subtitle: "Professional Amazon listing design and optimization",
+    id: "custom-agent",
+    icon: UserCogIcon2,
+    title: "Custom Agent",
+    subtitle: "Autonomous AI agents that handle complex workflows end-to-end",
     features: [
-      "A+ Content / Premium A+ design",
-      "Main image and infographic creation",
-      "Lifestyle and product photography guidance",
-      "Brand Story design",
-      "Storefront design and optimization",
-      "Video ad creative development",
-      "Competitor analysis and positioning",
-      "💡 Perfect for Amazon sellers looking to stand out"
+      "Custom agent design and behavior scoping",
+      "Multi-step workflow automation",
+      "Tool and API integrations",
+      "Intelligent decision-making and routing",
+      "Monitoring, logging, and performance dashboards",
+      "Safety guardrails and human-in-the-loop controls",
+      "Ongoing optimization (monthly retainer option)",
+      "💡 Bundle with Custom AI Assistant or Custom Dashboard to save"
     ],
-    price: "Custom Pricing",
-    isAmazon: true
-  }
+    price: "Custom Pricing"
+  },
+  {
+    id: "custom-project-management",
+    icon: KanbanIcon2,
+    title: "Custom Project Management System",
+    subtitle: "Tailored project management platform built for your team",
+    features: [
+      "Custom workflows and task management",
+      "Team collaboration and communication tools",
+      "Resource allocation and scheduling",
+      "Milestone tracking and progress reporting",
+      "Integrations with existing tools (Slack, email, etc.)",
+      "Role-based access and permissions",
+      "💡 Bundle with Custom Data Dashboard or Custom Agent to save"
+    ],
+    price: "Custom Pricing"
+  },
+  {
+    id: "custom-data-dashboard",
+    icon: BarChart3Icon2,
+    title: "Custom Data Dashboard",
+    subtitle: "Real-time data visualization and business intelligence",
+    features: [
+      "Custom KPI tracking and visualization",
+      "Multi-source data integration",
+      "Interactive charts, graphs, and reports",
+      "Automated reporting and alerts",
+      "Role-based dashboards for different teams",
+      "Export and sharing capabilities",
+      "💡 Bundle with Custom Project Management or Custom Agent to save"
+    ],
+    price: "Custom Pricing"
+  },
+  // NOTE: Amazon Design Package is temporarily hidden
+  // {
+  //   id: "amazon-design",
+  //   icon: ShoppingBagIcon2,
+  //   title: "Amazon Design Package",
+  //   subtitle: "Professional Amazon listing design and optimization",
+  //   features: [
+  //     "A+ Content / Premium A+ design",
+  //     "Main image and infographic creation",
+  //     "Lifestyle and product photography guidance",
+  //     "Brand Story design",
+  //     "Storefront design and optimization",
+  //     "Video ad creative development",
+  //     "Competitor analysis and positioning",
+  //     "💡 Perfect for Amazon sellers looking to stand out"
+  //   ],
+  //   price: "Custom Pricing",
+  //   isAmazon: true
+  // }
 ];
