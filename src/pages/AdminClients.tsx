@@ -1173,7 +1173,7 @@ const AdminClients = () => {
                       </p>
                     </div>
 
-                    {selectedClient.contractStatus === "signed" && !selectedClient.contractDetails?.uploadedContractUrl && (
+                    {selectedClient.contractStatus === "signed" && (
                       <div className="grid grid-cols-2 gap-4 border-t pt-3 mt-3">
                         <div>
                           <p className="text-xs text-muted-foreground">Effective Date</p>
