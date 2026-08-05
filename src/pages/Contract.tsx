@@ -195,6 +195,7 @@ const Contract = () => {
       if (!session) throw new Error("Not authenticated");
 
       const contractDetails = {
+        ...(profile?.contractDetails || {}),
         effectiveDate,
         clientLegalName: clientLegalName.trim(),
         clientTradeName: clientTradeName.trim(),
@@ -206,8 +207,6 @@ const Contract = () => {
         shopifySite: shopifySite.trim(),
         strategyPeriod: strategyPeriod.trim(),
         confidentialityPeriod: confidentialityPeriod.trim(),
-        uploadedContractUrl: profile?.contractDetails?.uploadedContractUrl || null,
-        uploadedContractName: profile?.contractDetails?.uploadedContractName || null,
       };
 
       const response = await supabase.functions.invoke("update-client-status", {
