@@ -1214,6 +1214,22 @@ const AdminClients = () => {
                           <p className="font-medium">{selectedClient.contractDetails?.confidentialityPeriod || "-"}</p>
                         </div>
                         <div>
+                          <p className="text-xs text-muted-foreground">Initial Term</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.initialTerm || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Notice Period</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.noticePeriod || "-"}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Billing Terms</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.billingTerms || "-"}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-muted-foreground">Service Delivery</p>
+                          <p className="font-medium">{selectedClient.contractDetails?.serviceDelivery || "-"}</p>
+                        </div>
+                        <div>
                           <p className="text-xs text-muted-foreground text-indigo-600">Digitally Signed Name</p>
                           <p className="font-medium text-indigo-700 font-serif italic">{selectedClient.contractSignature || "-"}</p>
                         </div>
