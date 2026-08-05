@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,8 @@ const serviceLabels: Record<string, string> = {
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const paramClientId = searchParams.get("clientId");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -130,6 +132,7 @@ const ClientDashboard = () => {
       }
 
       const response = await supabase.functions.invoke("get-client-profile", {
+        body: paramClientId ? { clientId: paramClientId } : undefined,
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -395,7 +398,13 @@ const ClientDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      {paramClientId && (
+        <div className="bg-amber-100 border-b border-amber-200 text-amber-800 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
+          <Settings className="w-4 h-4" />
+          Previewing Client Dashboard
+        </div>
+      )}
       <SEOHead title="Client Dashboard | Sienvi" description="Client Workspace Dashboard" noindex={true} />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">

@@ -46,6 +46,7 @@ import {
   Send,
   Download,
   FileSignature,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1031,8 +1032,19 @@ const AdminClients = () => {
 
         <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-slate-900">
-            <DialogHeader>
+            <DialogHeader className="flex flex-row items-center justify-between">
               <DialogTitle>Client Details</DialogTitle>
+              {selectedClient && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(`/dashboard?clientId=${selectedClient.id}`, "_blank")}
+                  className="h-8 text-xs font-normal"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
+                  Preview Dashboard
+                </Button>
+              )}
             </DialogHeader>
             {selectedClient && (
               <div className="space-y-6">
