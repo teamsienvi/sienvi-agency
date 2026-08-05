@@ -150,7 +150,7 @@ const channels = [
   {
     name: "YouTube",
     handle: "Sienvi",
-    url: "https://www.youtube.com/@Sienvi",
+    url: "https://www.youtube.com/@SienviAgency",
     icon: null, // Custom SVG
     color: "from-red-600 to-red-700",
     description: "Deep dives & tutorials",
