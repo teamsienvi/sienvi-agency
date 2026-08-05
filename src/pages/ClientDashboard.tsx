@@ -670,14 +670,14 @@ const ClientDashboard = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => window.open("/contract?view=true", "_blank")}
+                        onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
                       >
                         View Signed Copy
                       </Button>
                       <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
                     </div>
                   ) : (
-                    <Button size="sm" onClick={() => navigate("/contract")}>
+                    <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>
                       Sign Now
                     </Button>
                   )}
