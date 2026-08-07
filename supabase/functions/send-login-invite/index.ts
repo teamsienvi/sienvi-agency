@@ -97,14 +97,16 @@ serve(async (req) => {
     const { data: profile } = clientId
       ? await supabaseAdmin
           .from("client_profiles")
-          .select("subscription_status, contract_status, onboarding_status, notes")
+          .select("subscription_status, contract_status, onboarding_status, notes, plan")
           .eq("id", clientId)
           .maybeSingle()
       : await supabaseAdmin
           .from("client_profiles")
-          .select("subscription_status, contract_status, onboarding_status, notes")
+          .select("subscription_status, contract_status, onboarding_status, notes, plan")
           .eq("email", targetEmail)
           .maybeSingle();
+
+    let clientPlan: string | null = null;
 
     if (profile) {
       clientStatus = {
@@ -113,7 +115,10 @@ serve(async (req) => {
         onboardingStatus: profile.onboarding_status,
       };
       additionalEmails = parseAdditionalEmails(profile.notes);
+      clientPlan = profile.plan || null;
     }
+
+    const isProspect = clientPlan === "prospect";
 
     const baseUrl = req.headers.get("origin") || "https://sienvi.com";
     let redirectPath = "/dashboard";
@@ -130,7 +135,28 @@ serve(async (req) => {
     const hasSetPassword = !!existingAuthUser?.user_metadata?.password_set;
     const isNewUser = !existingAuthUser || !hasSetPassword;
 
-    if (isNewUser) {
+    // Prospect-specific overrides — discovery-only flow, no contract or payment
+    if (isProspect) {
+      if (isNewUser) {
+        redirectPath = "/login?setup=password";
+        actionMessage = "Set Password & Start Discovery";
+        emailSubject = "Welcome — Complete Your Discovery Questionnaire";
+        headerTitle = "Let's Learn About Your Business";
+        emailIntro = "We'd love to learn more about your business. Set up your password to access our discovery questionnaire — your answers help us understand your needs and craft a tailored proposal.";
+        tipText = "After setting your password, you'll complete a short discovery questionnaire about your business.";
+      } else {
+        redirectPath = clientStatus.onboardingStatus === "completed" ? "/dashboard" : "/onboarding";
+        actionMessage = clientStatus.onboardingStatus === "completed" ? "View Dashboard" : "Complete Discovery Questionnaire";
+        emailSubject = clientStatus.onboardingStatus === "completed" ? "Your Sienvi Dashboard" : "Complete Your Discovery Questionnaire";
+        headerTitle = clientStatus.onboardingStatus === "completed" ? "Your Dashboard" : "Discovery Questionnaire";
+        emailIntro = clientStatus.onboardingStatus === "completed"
+          ? "Access your Sienvi dashboard to view your discovery responses and any updates from our team."
+          : "We'd love to learn more about your business. Complete our discovery questionnaire so we can prepare a tailored proposal for you.";
+        tipText = clientStatus.onboardingStatus === "completed"
+          ? "Our team is reviewing your responses and will reach out with a tailored proposal."
+          : "The questionnaire takes about 15-20 minutes and helps us understand your business needs.";
+      }
+    } else if (isNewUser) {
       redirectPath = "/login?setup=password";
       actionMessage = "Set Password & Review Contract";
       emailSubject = "Welcome to Sienvi — Set Up Your Account";

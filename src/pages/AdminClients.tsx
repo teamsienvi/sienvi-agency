@@ -197,6 +197,9 @@ const AdminClients = () => {
   };
 
   const getPlanDisplay = (plan: string | null, customPrice: number | null, selectedServices: string[] = []) => {
+    if (plan === "prospect") {
+      return "Prospect (Discovery)";
+    }
     if (plan === "custom" && customPrice) {
       return `Custom ($${customPrice}/mo)`;
     }
@@ -255,6 +258,9 @@ const AdminClients = () => {
     const services = client.selectedServices || [];
     const plan = client.plan;
     
+    if (plan === "prospect") {
+      return "prospect";
+    }
     if (services.includes("custom-tool") || plan === "custom-lms" || plan === "discovery") {
       return "discovery";
     }
@@ -277,6 +283,8 @@ const AdminClients = () => {
   const getOnboardingTypeDisplay = (client: Client) => {
     const type = getOnboardingType(client);
     switch (type) {
+      case "prospect":
+        return "Prospect Discovery Onboarding";
       case "discovery":
         return "Business Admin Onboarding";
       case "amazon":
@@ -292,6 +300,9 @@ const AdminClients = () => {
 
   const getRequiredOnboardingForms = (client: Client) => {
     const type = getOnboardingType(client);
+    if (type === "prospect") {
+      return ["General Discovery Questionnaire"];
+    }
     if (type === "discovery") {
       return ["Business Admin Onboarding Questionnaire"];
     }
@@ -572,7 +583,7 @@ const AdminClients = () => {
     });
 
   return (
-    <div className="min-h-screen bg-gray-50 text-slate-800">
+    <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <motion.div
@@ -701,29 +712,29 @@ const AdminClients = () => {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6"
         >
-          <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Total Clients</p>
             <p className="text-2xl font-bold">{clients.length}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Awaiting Payment</p>
             <p className="text-2xl font-bold text-orange-600">
               {clients.filter((c) => c.subscriptionStatus === "pending_payment").length}
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Active</p>
             <p className="text-2xl font-bold text-green-600">
               {clients.filter((c) => c.isActive && c.subscriptionStatus === "active").length}
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Custom Plans</p>
             <p className="text-2xl font-bold text-primary">
               {clients.filter((c) => c.plan === "custom").length}
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl border shadow-sm">
+          <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
             <p className="text-sm text-muted-foreground">Est. MRR</p>
             <p className="text-2xl font-bold">
               ${clients
@@ -739,7 +750,7 @@ const AdminClients = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white p-4 rounded-xl border shadow-sm mb-6"
+          className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm mb-6"
         >
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
@@ -797,7 +808,7 @@ const AdminClients = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl border shadow-sm overflow-hidden"
+          className="bg-white dark:bg-card rounded-xl border shadow-sm overflow-hidden"
         >
           {loading ? (
             <div className="p-8 text-center">
@@ -875,7 +886,7 @@ const AdminClients = () => {
                           size="sm"
                           onClick={() => setSelectedClient(client)}
                           title="View Details"
-                          className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -884,7 +895,7 @@ const AdminClients = () => {
                           size="sm"
                           onClick={() => setEditClient(client)}
                           title="Edit Client"
-                          className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -980,7 +991,7 @@ const AdminClients = () => {
                           size="sm"
                           onClick={() => setOnboardingViewClient(client)}
                           title={client.onboardingCompleted ? "View Onboarding Responses" : "Preview / View Onboarding"}
-                          className={client.onboardingCompleted ? "text-purple-600 hover:text-purple-700" : "text-slate-400 hover:text-slate-600"}
+                          className={client.onboardingCompleted ? "text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300" : "text-muted-foreground hover:text-foreground"}
                         >
                           <ClipboardList className="w-4 h-4" />
                         </Button>
@@ -1002,7 +1013,7 @@ const AdminClients = () => {
                               size="sm"
                               onClick={() => copyToClipboard(client.stripeCustomerId, client.id)}
                               title="Copy Customer ID"
-                              className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted"
                             >
                               {copiedId === client.id ? (
                                 <Check className="w-4 h-4 text-green-500" />
@@ -1015,7 +1026,7 @@ const AdminClients = () => {
                               size="sm"
                               onClick={() => openStripeCustomer(client.stripeCustomerId)}
                               title="View in Stripe"
-                              className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </Button>
@@ -1031,7 +1042,7 @@ const AdminClients = () => {
         </motion.div>
 
         <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-slate-900">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="flex flex-row items-center justify-between">
               <DialogTitle>Client Details</DialogTitle>
               {selectedClient && (
@@ -1131,7 +1142,7 @@ const AdminClients = () => {
                   </div>
                 )}
 
-                <div className="border-t pt-4 text-slate-900">
+                <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-sm">Contract Details</h4>
                     <div className="flex gap-2">
@@ -1175,7 +1186,7 @@ const AdminClients = () => {
                   <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Contract Template Type</p>
-                      <p className="font-medium text-slate-800">
+                      <p className="font-medium">
                         {selectedClient.contractDetails?.uploadedContractUrl
                           ? `Custom Upload: ${selectedClient.contractDetails.uploadedContractName || "Uploaded PDF"}`
                           : (selectedClient.plan === "amazon" || 
@@ -1265,7 +1276,7 @@ const AdminClients = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4 text-slate-900">
+                <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-sm">Onboarding Details</h4>
                     <div className="flex gap-2">
@@ -1284,7 +1295,7 @@ const AdminClients = () => {
                   <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Onboarding Type</p>
-                      <p className="font-medium text-slate-800">
+                      <p className="font-medium">
                         {getOnboardingTypeDisplay(selectedClient)}
                       </p>
                     </div>
@@ -1293,7 +1304,7 @@ const AdminClients = () => {
                       <p className="text-xs text-muted-foreground">Required Onboarding Forms</p>
                       <div className="mt-1 flex flex-wrap gap-2">
                         {getRequiredOnboardingForms(selectedClient).map((formName, idx) => (
-                          <Badge key={idx} variant="secondary" className="bg-slate-200 text-slate-700">
+                          <Badge key={idx} variant="secondary">
                             {formName}
                           </Badge>
                         ))}
@@ -1312,7 +1323,7 @@ const AdminClients = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4 text-slate-900">
+                <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="font-semibold text-sm">1-Click Client Access & Onboarding Link</h4>
@@ -1338,35 +1349,35 @@ const AdminClients = () => {
                   </div>
 
                   {onboardingLinks[selectedClient.id] ? (
-                    <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-2">
+                    <div className="bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-indigo-900">1-Click Client Onboarding URL:</span>
-                        <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
+                        <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">1-Click Client Onboarding URL:</span>
+                        <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono">
                           Sign Up ➔ Contract ➔ Payment ➔ Access
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <code className="flex-1 text-xs bg-white p-2 rounded border border-indigo-200 text-indigo-950 font-mono break-all max-h-20 overflow-y-auto">
+                        <code className="flex-1 text-xs bg-white dark:bg-background p-2 rounded border border-indigo-200 dark:border-indigo-800 text-indigo-950 dark:text-indigo-100 font-mono break-all max-h-20 overflow-y-auto">
                           {onboardingLinks[selectedClient.id]}
                         </code>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => copyToClipboard(onboardingLinks[selectedClient.id], "modal-onboarding-link")}
-                          className="bg-white"
+                          className="bg-white dark:bg-card"
                         >
                           {copiedId === "modal-onboarding-link" ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          className="bg-white"
+                          className="bg-white dark:bg-card"
                           onClick={() => window.open(onboardingLinks[selectedClient.id], "_blank")}
                         >
                           <ExternalLink className="w-4 h-4 text-indigo-600" />
                         </Button>
                       </div>
-                      <p className="text-[11px] text-indigo-700 font-light">
+                      <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-light">
                         Send this single link directly to your client via chat, SMS, or email.
                       </p>
                     </div>

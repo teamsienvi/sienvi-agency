@@ -169,30 +169,30 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
           </Button>
 
           {onboardingLink && (
-            <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-2">
+            <div className="bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-indigo-900">1-Click Client Onboarding URL:</span>
-                <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
-                  Sign Up ➔ Contract ➔ Payment ➔ Access
+                <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">1-Click Client Onboarding URL:</span>
+                <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono">
+                  {client.plan === "prospect" ? "Sign Up ➔ Discovery Questions" : "Sign Up ➔ Contract ➔ Payment ➔ Access"}
                 </span>
               </div>
               <div className="flex gap-2">
-                <code className="flex-1 text-xs bg-white p-2 rounded border border-indigo-200 text-indigo-950 font-mono break-all max-h-20 overflow-y-auto">
+                <code className="flex-1 text-xs bg-white dark:bg-background p-2 rounded border border-indigo-200 dark:border-indigo-800 text-indigo-950 dark:text-indigo-100 font-mono break-all max-h-20 overflow-y-auto">
                   {onboardingLink}
                 </code>
-                <Button size="sm" variant="outline" onClick={copyOnboardingToClipboard} className="bg-white">
+                <Button size="sm" variant="outline" onClick={copyOnboardingToClipboard} className="bg-white dark:bg-card">
                   {copiedLink ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
                 </Button>
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="bg-white"
+                  className="bg-white dark:bg-card"
                   onClick={() => window.open(onboardingLink, "_blank")}
                 >
                   <ExternalLink className="w-4 h-4 text-indigo-600" />
                 </Button>
               </div>
-              <p className="text-[11px] text-indigo-700 font-light">
+              <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-light">
                 Send this single link directly to your client via chat or email.
               </p>
             </div>

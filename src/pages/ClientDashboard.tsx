@@ -21,10 +21,12 @@ import {
   Package,
   Calendar,
   Settings,
+  FileText,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
+import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
 
 interface ClientProfile {
   id: string;
@@ -57,6 +59,7 @@ const planDetails: Record<string, { name: string; price: number; services: numbe
   amazon: { name: "Amazon Design Package", price: 999, services: 1 },
   advertising: { name: "Advertising Package", price: 888, services: 7 },
   custom: { name: "Custom Plan", price: 0, services: 0 },
+  prospect: { name: "Prospect Discovery", price: 0, services: 0 },
 };
 
 const serviceLabels: Record<string, string> = {
@@ -104,8 +107,10 @@ const ClientDashboard = () => {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
+  const [showResponses, setShowResponses] = useState(false);
 
-  const isDiscovery = profile?.plan === "discovery" || profile?.plan === "custom-lms" || (profile?.selectedServices || []).includes("custom-tool");
+  const isDiscovery = profile?.plan === "discovery" || profile?.plan === "prospect" || profile?.plan === "custom-lms" || (profile?.selectedServices || []).includes("custom-tool");
+  const isProspect = profile?.plan === "prospect";
 
   useEffect(() => {
     checkAuthAndFetchProfile();
@@ -159,8 +164,9 @@ const ClientDashboard = () => {
       // Route users based on onboarding sequence: Unique sign-up link -> Contract -> Payment -> Full Access
       // Skip enforcement for admins so they don't get stuck when testing client links
       const isAdvertising = clientProfile.plan === "advertising";
+      const isClientDiscovery = clientProfile.plan === "discovery" || clientProfile.plan === "prospect" || clientProfile.plan === "custom-lms" || (clientProfile.selectedServices || []).includes("custom-tool");
       
-      if (!response.data.isAdmin && !isAdvertising && !isDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
+      if (!response.data.isAdmin && !isAdvertising && !isClientDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
         // Step 2: Enforce Contract Signing before Payment & Full Access
         navigate("/contract");
         return;
@@ -264,6 +270,12 @@ const ClientDashboard = () => {
   const getStatusBadge = () => {
     if (!profile) return null;
     
+    if (isProspect && profile.onboardingStatus === "completed") {
+      return <Badge className="bg-teal-500 hover:bg-teal-600">Discovery Complete</Badge>;
+    }
+    if (isProspect) {
+      return <Badge className="bg-amber-500 hover:bg-amber-600">Prospect</Badge>;
+    }
     if (!isDiscovery && profile.plan !== "advertising" && profile.contractStatus === "not_signed") {
       return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Contract</Badge>;
     }
@@ -281,6 +293,11 @@ const ClientDashboard = () => {
 
   const getProgress = () => {
     if (!profile) return 0;
+    if (isProspect) {
+      let completed = 1; // Account Created
+      if (profile.onboardingStatus === "completed") completed++;
+      return (completed / 2) * 100;
+    }
     if (isDiscovery) {
       let completed = 1;
       if (profile.subscriptionStatus === "active") completed++;
@@ -298,6 +315,19 @@ const ClientDashboard = () => {
   const getPrimaryCTA = () => {
     if (!profile) return null;
     
+    // Prospect CTA: skip contract + payment, go straight to discovery
+    if (isProspect) {
+      if (profile.onboardingStatus !== "completed") {
+        return (
+          <Button size="lg" className="w-full" onClick={() => navigate("/onboarding")}>
+            <ClipboardList className="w-5 h-5 mr-2" />
+            {profile.onboardingStatus === "not_started" ? "Start Discovery Questionnaire" : "Continue Discovery Questionnaire"}
+          </Button>
+        );
+      }
+      return null;
+    }
+
     // Step 2: Contract Signing
     if (profile.contractStatus === "not_signed" && !isDiscovery && profile.plan !== "advertising") {
       return (
@@ -440,7 +470,49 @@ const ClientDashboard = () => {
           </div>
 
           {/* Onboarding Completion Banner or Next Step CTA */}
-          {profile.onboardingStatus === "completed" ? (
+          {isProspect && profile.onboardingStatus === "completed" ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="border-teal-500/25 bg-gradient-to-br from-teal-50/90 via-emerald-50/80 to-white backdrop-blur-md overflow-hidden relative shadow-md">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                  <CheckCircle2 className="w-40 h-40 text-teal-600" />
+                </div>
+                <CardContent className="pt-8 pb-6 px-6 sm:px-8 space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl shadow-lg shadow-teal-500/20 flex-shrink-0">
+                      <span className="text-2xl">🙌</span>
+                    </div>
+                    <div className="space-y-1">
+                      <Badge className="bg-teal-600 hover:bg-teal-700 text-white font-semibold tracking-wider">DISCOVERY COMPLETE</Badge>
+                      <h2 className="text-2xl font-bold text-slate-800">Thank You, {profile.firstName}!</h2>
+                      <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
+                        We've received your discovery questionnaire responses. Our team is reviewing your answers and will reach out with a tailored proposal for your business needs.
+                      </p>
+                    </div>
+                  </div>
+                  <Separator className="bg-teal-100" />
+                  <div className="bg-white/60 backdrop-blur-sm border border-slate-100 p-4 rounded-xl space-y-3 shadow-sm">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-sm text-slate-800">What happens next?</p>
+                      <p className="text-xs text-muted-foreground">
+                        A member of our team will review your responses and schedule a follow-up conversation. 
+                        If you're ready to move forward, we'll set you up with a tailored service plan — no need to create a new account.
+                      </p>
+                    </div>
+                    <div>
+                      <Button variant="outline" size="sm" onClick={() => setShowResponses(true)} className="bg-white hover:bg-slate-50 text-teal-700 border-teal-200">
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Your Responses
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : profile.onboardingStatus === "completed" ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -488,12 +560,18 @@ const ClientDashboard = () => {
                     <p className="text-xs text-muted-foreground">
                       Need to add more details? Feel free to contact our specialists directly.
                     </p>
-                    <a
-                      href="mailto:info@sienvi.com,teamsienvi@gmail.com"
-                      className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-white hover:bg-slate-50 h-10 px-4 py-2 text-indigo-600 font-semibold shadow-sm"
-                    >
-                      Email Support Team
-                    </a>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button variant="outline" size="sm" onClick={() => setShowResponses(true)} className="bg-white hover:bg-slate-50 text-indigo-600 border-indigo-200">
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Responses
+                      </Button>
+                      <a
+                        href="mailto:info@sienvi.com,teamsienvi@gmail.com"
+                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-white hover:bg-slate-50 h-10 px-4 py-2 text-indigo-600 font-semibold shadow-sm"
+                      >
+                        Email Support Team
+                      </a>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -520,7 +598,38 @@ const ClientDashboard = () => {
               <CardContent className="space-y-6">
                 <Progress value={getProgress()} className="h-3" />
                 
-                <div className="space-y-4">
+                {/* Steps for prospects: simplified 2-step progress */}
+                {isProspect ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Account Created</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(profile.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {profile.onboardingStatus === "completed" ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Discovery Questionnaire</p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.onboardingStatus === "completed"
+                            ? "Completed"
+                            : profile.onboardingStatus === "in_progress"
+                            ? "In progress..."
+                            : "Not started"}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
                   {/* Step 1: Account Created */}
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -586,7 +695,8 @@ const ClientDashboard = () => {
                       </p>
                     </div>
                   </div>
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -603,13 +713,16 @@ const ClientDashboard = () => {
                   <div>
                     <p className="text-lg font-semibold">{getPlanName()}</p>
                   </div>
+                  {!isProspect && (
                   <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
                     {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus.replace("_", " ")}
                   </Badge>
+                  )}
                 </div>
 
                 <Separator />
 
+                {!isProspect && (
                 <div>
                   <p className="text-sm font-medium mb-2">Services Included ({profile.maxServices || 0})</p>
                   {profile.selectedServices && profile.selectedServices.length > 0 ? (
@@ -624,6 +737,7 @@ const ClientDashboard = () => {
                     <p className="text-sm text-muted-foreground">No services selected yet</p>
                   )}
                 </div>
+                )}
 
                 {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
                   <>
@@ -728,6 +842,15 @@ const ClientDashboard = () => {
             </CardContent>
           </Card>
         </motion.div>
+        
+        {profile && (
+          <OnboardingResponsesModal
+            open={showResponses}
+            onOpenChange={setShowResponses}
+            clientId={profile.id}
+            clientName={profile.firstName || profile.email}
+          />
+        )}
       </main>
       <Footer />
     </div>

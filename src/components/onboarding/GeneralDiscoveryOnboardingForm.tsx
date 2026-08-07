@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { Loader2, Clipboard, CheckCircle2, ChevronRight, ChevronLeft, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   // Section 1: Basic Business Information
@@ -415,12 +416,36 @@ export const GeneralDiscoveryOnboardingForm = ({ clientProfileId, onComplete, in
     setValue("selectedSupportTypes", updated);
   };
 
+  const buildPayload = (data: Partial<FormData>, isDraft: boolean) => {
+    // Map to the existing columns where possible, dump the rest into additional_notes
+    return {
+      ...(initialData?.id ? { id: initialData.id } : {}),
+      client_profile_id: clientProfileId,
+      business_name: data.businessName || null,
+      business_description: data.businessDescription || null,
+      industry_niche: data.industryNiche || null,
+      years_operating: data.yearsOperating || null,
+      revenue_streams: data.revenueStreams || null,
+      top_3_goals: data.top3Goals || null,
+      primary_contact: data.primaryContactName || null,
+      communication_preference: data.preferredCommunication || null,
+      additional_notes: JSON.stringify(data), // Save everything else as JSON
+      completed_at: isDraft ? null : new Date().toISOString(),
+    };
+  };
+
   const handleSaveDraft = async () => {
     setSaving(true);
     try {
       const values = getValues();
-      console.log("Mock Saving General Discovery draft:", values);
-      toast.success("Draft saved successfully! (Dev Mode)");
+      const payload = buildPayload(values, true);
+      
+      const { error } = await supabase
+        .from("onboarding_questionnaire")
+        .upsert(payload as any, { onConflict: "client_profile_id" });
+
+      if (error) throw error;
+      toast.success("Draft saved successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to save draft");
     } finally {
@@ -431,7 +456,13 @@ export const GeneralDiscoveryOnboardingForm = ({ clientProfileId, onComplete, in
   const onSubmit = async (data: FormData) => {
     setSaving(true);
     try {
-      console.log("Mock Submitting General Discovery Form:", data);
+      const payload = buildPayload(data, false);
+      
+      const { error } = await supabase
+        .from("onboarding_questionnaire")
+        .upsert(payload as any, { onConflict: "client_profile_id" });
+
+      if (error) throw error;
       toast.success("Discovery Questionnaire completed successfully!");
       onComplete();
     } catch (err: any) {
@@ -449,8 +480,74 @@ export const GeneralDiscoveryOnboardingForm = ({ clientProfileId, onComplete, in
     if (activeStep > 0) setActiveStep(activeStep - 1);
   };
 
+  // Map field names to step indices for error navigation
+  const fieldToStep: Record<string, number> = {
+    // Step 0: Info & Overview
+    businessName: 0, primaryContactName: 0, roleTitle: 0, emailAddress: 0,
+    phoneWhatsapp: 0, websiteUrl: 0, socialMediaLinks: 0, locationTimeZone: 0,
+    preferredCommunication: 0, mainPointOfContact: 0, decisionMaker: 0,
+    businessDescription: 0, industryNiche: 0, yearsOperating: 0, businessStage: 0,
+    currentOffers: 0, revenueStreams: 0, pricingStructure: 0, competitorDifferentiation: 0,
+    // Step 1: SMART Goals
+    top3Goals: 1, primaryGoal: 1, smartSpecific: 1, smartMeasurable: 1,
+    smartAchievable: 1, smartRelevant: 1, smartTimebound: 1, bigWin: 1,
+    longTermVision: 1, upcomingLaunches: 1,
+    // Step 2: Bottlenecks & Audience
+    biggestChallenges: 2, stuckOverwhelmed: 2, speedPrevention: 2, timeSinks: 2,
+    inconsistencies: 2, pastSupportExperience: 2, thingsToAvoid: 2,
+    idealCustomer: 2, audienceType: 2, demographics: 2, audienceGoals: 2,
+    painPoints: 2, fears: 2, objections: 2, onlineHangouts: 2,
+    currentDiscovery: 2, valuableClientType: 2, avoidClients: 2,
+    // Step 3: Offers & Sales
+    coreOffersDetails: 3, growPriorityOffer: 3, profitableOffer: 3, easySellOffer: 3,
+    improvementOffer: 3, transformationOutcome: 3, sellingPoints: 3, proofOfWork: 3,
+    guaranteesBonuses: 3, claimsToAvoid: 3, leadAcquisition: 3, bestChannels: 3,
+    inconsistentChannels: 3, paidAdsStatus: 3, paidAdsPlatforms: 3, existingFunnels: 3,
+    salesProcess: 3, dropoffPoints: 3, trackConversions: 3, promoOffers: 3,
+    topCompetitors: 3, differentiation: 3,
+    // Step 4: Brand & Systems
+    brandIdentityStatus: 4, brandVoice: 4, brandAssociations: 4, brandAvoidWords: 4,
+    admiredBrands: 4, creativeAssets: 4, contentCreated: 4, importantPlatforms: 4,
+    designHelpNeeded: 4, pmTools: 4, crmTools: 4, schedulingTools: 4, emailTools: 4,
+    fileStorageTools: 4, financeTools: 4, automationTools: 4, messySystems: 4,
+    documentedSOPsStatus: 4, recurringTasks: 4, manualAutomate: 4, adminSupportNeeds: 4,
+    // Step 5: Scope & Access
+    selectedSupportTypes: 5, top3Priorities: 5, first7Days: 5, first30Days: 5,
+    month1Success: 5, urgentFires: 5, websiteLink: 5, driveFolder: 5,
+    brandAssets: 5, logoFiles: 5, styleGuide: 5, currentAds: 5, landingPages: 5,
+    crmLogin: 5, pmWorkspace: 5, socialAccounts: 5, emailPlatform: 5,
+    analyticsDashboard: 5, serviceDocs: 5, testimonialsDocs: 5, otherLinks: 5,
+    platformsAccessList: 5, accessMethod: 5, passwordManager: 5, complianceRules: 5,
+    // Step 6: Collab & Finish
+    collabPreference: 6, updateFrequency: 6, workApprover: 6, feedbackTurnaround: 6,
+    agencyTurnaround: 6, urgentRequests: 6, idealRelationship: 6,
+    providerFrustrations: 6, boundariesPreferences: 6, startDate: 6,
+    deadline: 6, projectTimeline: 6, budgetRange: 6, resultTimeline: 6,
+    successConfidence: 6, startingConcerns: 6, finalNotes: 6,
+    excitedToImprove: 6, worriedAbout: 6, finalInstructions: 6,
+  };
+
+  const onFormError = (formErrors: any) => {
+    const errorFields = Object.keys(formErrors);
+    const errorSteps = new Set(errorFields.map(f => fieldToStep[f]).filter(s => s !== undefined));
+    const sortedSteps = [...errorSteps].sort((a, b) => a - b);
+    
+    const stepNames = sortedSteps.map(s => steps[s]?.title || `Step ${s + 1}`);
+    const errorCount = errorFields.length;
+    
+    toast.error(
+      `${errorCount} required field${errorCount > 1 ? "s" : ""} missing — check: ${stepNames.join(", ")}`,
+      { duration: 6000 }
+    );
+    
+    // Navigate to the first step with errors
+    if (sortedSteps.length > 0) {
+      setActiveStep(sortedSteps[0]);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-8">
       {/* Introduction Card */}
       <Card className="border-emerald-500/20 bg-emerald-50/50 backdrop-blur-sm">
         <CardHeader>

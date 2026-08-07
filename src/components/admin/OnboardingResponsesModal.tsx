@@ -57,7 +57,7 @@ export const OnboardingResponsesModal = ({
         supabase.from("onboarding_questionnaire").select("*").eq("client_profile_id", clientId).maybeSingle(),
         supabase.from("onboarding_amazon").select("*").eq("client_profile_id", clientId).maybeSingle(),
         supabase.from("onboarding_advertising").select("*").eq("client_profile_id", clientId).maybeSingle(),
-        supabase.from("client_profiles").select("plan, selected_services").eq("id", clientId).maybeSingle(),
+        supabase.from("client_profiles").select("plan, selected_services, discovery_form_type").eq("id", clientId).maybeSingle(),
       ]);
 
       let qData = questionnaireRes.data;
@@ -93,11 +93,15 @@ export const OnboardingResponsesModal = ({
       if (profileRes.data) {
         const services = profileRes.data.selected_services || [];
         const plan = profileRes.data.plan;
-        if (services.includes("amazon-design") || plan === "amazon") {
+        const formType = (profileRes.data as any).discovery_form_type;
+
+        if (plan === "prospect" || formType === "general") {
+          setOnboardingType("prospect");
+        } else if (services.includes("amazon-design") || plan === "amazon") {
           setOnboardingType("amazon");
         } else if (services.includes("advertising-package") || services.some((s: string) => s.startsWith("channel-")) || plan === "advertising") {
           setOnboardingType("advertising");
-        } else if (services.includes("custom-tool") || plan === "custom-lms" || plan === "discovery") {
+        } else if (services.includes("custom-tool") || plan === "custom-lms" || plan === "discovery" || formType === "business") {
           setOnboardingType("discovery");
         } else {
           setOnboardingType("standard");
@@ -706,7 +710,7 @@ export const OnboardingResponsesModal = ({
         bizAdminHtml += renderPrintCard("20. Final Notes", sect20);
 
         reportContent += `
-          <div class="section-title page-break">Business Admin Onboarding Questionnaire</div>
+          <div class="section-title page-break">${onboardingType === "prospect" ? "Prospect Discovery Onboarding Questionnaire" : "Business Admin Onboarding Questionnaire"}</div>
           ${bizAdminHtml}
         `;
       } else {
@@ -970,18 +974,18 @@ export const OnboardingResponsesModal = ({
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <Tabs defaultValue={onboardingType === "amazon" ? "amazon" : onboardingType === "discovery" ? "questionnaire" : "goals"} className="w-full">
-            <TabsList className={`grid w-full h-auto ${onboardingType === "amazon" || onboardingType === "discovery" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-0"}`}>
+          <Tabs defaultValue={onboardingType === "amazon" ? "amazon" : (onboardingType === "discovery" || onboardingType === "prospect") ? "questionnaire" : "goals"} className="w-full">
+            <TabsList className={`grid w-full h-auto ${onboardingType === "amazon" || onboardingType === "discovery" || onboardingType === "prospect" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-0"}`}>
               {onboardingType === "amazon" ? (
                 <TabsTrigger value="amazon" className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4" />
                   Amazon Listing Design
                   {renderStatus(amazon)}
                 </TabsTrigger>
-              ) : onboardingType === "discovery" ? (
+              ) : (onboardingType === "discovery" || onboardingType === "prospect") ? (
                 <TabsTrigger value="questionnaire" className="flex items-center gap-2">
                   <ClipboardList className="w-4 h-4" />
-                  Business Admin Onboarding
+                  {onboardingType === "prospect" ? "Prospect Discovery Onboarding" : "Business Admin Onboarding"}
                   {renderStatus(questionnaire)}
                 </TabsTrigger>
               ) : (
@@ -1167,7 +1171,7 @@ export const OnboardingResponsesModal = ({
               <TabsContent value="questionnaire" className="space-y-4">
                 {!questionnaire ? (
                   <Card><CardContent className="py-8 text-center text-muted-foreground">No questionnaire submitted yet</CardContent></Card>
-                ) : onboardingType === "discovery" ? (
+                ) : onboardingType === "discovery" || onboardingType === "prospect" ? (
                   <>
                     <Card>
                       <CardHeader><CardTitle className="text-base">1. Business & Contact Info</CardTitle></CardHeader>
@@ -1427,6 +1431,36 @@ export const OnboardingResponsesModal = ({
                         {renderField("Additional Notes", questionnaire.final_notes)}
                       </CardContent>
                     </Card>
+
+                    {/* Catch-all for new General Discovery Questionnaire fields stored in additional_notes/JSON */}
+                    {Object.keys(questionnaire).filter(key => 
+                      !["id", "client_profile_id", "created_at", "updated_at", "completed_at", "additional_notes", 
+                        "business_name", "primary_contact_name", "role_title", "email_address", "phone_whatsapp",
+                        "website", "social_media_links", "location_time_zone", "preferred_communication",
+                        "business_description", "industry_niche", "years_operating", "primary_services", 
+                        "revenue_streams", "business_stage", "top_3_goals"].includes(key)
+                    ).length > 0 && (
+                      <Card>
+                        <CardHeader><CardTitle className="text-base">Extended Discovery Responses</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          {Object.keys(questionnaire)
+                            .filter(key => !["id", "client_profile_id", "created_at", "updated_at", "completed_at", "additional_notes",
+                              "business_name", "primary_contact_name", "role_title", "email_address", "phone_whatsapp",
+                              "website", "social_media_links", "location_time_zone", "preferred_communication",
+                              "business_description", "industry_niche", "years_operating", "primary_services", 
+                              "revenue_streams", "business_stage", "top_3_goals"].includes(key))
+                            .map((key) => {
+                              // Convert camelCase to Title Case for labels
+                              const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                              let value = questionnaire[key];
+                              if (Array.isArray(value)) value = value.join(", ");
+                              if (typeof value === "boolean") value = value ? "Yes" : "No";
+                              if (typeof value === "object") value = JSON.stringify(value);
+                              return renderField(label, value);
+                            })}
+                        </CardContent>
+                      </Card>
+                    )}
                   </>
                 ) : (
                   <>

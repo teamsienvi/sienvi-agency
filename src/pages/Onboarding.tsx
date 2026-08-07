@@ -26,6 +26,7 @@ import { AmazonOnboardingForm } from "@/components/onboarding/AmazonOnboardingFo
 import { AdvertisingOnboardingForm } from "@/components/onboarding/AdvertisingOnboardingForm";
 import { BusinessAdminOnboardingForm } from "@/components/onboarding/BusinessAdminOnboardingForm";
 import { AmazonAdsOnboardingForm } from "@/components/onboarding/AmazonAdsOnboardingForm";
+import { GeneralDiscoveryOnboardingForm } from "@/components/onboarding/GeneralDiscoveryOnboardingForm";
 
 interface StepData {
   goals: any;
@@ -35,7 +36,7 @@ interface StepData {
   advertising: any;
 }
 
-type OnboardingType = "standard" | "amazon" | "advertising" | "discovery";
+type OnboardingType = "standard" | "amazon" | "advertising" | "discovery" | "prospect";
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ const Onboarding = () => {
       const profile = response.data.profile;
       
       const services = profile.selectedServices || [];
-      const isDiscovery = profile.plan === "discovery" || profile.plan === "custom-lms" || services.includes("custom-tool");
+      const isDiscovery = profile.plan === "discovery" || profile.plan === "prospect" || profile.plan === "custom-lms" || services.includes("custom-tool");
       
       if (profile.contractStatus !== "signed" && !isDiscovery) {
         toast.error("Please sign the contract first");
@@ -100,7 +101,9 @@ const Onboarding = () => {
       const hasGeneral = services.some((s: string) => !s.startsWith("channel-") && s !== "advertising-package" && s !== "amazon-design" && s !== "custom-tool");
       const hasAdvertising = profile.plan === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
       
-      if (services.includes("custom-tool")) {
+      if (profile.plan === "prospect") {
+        type = "prospect";
+      } else if (services.includes("custom-tool")) {
         type = "discovery";
       } else if (services.includes("amazon-design")) {
         type = "amazon";
@@ -150,7 +153,9 @@ const Onboarding = () => {
 
       // Determine completed steps based on active services
       let completed: boolean[];
-      if (type === "discovery") {
+      if (type === "prospect") {
+        completed = [!!qData?.completed_at];
+      } else if (type === "discovery") {
         completed = [!!qData?.completed_at];
       } else if (type === "amazon") {
         completed = [!!amazonRes.data?.completed_at];
@@ -230,6 +235,9 @@ const Onboarding = () => {
   };
 
   const getSteps = () => {
+    if (onboardingType === "prospect") {
+      return [{ id: "prospect-questionnaire", title: "Discovery Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
+    }
     if (onboardingType === "discovery") {
       return [{ id: "discovery-questionnaire", title: "Business Admin Questionnaire", icon: <Briefcase className="w-6 h-6" /> }];
     }
@@ -315,6 +323,14 @@ const Onboarding = () => {
 
           {clientProfileId && (
             <div className="mt-8">
+              {steps[currentStep]?.id === "prospect-questionnaire" && (
+                <GeneralDiscoveryOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(currentStep)}
+                  initialData={stepData.questionnaire}
+                />
+              )}
+
               {steps[currentStep]?.id === "discovery-questionnaire" && (
                 <BusinessAdminOnboardingForm
                   clientProfileId={clientProfileId}

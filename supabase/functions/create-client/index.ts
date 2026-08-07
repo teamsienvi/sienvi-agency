@@ -11,7 +11,7 @@ interface CreateClientRequest {
   firstName?: string;
   lastName?: string;
   clientType: "new" | "existing";
-  plan: "single" | "triple" | "full" | "amazon" | "advertising" | "custom";
+  plan: "single" | "triple" | "full" | "amazon" | "advertising" | "custom" | "prospect";
   customPrice?: number;
   maxServices?: number;
   subscriptionStatus: "pending_payment" | "active" | "past_due" | "canceled";
@@ -95,7 +95,16 @@ serve(async (req) => {
     }
 
     // Calculate max_services based on plan
-    const planLimits: Record<string, number> = { single: 1, triple: 3, full: 6, amazon: 1, advertising: 8, custom: 6 };
+    const planLimits: Record<string, number> = { single: 1, triple: 3, full: 6, amazon: 1, advertising: 8, custom: 6, prospect: 0 };
+
+    // Prospects get forced defaults — no services, no contract, pending payment
+    if (body.plan === "prospect") {
+      body.subscriptionStatus = "pending_payment";
+      body.contractStatus = "not_signed";
+      body.onboardingStatus = "not_started";
+      body.selectedServices = [];
+    }
+
     const maxServices = body.plan === "custom" && body.maxServices 
       ? body.maxServices 
       : (planLimits[body.plan] ?? 1);

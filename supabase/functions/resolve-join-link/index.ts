@@ -85,7 +85,31 @@ serve(async (req) => {
     let redirectPath = "/dashboard";
     let linkType: "invite" | "magiclink" = "magiclink";
 
-    if (profile.contract_status === "not_signed") {
+    const isProspect = profile.plan === "prospect";
+    const isDiscovery = isProspect || profile.plan === "discovery" || profile.plan === "custom-lms";
+
+    if (isProspect && profile.contract_status === "not_signed") {
+      // Prospects skip contract entirely — check if they need password setup
+      const probe = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: targetEmail,
+        options: { redirectTo: "https://sienvi.com/onboarding" },
+      });
+
+      if (!probe.error && probe.data?.user) {
+        const hasSetPassword = !!probe.data.user.user_metadata?.password_set;
+        if (!hasSetPassword) {
+          redirectPath = "/login?setup=password";
+          linkType = "invite";
+        } else {
+          redirectPath = "/onboarding";
+          linkType = "magiclink";
+        }
+      } else {
+        redirectPath = "/login?setup=password";
+        linkType = "invite";
+      }
+    } else if (profile.contract_status === "not_signed") {
       // Ambiguous: new user or needs contract? Try magiclink to probe user state.
       const probe = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
@@ -112,9 +136,9 @@ serve(async (req) => {
         redirectPath = "/login?setup=password";
         linkType = "invite";
       }
-    } else if (profile.subscription_status === "pending_payment") {
+    } else if (profile.subscription_status === "pending_payment" && !isProspect) {
       redirectPath = profile.plan ? `/checkout-summary?plan=${profile.plan}` : "/checkout-summary";
-    } else if (profile.contract_status === "signed" && profile.onboarding_status !== "completed") {
+    } else if ((profile.contract_status === "signed" || isDiscovery) && profile.onboarding_status !== "completed") {
       redirectPath = "/onboarding";
     }
 

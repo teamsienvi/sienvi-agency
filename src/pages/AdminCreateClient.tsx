@@ -50,6 +50,7 @@ const planConfigs: Record<string, { amount: number; maxServices: number }> = {
   amazon: { amount: 999, maxServices: 1 },
   advertising: { amount: 999, maxServices: 7 },
   custom: { amount: 0, maxServices: 6 },
+  prospect: { amount: 0, maxServices: 0 },
 };
 
 const AdminCreateClient = () => {
@@ -72,7 +73,7 @@ const AdminCreateClient = () => {
     firstName: "",
     lastName: "",
     clientType: "new" as "new" | "existing",
-    plan: "single" as "single" | "triple" | "full" | "amazon" | "advertising" | "custom",
+    plan: "single" as "single" | "triple" | "full" | "amazon" | "advertising" | "custom" | "prospect",
     customPrice: 888,
     maxServices: 1,
     selectedServices: [] as string[],
@@ -97,7 +98,13 @@ const AdminCreateClient = () => {
       plan: plan as typeof prev.plan,
       customPrice: plan === "custom" ? prev.customPrice : planConfig.amount,
       maxServices: plan === "custom" ? prev.maxServices : planConfig.maxServices,
-      selectedServices: plan === "amazon" ? ["amazon-design"] : prev.selectedServices.slice(0, plan === "custom" ? prev.maxServices : planConfig.maxServices),
+      selectedServices: plan === "amazon" ? ["amazon-design"] : plan === "prospect" ? [] : prev.selectedServices.slice(0, plan === "custom" ? prev.maxServices : planConfig.maxServices),
+      // Force correct defaults for prospect plan
+      ...(plan === "prospect" ? {
+        subscriptionStatus: "pending_payment" as const,
+        contractStatus: "not_signed" as const,
+        onboardingStatus: "not_started" as const,
+      } : {}),
     }));
   };
 
@@ -352,7 +359,7 @@ const AdminCreateClient = () => {
   // Show success state after client creation
   if (createdClient) {
     return (
-      <div className="min-h-screen bg-gray-50 text-slate-800">
+      <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <Button variant="ghost" onClick={() => navigate("/admin/clients")} className="mb-6">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -396,7 +403,7 @@ const AdminCreateClient = () => {
                 <div className="border-t pt-6 space-y-4">
                   <h3 className="font-semibold">Post-Creation Actions</h3>
                   
-                  {createdClient.subscription_status === "pending_payment" && (
+                  {createdClient.subscription_status === "pending_payment" && createdClient.plan !== "prospect" && (
                     <div className="space-y-3">
                       {!checkoutUrl ? (
                         <Button 
@@ -454,30 +461,30 @@ const AdminCreateClient = () => {
                   </Button>
 
                   {onboardingLink && (
-                    <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 space-y-2">
+                    <div className="bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-indigo-900">1-Click Client Onboarding URL:</span>
-                        <span className="text-[10px] bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded font-mono">
-                          Sign Up ➔ Contract ➔ Payment ➔ Access
+                        <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">1-Click Client Onboarding URL:</span>
+                        <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono">
+                          {createdClient.plan === "prospect" ? "Sign Up ➔ Discovery Questions" : "Sign Up ➔ Contract ➔ Payment ➔ Access"}
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <code className="flex-1 text-xs bg-white p-2 rounded border border-indigo-200 text-indigo-950 font-mono break-all max-h-20 overflow-y-auto">
+                        <code className="flex-1 text-xs bg-white dark:bg-background p-2 rounded border border-indigo-200 dark:border-indigo-800 text-indigo-950 dark:text-indigo-100 font-mono break-all max-h-20 overflow-y-auto">
                           {onboardingLink}
                         </code>
-                        <Button size="sm" variant="outline" onClick={copyOnboardingLink} className="bg-white">
+                        <Button size="sm" variant="outline" onClick={copyOnboardingLink} className="bg-white dark:bg-card">
                           {copiedOnboarding ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          className="bg-white"
+                          className="bg-white dark:bg-card"
                           onClick={() => window.open(onboardingLink, "_blank")}
                         >
                           <ExternalLink className="w-4 h-4 text-indigo-600" />
                         </Button>
                       </div>
-                      <p className="text-[11px] text-indigo-700 font-light">
+                      <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-light">
                         Send this single link directly to your client via chat or email.
                       </p>
                     </div>
@@ -500,7 +507,7 @@ const AdminCreateClient = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-slate-800">
+    <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -612,9 +619,11 @@ const AdminCreateClient = () => {
                         <SelectItem value="amazon">Amazon Design ($999 one-time)</SelectItem>
                         <SelectItem value="advertising">Advertising Package</SelectItem>
                         <SelectItem value="custom">Custom Plan</SelectItem>
+                        <SelectItem value="prospect">Prospect (Discovery Only)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  {formData.plan !== "prospect" && (
                   <div className="space-y-2">
                     <Label>Subscription Status</Label>
                     <Select
@@ -635,6 +644,7 @@ const AdminCreateClient = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
                 </div>
 
                 {formData.plan === "custom" && (
@@ -692,7 +702,8 @@ const AdminCreateClient = () => {
                 )}
               </div>
 
-              {/* Section D: Contract Status */}
+              {/* Section D: Contract Status - hidden for prospects */}
+              {formData.plan !== "prospect" && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">Contract Status</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -750,8 +761,10 @@ const AdminCreateClient = () => {
                   </div>
                 </div>
               </div>
+              )}
 
-              {/* Service Selection */}
+              {/* Service Selection - hidden for prospects */}
+              {formData.plan !== "prospect" && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">
                   {formData.plan === "amazon" 
@@ -855,6 +868,18 @@ const AdminCreateClient = () => {
               </div>
             )}
               </div>
+              )}
+
+              {/* Prospect Info Banner */}
+              {formData.plan === "prospect" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-semibold text-amber-900">Prospect — Discovery Only</p>
+                  <p className="text-xs text-amber-700">
+                    This prospect will receive a login invite and fill out a discovery questionnaire. 
+                    No contract or payment is required. You can upgrade them to a full client later.
+                  </p>
+                </div>
+              )}
 
               {/* Notes */}
               <div className="space-y-4">
@@ -875,7 +900,7 @@ const AdminCreateClient = () => {
                   ) : (
                     <UserPlus className="w-4 h-4 mr-2" />
                   )}
-                  Create Client
+                  {formData.plan === "prospect" ? "Create Prospect" : "Create Client"}
                 </Button>
               </div>
             </CardContent>

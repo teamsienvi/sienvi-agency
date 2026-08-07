@@ -346,6 +346,7 @@ export const EditClientModal = ({
                   <SelectItem value="amazon">Amazon Design ($999 one-time)</SelectItem>
                   <SelectItem value="advertising">Advertising Package</SelectItem>
                   <SelectItem value="custom">Custom Plan</SelectItem>
+                  <SelectItem value="prospect">Prospect (Discovery Only)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

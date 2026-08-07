@@ -703,7 +703,7 @@ serve(async (req) => {
         break;
 
       case "start_onboarding":
-        const isDiscovery = profile.plan === "discovery" || profile.plan === "custom-lms" || (profile.selected_services || []).includes("custom-tool");
+        const isDiscovery = profile.plan === "discovery" || profile.plan === "prospect" || profile.plan === "custom-lms" || (profile.selected_services || []).includes("custom-tool");
         if (profile.contract_status !== "signed" && !isDiscovery) {
           return new Response(
             JSON.stringify({ error: "Contract must be signed before starting onboarding" }),
