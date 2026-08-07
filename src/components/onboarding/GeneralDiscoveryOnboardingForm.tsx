@@ -418,6 +418,34 @@ export const GeneralDiscoveryOnboardingForm = ({ clientProfileId, onComplete, in
 
   const buildPayload = (data: Partial<FormData>, isDraft: boolean) => {
     // Map to the existing columns where possible, dump the rest into additional_notes
+    const enrichedNotes = {
+      ...data,
+      primary_contact_name: data.primaryContactName || null,
+      role_title: data.roleTitle || null,
+      email_address: data.emailAddress || null,
+      phone_whatsapp: data.phoneWhatsapp || null,
+      website: data.websiteUrl || null,
+      social_media_links: data.socialMediaLinks || null,
+      location_time_zone: data.locationTimeZone || null,
+      preferred_communication: data.preferredCommunication || null,
+      preferred_meeting_frequency: data.preferredMeetingFrequency || null,
+      business_stage: data.businessStage || null,
+      current_offers: data.currentOffers || null,
+      primary_services: data.currentOffers || null,
+      primary_goal: data.primaryGoal || null,
+      smart_specific: data.smartSpecific || null,
+      smart_measurable: data.smartMeasurable || null,
+      smart_achievable: data.smartAchievable || null,
+      smart_relevant: data.smartRelevant || null,
+      smart_timebound: data.smartTimebound || null,
+      big_win: data.bigWin || null,
+      biggest_challenges: data.biggestChallenges || null,
+      stuck_overwhelmed: data.stuckOverwhelmed || null,
+      time_sinks: data.timeSinks || null,
+      ideal_customer: data.idealCustomer || null,
+      pain_points: data.painPoints || null,
+    };
+
     return {
       ...(initialData?.id ? { id: initialData.id } : {}),
       client_profile_id: clientProfileId,
@@ -429,7 +457,7 @@ export const GeneralDiscoveryOnboardingForm = ({ clientProfileId, onComplete, in
       top_3_goals: data.top3Goals || null,
       primary_contact: data.primaryContactName || null,
       communication_preference: data.preferredCommunication || null,
-      additional_notes: JSON.stringify(data), // Save everything else as JSON
+      additional_notes: JSON.stringify(enrichedNotes),
       completed_at: isDraft ? null : new Date().toISOString(),
     };
   };

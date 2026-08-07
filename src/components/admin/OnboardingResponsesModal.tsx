@@ -503,48 +503,55 @@ export const OnboardingResponsesModal = ({
     }
 
     if (onboardingType !== "amazon" && onboardingType !== "advertising" && questionnaire) {
-      if (onboardingType === "discovery") {
+      if (onboardingType === "discovery" || onboardingType === "prospect") {
         let bizAdminHtml = "";
         
         let sect1 = "";
-        sect1 += renderPrintField("Business Name", questionnaire.business_name);
-        sect1 += renderPrintField("Primary Contact Name", questionnaire.primary_contact_name);
-        sect1 += renderPrintField("Role/Title", questionnaire.role_title);
-        sect1 += renderPrintField("Email Address", questionnaire.email_address);
-        sect1 += renderPrintField("Phone/WhatsApp", questionnaire.phone_whatsapp);
-        sect1 += renderPrintField("Website", questionnaire.website);
-        sect1 += renderPrintField("Social Media Links", questionnaire.social_media_links);
-        sect1 += renderPrintField("Location/Time Zone", questionnaire.location_time_zone);
-        sect1 += renderPrintField("Preferred Communication", questionnaire.preferred_communication);
-        sect1 += renderPrintField("Preferred Meeting Frequency", questionnaire.preferred_meeting_frequency);
+        sect1 += renderPrintField("Business Name", questionnaire.business_name || questionnaire.businessName);
+        sect1 += renderPrintField("Primary Contact Name", questionnaire.primary_contact_name || questionnaire.primary_contact || questionnaire.primaryContactName);
+        sect1 += renderPrintField("Role/Title", questionnaire.role_title || questionnaire.roleTitle);
+        sect1 += renderPrintField("Email Address", questionnaire.email_address || questionnaire.emailAddress || questionnaire.email);
+        sect1 += renderPrintField("Phone/WhatsApp", questionnaire.phone_whatsapp || questionnaire.phoneWhatsapp);
+        sect1 += renderPrintField("Website", questionnaire.website || questionnaire.websiteUrl);
+        sect1 += renderPrintField("Social Media Links", questionnaire.social_media_links || questionnaire.socialMediaLinks);
+        sect1 += renderPrintField("Location/Time Zone", questionnaire.location_time_zone || questionnaire.locationTimeZone);
+        sect1 += renderPrintField("Preferred Communication", questionnaire.preferred_communication || questionnaire.communication_preference || questionnaire.preferredCommunication);
+        sect1 += renderPrintField("Preferred Meeting Frequency", questionnaire.preferred_meeting_frequency || questionnaire.preferredMeetingFrequency);
         bizAdminHtml += renderPrintCard("1. Business & Contact Info", sect1);
 
         let sect2 = "";
-        sect2 += renderPrintField("Business Description", questionnaire.business_description);
-        sect2 += renderPrintField("Industry/Niche", questionnaire.industry_niche);
-        sect2 += renderPrintField("Years Operating", questionnaire.years_operating);
-        sect2 += renderPrintField("Primary Services", questionnaire.primary_services);
-        sect2 += renderPrintField("Primary Clients", questionnaire.primary_clients);
-        sect2 += renderPrintField("Revenue Streams", questionnaire.revenue_streams);
-        sect2 += renderPrintField("Business Stage", questionnaire.business_stage);
+        sect2 += renderPrintField("Business Description", questionnaire.business_description || questionnaire.businessDescription);
+        sect2 += renderPrintField("Industry/Niche", questionnaire.industry_niche || questionnaire.industryNiche);
+        sect2 += renderPrintField("Years Operating", questionnaire.years_operating || questionnaire.yearsOperating);
+        sect2 += renderPrintField("Primary Services", questionnaire.primary_services || questionnaire.current_offers || questionnaire.currentOffers);
+        sect2 += renderPrintField("Primary Clients", questionnaire.primary_clients || questionnaire.ideal_customer || questionnaire.idealCustomer);
+        sect2 += renderPrintField("Revenue Streams", questionnaire.revenue_streams || questionnaire.revenueStreams);
+        sect2 += renderPrintField("Business Stage", questionnaire.business_stage || questionnaire.businessStage);
         bizAdminHtml += renderPrintCard("2. Business Overview", sect2);
 
         let sect3 = "";
-        sect3 += renderPrintField("Top 3 Goals (6-12 months)", questionnaire.top_3_goals);
-        sect3 += renderPrintField("Successful Partnership definition", questionnaire.successful_partnership);
-        sect3 += renderPrintField("Specific Outcomes Needed", questionnaire.specific_outcomes);
-        sect3 += renderPrintField("How to Measure Success", questionnaire.measure_success);
-        sect3 += renderPrintField("Deadlines & Priorities", questionnaire.deadlines_priorities);
-        sect3 += renderPrintField("Long-Term Vision", questionnaire.long_term_vision);
+        sect3 += renderPrintField("Top 3 Goals (6-12 months)", questionnaire.top_3_goals || questionnaire.top3Goals);
+        sect3 += renderPrintField("Primary Goal", questionnaire.primary_goal || questionnaire.primaryGoal);
+        sect3 += renderPrintField("SMART Goal (Specific)", questionnaire.smart_specific || questionnaire.smartSpecific);
+        sect3 += renderPrintField("SMART Goal (Measurable)", questionnaire.smart_measurable || questionnaire.smartMeasurable);
+        sect3 += renderPrintField("SMART Goal (Achievable)", questionnaire.smart_achievable || questionnaire.smartAchievable);
+        sect3 += renderPrintField("SMART Goal (Relevant)", questionnaire.smart_relevant || questionnaire.smartRelevant);
+        sect3 += renderPrintField("SMART Goal (Timebound)", questionnaire.smart_timebound || questionnaire.smartTimebound);
+        sect3 += renderPrintField("Big Win Expectation", questionnaire.big_win_expectation || questionnaire.big_win || questionnaire.bigWin);
+        sect3 += renderPrintField("Successful Partnership definition", questionnaire.successful_partnership || questionnaire.successfulPartnership);
+        sect3 += renderPrintField("Specific Outcomes Needed", questionnaire.specific_outcomes || questionnaire.specificOutcomes);
+        sect3 += renderPrintField("How to Measure Success", questionnaire.measure_success || questionnaire.measureSuccess);
+        sect3 += renderPrintField("Deadlines & Priorities", questionnaire.deadlines_priorities || questionnaire.deadlinesPriorities);
+        sect3 += renderPrintField("Long-Term Vision", questionnaire.long_term_vision || questionnaire.longTermVision);
         bizAdminHtml += renderPrintCard("3. Goals & Vision", sect3);
 
         let sect4 = "";
-        sect4 += renderPrintField("Administrative Challenges", questionnaire.admin_challenges);
-        sect4 += renderPrintField("Personal Time Sinks", questionnaire.personal_time_sinks);
-        sect4 += renderPrintField("Tasks Falling Through Cracks", questionnaire.tasks_falling_through_cracks);
+        sect4 += renderPrintField("Administrative Challenges", questionnaire.admin_challenges || questionnaire.biggest_challenges || questionnaire.biggestChallenges);
+        sect4 += renderPrintField("Personal Time Sinks", questionnaire.personal_time_sinks || questionnaire.time_sinks || questionnaire.timeSinks);
+        sect4 += renderPrintField("Tasks Falling Through Cracks", questionnaire.tasks_falling_through_cracks || questionnaire.inconsistencies);
         sect4 += renderPrintField("Unclear Processes", questionnaire.unclear_processes);
-        sect4 += renderPrintField("Prevention Factors", questionnaire.prevention_factors);
-        sect4 += renderPrintField("Past Support Experience", questionnaire.past_support_experience);
+        sect4 += renderPrintField("Prevention Factors", questionnaire.prevention_factors || questionnaire.speed_prevention || questionnaire.speedPrevention);
+        sect4 += renderPrintField("Past Support Experience", questionnaire.past_support_experience || questionnaire.pastSupportExperience);
         sect4 += renderPrintField("Immediate Delegation Tasks", questionnaire.immediate_delegation);
         bizAdminHtml += renderPrintCard("4. Challenges & Bottlenecks", sect4);
 
@@ -1176,53 +1183,62 @@ export const OnboardingResponsesModal = ({
                     <Card>
                       <CardHeader><CardTitle className="text-base">1. Business & Contact Info</CardTitle></CardHeader>
                       <CardContent className="space-y-3">
-                        {renderField("Business Name", questionnaire.business_name)}
-                        {renderField("Primary Contact Name", questionnaire.primary_contact_name)}
-                        {renderField("Role/Title", questionnaire.role_title)}
-                        {renderField("Email Address", questionnaire.email_address)}
-                        {renderField("Phone/WhatsApp", questionnaire.phone_whatsapp)}
-                        {renderField("Website", questionnaire.website)}
-                        {renderField("Social Media Links", questionnaire.social_media_links)}
-                        {renderField("Location/Time Zone", questionnaire.location_time_zone)}
-                        {renderField("Preferred Communication", questionnaire.preferred_communication)}
-                        {renderField("Preferred Meeting Frequency", questionnaire.preferred_meeting_frequency)}
+                        {renderField("Business Name", questionnaire.business_name || questionnaire.businessName)}
+                        {renderField("Primary Contact Name", questionnaire.primary_contact_name || questionnaire.primary_contact || questionnaire.primaryContactName)}
+                        {renderField("Role/Title", questionnaire.role_title || questionnaire.roleTitle)}
+                        {renderField("Email Address", questionnaire.email_address || questionnaire.emailAddress || questionnaire.email)}
+                        {renderField("Phone/WhatsApp", questionnaire.phone_whatsapp || questionnaire.phoneWhatsapp)}
+                        {renderField("Website", questionnaire.website || questionnaire.websiteUrl)}
+                        {renderField("Social Media Links", questionnaire.social_media_links || questionnaire.socialMediaLinks)}
+                        {renderField("Location/Time Zone", questionnaire.location_time_zone || questionnaire.locationTimeZone)}
+                        {renderField("Preferred Communication", questionnaire.preferred_communication || questionnaire.communication_preference || questionnaire.preferredCommunication)}
+                        {renderField("Preferred Meeting Frequency", questionnaire.preferred_meeting_frequency || questionnaire.preferredMeetingFrequency)}
                       </CardContent>
                     </Card>
 
                     <Card>
                       <CardHeader><CardTitle className="text-base">2. Business Overview</CardTitle></CardHeader>
                       <CardContent className="space-y-3">
-                        {renderField("Business Description", questionnaire.business_description)}
-                        {renderField("Industry/Niche", questionnaire.industry_niche)}
-                        {renderField("Years Operating", questionnaire.years_operating)}
-                        {renderField("Primary Services", questionnaire.primary_services)}
-                        {renderField("Primary Clients", questionnaire.primary_clients)}
-                        {renderField("Revenue Streams", questionnaire.revenue_streams)}
-                        {renderField("Business Stage", questionnaire.business_stage)}
+                        {renderField("Business Description", questionnaire.business_description || questionnaire.businessDescription)}
+                        {renderField("Industry/Niche", questionnaire.industry_niche || questionnaire.industryNiche)}
+                        {renderField("Years Operating", questionnaire.years_operating || questionnaire.yearsOperating)}
+                        {renderField("Primary Services / Current Offers", questionnaire.primary_services || questionnaire.current_offers || questionnaire.currentOffers || questionnaire.coreOffersDetails)}
+                        {renderField("Primary Clients / Ideal Customer", questionnaire.primary_clients || questionnaire.ideal_customer || questionnaire.idealCustomer)}
+                        {renderField("Revenue Streams", questionnaire.revenue_streams || questionnaire.revenueStreams)}
+                        {renderField("Business Stage", questionnaire.business_stage || questionnaire.businessStage)}
                       </CardContent>
                     </Card>
 
                     <Card>
                       <CardHeader><CardTitle className="text-base">3. Goals & Vision</CardTitle></CardHeader>
                       <CardContent className="space-y-3">
-                        {renderField("Top 3 Goals (6-12 months)", questionnaire.top_3_goals)}
-                        {renderField("Successful Partnership Success Definition", questionnaire.successful_partnership)}
-                        {renderField("Specific Outcomes Needed", questionnaire.specific_outcomes)}
-                        {renderField("How to Measure Success", questionnaire.measure_success)}
-                        {renderField("Deadlines & Priorities", questionnaire.deadlines_priorities)}
-                        {renderField("Long-Term Vision", questionnaire.long_term_vision)}
+                        {renderField("Top 3 Goals (6-12 months)", questionnaire.top_3_goals || questionnaire.top3Goals)}
+                        {renderField("Primary Goal", questionnaire.primary_goal || questionnaire.primaryGoal)}
+                        {renderField("SMART Goal (Specific)", questionnaire.smart_specific || questionnaire.smartSpecific)}
+                        {renderField("SMART Goal (Measurable)", questionnaire.smart_measurable || questionnaire.smartMeasurable)}
+                        {renderField("SMART Goal (Achievable)", questionnaire.smart_achievable || questionnaire.smartAchievable)}
+                        {renderField("SMART Goal (Relevant)", questionnaire.smart_relevant || questionnaire.smartRelevant)}
+                        {renderField("SMART Goal (Timebound)", questionnaire.smart_timebound || questionnaire.smartTimebound)}
+                        {renderField("Big Win Expectation", questionnaire.big_win_expectation || questionnaire.big_win || questionnaire.bigWin)}
+                        {renderField("Successful Partnership Success Definition", questionnaire.successful_partnership || questionnaire.successfulPartnership)}
+                        {renderField("Specific Outcomes Needed", questionnaire.specific_outcomes || questionnaire.specificOutcomes)}
+                        {renderField("How to Measure Success", questionnaire.measure_success || questionnaire.measureSuccess)}
+                        {renderField("Deadlines & Priorities", questionnaire.deadlines_priorities || questionnaire.deadlinesPriorities)}
+                        {renderField("Long-Term Vision", questionnaire.long_term_vision || questionnaire.longTermVision)}
                       </CardContent>
                     </Card>
 
                     <Card>
                       <CardHeader><CardTitle className="text-base">4. Challenges & Bottlenecks</CardTitle></CardHeader>
                       <CardContent className="space-y-3">
-                        {renderField("Administrative Challenges", questionnaire.admin_challenges)}
-                        {renderField("Personal Time Sinks", questionnaire.personal_time_sinks)}
-                        {renderField("Tasks Falling Through Cracks", questionnaire.tasks_falling_through_cracks)}
+                        {renderField("Administrative Challenges / Biggest Challenges", questionnaire.admin_challenges || questionnaire.biggest_challenges || questionnaire.biggestChallenges)}
+                        {renderField("Stuck / Overwhelmed Areas", questionnaire.stuck_areas || questionnaire.stuck_overwhelmed || questionnaire.stuckOverwhelmed)}
+                        {renderField("Personal Time Sinks", questionnaire.personal_time_sinks || questionnaire.time_sinks || questionnaire.timeSinks)}
+                        {renderField("Tasks Falling Through Cracks", questionnaire.tasks_falling_through_cracks || questionnaire.inconsistencies)}
                         {renderField("Unclear Processes", questionnaire.unclear_processes)}
-                        {renderField("Prevention Factors", questionnaire.prevention_factors)}
-                        {renderField("Past Support Experience", questionnaire.past_support_experience)}
+                        {renderField("Prevention Factors", questionnaire.prevention_factors || questionnaire.speed_prevention || questionnaire.speedPrevention)}
+                        {renderField("Past Support Experience", questionnaire.past_support_experience || questionnaire.pastSupportExperience)}
+                        {renderField("Things to Avoid", questionnaire.things_to_avoid || questionnaire.thingsToAvoid)}
                         {renderField("Immediate Delegation Tasks", questionnaire.immediate_delegation)}
                       </CardContent>
                     </Card>
