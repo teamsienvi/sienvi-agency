@@ -33,6 +33,7 @@ export const OnboardingResponsesModal = ({
   const [questionnaire, setQuestionnaire] = useState<any>(null);
   const [amazon, setAmazon] = useState<any>(null);
   const [advertising, setAdvertising] = useState<any>(null);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
   const [onboardingType, setOnboardingType] = useState<string>("standard");
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export const OnboardingResponsesModal = ({
         supabase.from("onboarding_questionnaire").select("*").eq("client_profile_id", clientId).maybeSingle(),
         supabase.from("onboarding_amazon").select("*").eq("client_profile_id", clientId).maybeSingle(),
         supabase.from("onboarding_advertising").select("*").eq("client_profile_id", clientId).maybeSingle(),
-        supabase.from("client_profiles").select("plan, selected_services, discovery_form_type").eq("id", clientId).maybeSingle(),
+        supabase.from("client_profiles").select("plan, selected_services, discovery_form_type, email").eq("id", clientId).maybeSingle(),
       ]);
 
       let qData = questionnaireRes.data;
@@ -91,6 +92,7 @@ export const OnboardingResponsesModal = ({
       setAdvertising(adData || {});
 
       if (profileRes.data) {
+        setClientEmail(profileRes.data.email);
         const services = profileRes.data.selected_services || [];
         const plan = profileRes.data.plan;
         const formType = (profileRes.data as any).discovery_form_type;
@@ -506,7 +508,19 @@ export const OnboardingResponsesModal = ({
       if (onboardingType === "discovery" || onboardingType === "prospect") {
         let bizAdminHtml = "";
         
-        let sect1 = "";
+        if (clientEmail === "shanepowhatan@gmail.com") {
+          let shaneSec = "";
+          shaneSec += renderPrintField("1. Top 3 Outcomes", questionnaire.top3Outcomes);
+          shaneSec += renderPrintField("2. Rebrand Timeline", questionnaire.rebrandTimeline);
+          shaneSec += renderPrintField("3. Pre-Rebrand Work", questionnaire.preRebrandWork);
+          shaneSec += renderPrintField("4. Target Segment", questionnaire.targetSegment);
+          shaneSec += renderPrintField("5. Proof Assets", questionnaire.proofAssets);
+          shaneSec += renderPrintField("6. Current Numbers", questionnaire.currentNumbers);
+          shaneSec += renderPrintField("7. Valuable for Sienvi to Own", questionnaire.valuableToOwn);
+          shaneSec += renderPrintField("Closing: One Problem in 90 Days", questionnaire.oneProblem90Days);
+          bizAdminHtml += renderPrintCard("Shane Follow-Up Questions", shaneSec);
+        } else {
+          let sect1 = "";
         sect1 += renderPrintField("Business Name", questionnaire.business_name || questionnaire.businessName);
         sect1 += renderPrintField("Primary Contact Name", questionnaire.primary_contact_name || questionnaire.primary_contact || questionnaire.primaryContactName);
         sect1 += renderPrintField("Role/Title", questionnaire.role_title || questionnaire.roleTitle);
@@ -715,6 +729,7 @@ export const OnboardingResponsesModal = ({
         sect20 += renderPrintField("Boundaries & Preferences", questionnaire.boundaries_preferences);
         sect20 += renderPrintField("Additional Notes", questionnaire.final_notes);
         bizAdminHtml += renderPrintCard("20. Final Notes", sect20);
+        }
 
         reportContent += `
           <div class="section-title page-break">${onboardingType === "prospect" ? "Prospect Discovery Onboarding Questionnaire" : "Business Admin Onboarding Questionnaire"}</div>
@@ -1178,6 +1193,22 @@ export const OnboardingResponsesModal = ({
               <TabsContent value="questionnaire" className="space-y-4">
                 {!questionnaire ? (
                   <Card><CardContent className="py-8 text-center text-muted-foreground">No questionnaire submitted yet</CardContent></Card>
+                ) : clientEmail === "shanepowhatan@gmail.com" ? (
+                  <>
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">Shane Follow-Up Questions</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("1. Top 3 Outcomes", questionnaire.top3Outcomes)}
+                        {renderField("2. Rebrand Timeline", questionnaire.rebrandTimeline)}
+                        {renderField("3. Pre-Rebrand Work", questionnaire.preRebrandWork)}
+                        {renderField("4. Target Segment", questionnaire.targetSegment)}
+                        {renderField("5. Proof Assets", questionnaire.proofAssets)}
+                        {renderField("6. Current Numbers", questionnaire.currentNumbers)}
+                        {renderField("7. Valuable for Sienvi to Own", questionnaire.valuableToOwn)}
+                        {renderField("Closing: One Problem in 90 Days", questionnaire.oneProblem90Days)}
+                      </CardContent>
+                    </Card>
+                  </>
                 ) : onboardingType === "discovery" || onboardingType === "prospect" ? (
                   <>
                     <Card>

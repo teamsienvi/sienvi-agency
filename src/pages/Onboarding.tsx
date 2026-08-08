@@ -27,6 +27,7 @@ import { AdvertisingOnboardingForm } from "@/components/onboarding/AdvertisingOn
 import { BusinessAdminOnboardingForm } from "@/components/onboarding/BusinessAdminOnboardingForm";
 import { AmazonAdsOnboardingForm } from "@/components/onboarding/AmazonAdsOnboardingForm";
 import { GeneralDiscoveryOnboardingForm } from "@/components/onboarding/GeneralDiscoveryOnboardingForm";
+import { ShaneDiscoveryOnboardingForm } from "@/components/onboarding/ShaneDiscoveryOnboardingForm";
 
 interface StepData {
   goals: any;
@@ -42,6 +43,7 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [clientProfileId, setClientProfileId] = useState<string | null>(null);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [stepData, setStepData] = useState<StepData>({ goals: null, avatars: null, questionnaire: null, amazon: null, advertising: null });
   const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
@@ -93,6 +95,7 @@ const Onboarding = () => {
       }
 
       setClientProfileId(profile.id);
+      setClientEmail(profile.email);
       setSelectedServices(services);
 
       // Determine onboarding type based on selected services
@@ -324,11 +327,19 @@ const Onboarding = () => {
           {clientProfileId && (
             <div className="mt-8">
               {steps[currentStep]?.id === "prospect-questionnaire" && (
-                <GeneralDiscoveryOnboardingForm
-                  clientProfileId={clientProfileId}
-                  onComplete={() => handleStepComplete(currentStep)}
-                  initialData={stepData.questionnaire}
-                />
+                clientEmail === "shanepowhatan@gmail.com" ? (
+                  <ShaneDiscoveryOnboardingForm
+                    clientProfileId={clientProfileId}
+                    onComplete={() => handleStepComplete(currentStep)}
+                    initialData={stepData.questionnaire}
+                  />
+                ) : (
+                  <GeneralDiscoveryOnboardingForm
+                    clientProfileId={clientProfileId}
+                    onComplete={() => handleStepComplete(currentStep)}
+                    initialData={stepData.questionnaire}
+                  />
+                )
               )}
 
               {steps[currentStep]?.id === "discovery-questionnaire" && (
