@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -515,8 +515,14 @@ export const OnboardingResponsesModal = ({
           shaneSec += renderPrintField("3. What work would be valuable to start before the rebrand is fully live?", questionnaire.preRebrandWork);
           shaneSec += renderPrintField("4. Outside of pro athletes and teams, which customer segment should the new brand target first?", questionnaire.targetSegment);
           shaneSec += renderPrintField("5. Which athlete, team, military, or customer proof assets can be used publicly after the rebrand?", questionnaire.proofAssets);
-          shaneSec += renderPrintField("6. What current numbers should we understand before recommending a scaling plan?", questionnaire.currentNumbers);
-          shaneSec += renderPrintField("7. What would be most valuable for Sienvi Agency to own outside of Amazon?", questionnaire.valuableToOwn);
+          shaneSec += renderPrintField(
+            "6. What current numbers should we understand before recommending a scaling plan?<br/><span style='font-size: 11px; font-weight: normal; text-transform: none; display: block; margin-top: 4px;'>Please share whatever is available:<br/>&bull; Average order value<br/>&bull; Repeat-purchase rate<br/>&bull; Subscription percentage<br/>&bull; Customer lifetime value, if known<br/>&bull; Monthly website traffic<br/>&bull; Email/SMS list size<br/>&bull; Current monthly DTC revenue<br/>&bull; Current monthly team/pro sports revenue<br/>&bull; Current conversion rate, if known<br/>&bull; Budget available for a 90-day test</span>", 
+            questionnaire.currentNumbers
+          );
+          shaneSec += renderPrintField(
+            "7. What would be most valuable for Sienvi Agency to own outside of Amazon?<br/><span style='font-size: 11px; font-weight: normal; text-transform: none; display: block; margin-top: 4px;'>Please rank the most relevant options:<br/>&bull; Off-Amazon growth strategy<br/>&bull; Website and conversion support<br/>&bull; Content strategy and production<br/>&bull; Paid traffic testing outside Amazon<br/>&bull; Email/SMS retention<br/>&bull; Affiliate, ambassador, or athlete activation<br/>&bull; Dashboards and reporting<br/>&bull; AI agents and automation<br/>&bull; Company operating system/source of truth<br/>&bull; Cross-channel coordination with Piranha<br/>&bull; Fractional growth and technology support</span>", 
+            questionnaire.valuableToOwn
+          );
           shaneSec += renderPrintField("If we could solve only one problem for you in the next 90 days, what should it be?", questionnaire.oneProblem90Days);
           bizAdminHtml += renderPrintCard("Shane Follow-Up Questions", shaneSec);
         } else {
@@ -950,18 +956,18 @@ export const OnboardingResponsesModal = ({
     printWindow.document.close();
   };
 
-  const renderField = (label: string, value: any) => {
+  const renderField = (label: React.ReactNode, value: any) => {
     if (!value) {
       return (
         <div className="space-y-1">
-          <p className="text-sm font-medium text-slate-700">{label}</p>
+          <div className="text-sm font-medium text-slate-700">{label}</div>
           <p className="text-sm text-slate-400 italic">Not answered</p>
         </div>
       );
     }
     return (
       <div className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <div className="text-sm font-medium text-muted-foreground">{label}</div>
         <p className="text-sm whitespace-pre-wrap">{value}</p>
       </div>
     );
@@ -1203,8 +1209,49 @@ export const OnboardingResponsesModal = ({
                         {renderField("3. What work would be valuable to start before the rebrand is fully live?", questionnaire.preRebrandWork)}
                         {renderField("4. Outside of pro athletes and teams, which customer segment should the new brand target first?", questionnaire.targetSegment)}
                         {renderField("5. Which athlete, team, military, or customer proof assets can be used publicly after the rebrand?", questionnaire.proofAssets)}
-                        {renderField("6. What current numbers should we understand before recommending a scaling plan?", questionnaire.currentNumbers)}
-                        {renderField("7. What would be most valuable for Sienvi Agency to own outside of Amazon?", questionnaire.valuableToOwn)}
+                        {renderField(
+                          <div className="space-y-1">
+                            <span>6. What current numbers should we understand before recommending a scaling plan?</span>
+                            <div className="text-xs text-slate-400 font-normal mt-1">
+                              Please share whatever is available:
+                              <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                <li>Average order value</li>
+                                <li>Repeat-purchase rate</li>
+                                <li>Subscription percentage</li>
+                                <li>Customer lifetime value, if known</li>
+                                <li>Monthly website traffic</li>
+                                <li>Email/SMS list size</li>
+                                <li>Current monthly DTC revenue</li>
+                                <li>Current monthly team/pro sports revenue</li>
+                                <li>Current conversion rate, if known</li>
+                                <li>Budget available for a 90-day test</li>
+                              </ul>
+                            </div>
+                          </div>, 
+                          questionnaire.currentNumbers
+                        )}
+                        {renderField(
+                          <div className="space-y-1">
+                            <span>7. What would be most valuable for Sienvi Agency to own outside of Amazon?</span>
+                            <div className="text-xs text-slate-400 font-normal mt-1">
+                              Please rank the most relevant options:
+                              <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                <li>Off-Amazon growth strategy</li>
+                                <li>Website and conversion support</li>
+                                <li>Content strategy and production</li>
+                                <li>Paid traffic testing outside Amazon</li>
+                                <li>Email/SMS retention</li>
+                                <li>Affiliate, ambassador, or athlete activation</li>
+                                <li>Dashboards and reporting</li>
+                                <li>AI agents and automation</li>
+                                <li>Company operating system/source of truth</li>
+                                <li>Cross-channel coordination with Piranha</li>
+                                <li>Fractional growth and technology support</li>
+                              </ul>
+                            </div>
+                          </div>, 
+                          questionnaire.valuableToOwn
+                        )}
                         {renderField("If we could solve only one problem for you in the next 90 days, what should it be?", questionnaire.oneProblem90Days)}
                       </CardContent>
                     </Card>
