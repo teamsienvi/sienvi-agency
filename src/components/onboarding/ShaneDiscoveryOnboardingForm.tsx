@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, Clipboard, CheckCircle2 } from "lucide-react";
@@ -17,9 +18,24 @@ const formSchema = z.object({
   targetSegment: z.string().min(5, "Please specify your target segment."),
   proofAssets: z.string().min(5, "Please detail the proof assets that can be used."),
   currentNumbers: z.string().optional(),
-  valuableToOwn: z.string().min(5, "Please rank what would be most valuable for Sienvi to own."),
+  valuableToOwn: z.array(z.string()).min(1, "Please select at least one option.").max(3, "Please select no more than 3 options."),
   oneProblem90Days: z.string().min(5, "Please answer the closing question."),
 });
+
+
+const valuableToOwnOptions = [
+  { id: "growth_strategy", label: "Off-Amazon growth strategy" },
+  { id: "website_conversion", label: "Website and conversion support" },
+  { id: "content_strategy", label: "Content strategy and production" },
+  { id: "paid_traffic", label: "Paid traffic testing outside Amazon" },
+  { id: "email_sms", label: "Email/SMS retention" },
+  { id: "affiliate_ambassador", label: "Affiliate, ambassador, or athlete activation" },
+  { id: "dashboards_reporting", label: "Dashboards and reporting" },
+  { id: "ai_agents", label: "AI agents and automation" },
+  { id: "company_os", label: "Company operating system/source of truth" },
+  { id: "cross_channel", label: "Cross-channel coordination with Piranha" },
+  { id: "fractional_growth", label: "Fractional growth and technology support" },
+];
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -32,7 +48,7 @@ interface ShaneDiscoveryOnboardingFormProps {
 export const ShaneDiscoveryOnboardingForm = ({ clientProfileId, onComplete, initialData }: ShaneDiscoveryOnboardingFormProps) => {
   const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, getValues } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, getValues, setValue, watch } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
       top3Outcomes: initialData.top3Outcomes || "",
@@ -41,10 +57,23 @@ export const ShaneDiscoveryOnboardingForm = ({ clientProfileId, onComplete, init
       targetSegment: initialData.targetSegment || "",
       proofAssets: initialData.proofAssets || "",
       currentNumbers: initialData.currentNumbers || "",
-      valuableToOwn: initialData.valuableToOwn || "",
+      valuableToOwn: initialData.valuableToOwn || [],
       oneProblem90Days: initialData.oneProblem90Days || "",
     } : {},
   });
+
+  const selectedValuableOptions = getValues("valuableToOwn") || [];
+  const watchValuableOptions = watch("valuableToOwn") || [];
+
+  const toggleValuableOption = (optionId: string) => {
+    const current = getValues("valuableToOwn") || [];
+    const updated = current.includes(optionId)
+      ? current.filter((id: string) => id !== optionId)
+      : [...current, optionId];
+    
+    // update value and trigger validation
+    setValue("valuableToOwn", updated, { shouldValidate: true });
+  };
 
   const buildPayload = (data: Partial<FormData>, isDraft: boolean) => {
     const enrichedNotes = { ...data };
@@ -177,23 +206,27 @@ export const ShaneDiscoveryOnboardingForm = ({ clientProfileId, onComplete, init
           <div className="space-y-3">
             <Label htmlFor="valuableToOwn" className="text-base font-semibold">7. What would be most valuable for Sienvi Agency to own outside of Amazon? *</Label>
             <div className="text-sm text-slate-500 space-y-2">
-              <p>Please rank the most relevant options:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Off-Amazon growth strategy</li>
-                <li>Website and conversion support</li>
-                <li>Content strategy and production</li>
-                <li>Paid traffic testing outside Amazon</li>
-                <li>Email/SMS retention</li>
-                <li>Affiliate, ambassador, or athlete activation</li>
-                <li>Dashboards and reporting</li>
-                <li>AI agents and automation</li>
-                <li>Company operating system/source of truth</li>
-                <li>Cross-channel coordination with Piranha</li>
-                <li>Fractional growth and technology support</li>
-              </ul>
+              <p>Please select the top 3 most valuable things for Sienvi Agency to own:</p>
             </div>
-            <Textarea id="valuableToOwn" {...register("valuableToOwn")} rows={4} />
-            {errors.valuableToOwn && <p className="text-xs text-destructive">{errors.valuableToOwn.message}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+              {valuableToOwnOptions.map((option) => (
+                <div key={option.id} className="flex items-start space-x-3">
+                  <Checkbox
+                    id={`vto-${option.id}`}
+                    checked={watchValuableOptions.includes(option.id)}
+                    onCheckedChange={() => toggleValuableOption(option.id)}
+                    disabled={!watchValuableOptions.includes(option.id) && watchValuableOptions.length >= 3}
+                  />
+                  <Label 
+                    htmlFor={`vto-${option.id}`} 
+                    className="text-sm font-normal cursor-pointer leading-tight"
+                  >
+                    {option.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {errors.valuableToOwn && <p className="text-xs text-destructive mt-2">{errors.valuableToOwn.message}</p>}
           </div>
 
         </CardContent>
