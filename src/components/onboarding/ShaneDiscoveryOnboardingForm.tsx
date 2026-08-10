@@ -155,14 +155,43 @@ export const ShaneDiscoveryOnboardingForm = ({ clientProfileId, onComplete, init
 
           <div className="space-y-3">
             <Label htmlFor="currentNumbers" className="text-base font-semibold">6. What current numbers should we understand before recommending a scaling plan?</Label>
-            <p className="text-sm text-slate-500">Please share whatever is available: Average order value, Repeat-purchase rate, Subscription percentage, Customer lifetime value (if known), Monthly website traffic, Email/SMS list size, Current monthly DTC revenue, Current monthly team/pro sports revenue, Current conversion rate, Budget available for a 90-day test.</p>
+            <div className="text-sm text-slate-500 space-y-2">
+              <p>Please share whatever is available:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Average order value</li>
+                <li>Repeat-purchase rate</li>
+                <li>Subscription percentage</li>
+                <li>Customer lifetime value, if known</li>
+                <li>Monthly website traffic</li>
+                <li>Email/SMS list size</li>
+                <li>Current monthly DTC revenue</li>
+                <li>Current monthly team/pro sports revenue</li>
+                <li>Current conversion rate, if known</li>
+                <li>Budget available for a 90-day test</li>
+              </ul>
+            </div>
             <Textarea id="currentNumbers" {...register("currentNumbers")} rows={4} />
             {errors.currentNumbers && <p className="text-xs text-destructive">{errors.currentNumbers.message}</p>}
           </div>
 
           <div className="space-y-3">
             <Label htmlFor="valuableToOwn" className="text-base font-semibold">7. What would be most valuable for Sienvi Agency to own outside of Amazon? *</Label>
-            <p className="text-sm text-slate-500">Please rank the most relevant options: Off-Amazon growth strategy, Website and conversion support, Content strategy and production, Paid traffic testing outside Amazon, Email/SMS retention, Affiliate/ambassador/athlete activation, Dashboards and reporting, AI agents and automation, Company operating system/source of truth, Cross-channel coordination with Piranha, Fractional growth and technology support.</p>
+            <div className="text-sm text-slate-500 space-y-2">
+              <p>Please rank the most relevant options:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Off-Amazon growth strategy</li>
+                <li>Website and conversion support</li>
+                <li>Content strategy and production</li>
+                <li>Paid traffic testing outside Amazon</li>
+                <li>Email/SMS retention</li>
+                <li>Affiliate, ambassador, or athlete activation</li>
+                <li>Dashboards and reporting</li>
+                <li>AI agents and automation</li>
+                <li>Company operating system/source of truth</li>
+                <li>Cross-channel coordination with Piranha</li>
+                <li>Fractional growth and technology support</li>
+              </ul>
+            </div>
             <Textarea id="valuableToOwn" {...register("valuableToOwn")} rows={4} />
             {errors.valuableToOwn && <p className="text-xs text-destructive">{errors.valuableToOwn.message}</p>}
           </div>
