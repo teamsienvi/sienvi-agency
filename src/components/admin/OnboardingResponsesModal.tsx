@@ -510,14 +510,14 @@ export const OnboardingResponsesModal = ({
         
         if (clientEmail === "shanepowhatan@gmail.com") {
           let shaneSec = "";
-          shaneSec += renderPrintField("1. Top 3 Outcomes", questionnaire.top3Outcomes);
-          shaneSec += renderPrintField("2. Rebrand Timeline", questionnaire.rebrandTimeline);
-          shaneSec += renderPrintField("3. Pre-Rebrand Work", questionnaire.preRebrandWork);
-          shaneSec += renderPrintField("4. Target Segment", questionnaire.targetSegment);
-          shaneSec += renderPrintField("5. Proof Assets", questionnaire.proofAssets);
-          shaneSec += renderPrintField("6. Current Numbers", questionnaire.currentNumbers);
-          shaneSec += renderPrintField("7. Valuable for Sienvi to Own", questionnaire.valuableToOwn);
-          shaneSec += renderPrintField("Closing: One Problem in 90 Days", questionnaire.oneProblem90Days);
+          shaneSec += renderPrintField("1. What are the top three business outcomes you want to achieve over the next 12 months?", questionnaire.top3Outcomes);
+          shaneSec += renderPrintField("2. What is the current timeline for the rebrand, upgraded formulas, packaging, and new website?", questionnaire.rebrandTimeline);
+          shaneSec += renderPrintField("3. What work would be valuable to start before the rebrand is fully live?", questionnaire.preRebrandWork);
+          shaneSec += renderPrintField("4. Outside of pro athletes and teams, which customer segment should the new brand target first?", questionnaire.targetSegment);
+          shaneSec += renderPrintField("5. Which athlete, team, military, or customer proof assets can be used publicly after the rebrand?", questionnaire.proofAssets);
+          shaneSec += renderPrintField("6. What current numbers should we understand before recommending a scaling plan?", questionnaire.currentNumbers);
+          shaneSec += renderPrintField("7. What would be most valuable for Sienvi Agency to own outside of Amazon?", questionnaire.valuableToOwn);
+          shaneSec += renderPrintField("If we could solve only one problem for you in the next 90 days, what should it be?", questionnaire.oneProblem90Days);
           bizAdminHtml += renderPrintCard("Shane Follow-Up Questions", shaneSec);
         } else {
           let sect1 = "";
@@ -1198,14 +1198,14 @@ export const OnboardingResponsesModal = ({
                     <Card>
                       <CardHeader><CardTitle className="text-base">Shane Follow-Up Questions</CardTitle></CardHeader>
                       <CardContent className="space-y-3">
-                        {renderField("1. Top 3 Outcomes", questionnaire.top3Outcomes)}
-                        {renderField("2. Rebrand Timeline", questionnaire.rebrandTimeline)}
-                        {renderField("3. Pre-Rebrand Work", questionnaire.preRebrandWork)}
-                        {renderField("4. Target Segment", questionnaire.targetSegment)}
-                        {renderField("5. Proof Assets", questionnaire.proofAssets)}
-                        {renderField("6. Current Numbers", questionnaire.currentNumbers)}
-                        {renderField("7. Valuable for Sienvi to Own", questionnaire.valuableToOwn)}
-                        {renderField("Closing: One Problem in 90 Days", questionnaire.oneProblem90Days)}
+                        {renderField("1. What are the top three business outcomes you want to achieve over the next 12 months?", questionnaire.top3Outcomes)}
+                        {renderField("2. What is the current timeline for the rebrand, upgraded formulas, packaging, and new website?", questionnaire.rebrandTimeline)}
+                        {renderField("3. What work would be valuable to start before the rebrand is fully live?", questionnaire.preRebrandWork)}
+                        {renderField("4. Outside of pro athletes and teams, which customer segment should the new brand target first?", questionnaire.targetSegment)}
+                        {renderField("5. Which athlete, team, military, or customer proof assets can be used publicly after the rebrand?", questionnaire.proofAssets)}
+                        {renderField("6. What current numbers should we understand before recommending a scaling plan?", questionnaire.currentNumbers)}
+                        {renderField("7. What would be most valuable for Sienvi Agency to own outside of Amazon?", questionnaire.valuableToOwn)}
+                        {renderField("If we could solve only one problem for you in the next 90 days, what should it be?", questionnaire.oneProblem90Days)}
                       </CardContent>
                     </Card>
                   </>
