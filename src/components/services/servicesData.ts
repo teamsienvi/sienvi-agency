@@ -14,7 +14,57 @@ const KanbanIcon2 = (props: any) => React.createElement(KanbanIcon, props);
 const BarChart3Icon2 = (props: any) => React.createElement(BarChart3Icon, props);
 
 export const services = [
-  // Row 1: Custom LMS, Social Media Suite, Advertising
+  // Row 1: Custom Agent, Custom Project Management, Custom Data Dashboard
+  {
+    id: "custom-agent",
+    icon: UserCogIcon2,
+    title: "Custom AI Agents",
+    subtitle: "Autonomous AI agents and agentic workflows for business process automation",
+    features: [
+      "Custom AI agent development and behavior scoping",
+      "Multi-agent AI systems and workflow automation",
+      "Tool, API, and LLM-powered integrations",
+      "Intelligent decision-making and automated routing",
+      "Monitoring, logging, and performance dashboards",
+      "Safety guardrails and human-in-the-loop controls",
+      "Ongoing optimization (monthly retainer option)",
+      "💡 Bundle with Custom AI Assistant or Custom Dashboard to save"
+    ],
+    price: "Custom Pricing"
+  },
+  {
+    id: "custom-project-management",
+    icon: KanbanIcon2,
+    title: "Custom Project Management System",
+    subtitle: "Tailored project management software and workflow automation built for your team",
+    features: [
+      "Custom workflow automation and task management",
+      "Team collaboration and communication tools",
+      "Resource allocation and operational scheduling",
+      "Milestone tracking and automated progress reporting",
+      "Integrations with existing tools (Slack, email, CRM, etc.)",
+      "Role-based access and permissions",
+      "💡 Bundle with Custom Data Dashboard or Custom Agent to save"
+    ],
+    price: "Custom Pricing"
+  },
+  {
+    id: "custom-data-dashboard",
+    icon: BarChart3Icon2,
+    title: "Custom Data Dashboard",
+    subtitle: "Custom business intelligence dashboard and unified data visualization platform",
+    features: [
+      "Custom KPI dashboard and performance tracking",
+      "Real-time multi-source data integration",
+      "Interactive charts, graphs, and executive reports",
+      "Automated business reporting and alerts",
+      "Role-based dashboards for different teams",
+      "Cross-platform export and sharing capabilities",
+      "💡 Bundle with Custom Project Management or Custom Agent to save"
+    ],
+    price: "Custom Pricing"
+  },
+  // Row 2: Custom LMS, Social Media Suite, Advertising
   {
     id: "custom-lms",
     icon: BookOpenIcon2,
@@ -62,7 +112,7 @@ export const services = [
     price: "Custom Pricing",
     isAdvertising: true
   },
-  // Row 2: Custom AI Assistant, Custom Website, SEO/AEO
+  // Row 3: Custom AI Assistant, Custom Website, SEO/AEO
   {
     id: "custom-ai-assistant",
     icon: BotIcon2,
@@ -113,55 +163,6 @@ export const services = [
       "On-page and technical SEO improvements",
       "Modern AI-powered SEO/AEO tools for search and answer engine performance",
       "💡 Bundle with Custom Website or Custom AI Assistant to save"
-    ],
-    price: "Custom Pricing"
-  },
-  {
-    id: "custom-agent",
-    icon: UserCogIcon2,
-    title: "Custom Agent",
-    subtitle: "Autonomous AI agents that handle complex workflows end-to-end",
-    features: [
-      "Custom agent design and behavior scoping",
-      "Multi-step workflow automation",
-      "Tool and API integrations",
-      "Intelligent decision-making and routing",
-      "Monitoring, logging, and performance dashboards",
-      "Safety guardrails and human-in-the-loop controls",
-      "Ongoing optimization (monthly retainer option)",
-      "💡 Bundle with Custom AI Assistant or Custom Dashboard to save"
-    ],
-    price: "Custom Pricing"
-  },
-  {
-    id: "custom-project-management",
-    icon: KanbanIcon2,
-    title: "Custom Project Management System",
-    subtitle: "Tailored project management platform built for your team",
-    features: [
-      "Custom workflows and task management",
-      "Team collaboration and communication tools",
-      "Resource allocation and scheduling",
-      "Milestone tracking and progress reporting",
-      "Integrations with existing tools (Slack, email, etc.)",
-      "Role-based access and permissions",
-      "💡 Bundle with Custom Data Dashboard or Custom Agent to save"
-    ],
-    price: "Custom Pricing"
-  },
-  {
-    id: "custom-data-dashboard",
-    icon: BarChart3Icon2,
-    title: "Custom Data Dashboard",
-    subtitle: "Real-time data visualization and business intelligence",
-    features: [
-      "Custom KPI tracking and visualization",
-      "Multi-source data integration",
-      "Interactive charts, graphs, and reports",
-      "Automated reporting and alerts",
-      "Role-based dashboards for different teams",
-      "Export and sharing capabilities",
-      "💡 Bundle with Custom Project Management or Custom Agent to save"
     ],
     price: "Custom Pricing"
   },

@@ -11,6 +11,24 @@ export interface OnboardingService {
 
 export const onboardingServices: OnboardingService[] = [
   {
+    id: "custom-agent",
+    title: "Custom AI Agents",
+    description: "Autonomous AI agents and agentic workflows for business process automation",
+    icon: UserCog,
+  },
+  {
+    id: "custom-project-management",
+    title: "Custom Project Management System",
+    description: "Tailored project management software and workflow automation built for your team",
+    icon: Kanban,
+  },
+  {
+    id: "custom-data-dashboard",
+    title: "Custom Data Dashboard",
+    description: "Custom business intelligence dashboard and unified data visualization platform",
+    icon: BarChart3,
+  },
+  {
     id: "social-media-suite",
     title: "Social Media Suite",
     description: "Complete social media management and automation across all major platforms",
@@ -47,24 +65,6 @@ export const onboardingServices: OnboardingService[] = [
     title: "Custom Tool",
     description: "Custom software tools and internal applications designed for your business needs",
     icon: Wrench,
-  },
-  {
-    id: "custom-agent",
-    title: "Custom Agent",
-    description: "Autonomous AI agents that handle complex workflows end-to-end",
-    icon: UserCog,
-  },
-  {
-    id: "custom-project-management",
-    title: "Custom Project Management System",
-    description: "Tailored project management platform built for your team",
-    icon: Kanban,
-  },
-  {
-    id: "custom-data-dashboard",
-    title: "Custom Data Dashboard",
-    description: "Real-time data visualization and business intelligence",
-    icon: BarChart3,
   },
   // NOTE: Amazon Design Package is temporarily hidden
   // {
