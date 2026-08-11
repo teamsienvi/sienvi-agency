@@ -44,7 +44,7 @@ const topics = [
     title: "Automation Workflows",
     description:
       "Build end-to-end workflows that eliminate repetitive tasks and let your team focus on growth.",
-    tags: ["Zapier", "Make", "n8n"],
+    tags: ["AI Agents", "Autonomous", "Custom"],
     gradient: "from-amber-500/20 to-orange-600/20",
     accentColor: "text-amber-400",
   },

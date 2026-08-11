@@ -164,6 +164,7 @@ serve(async (req) => {
           maxServices: profile.max_services,
           selectedServices: profile.selected_services || [],
           customPrice: profile.custom_price,
+          discoveryFormType: profile.discovery_form_type,
           createdAt: profile.created_at,
           updatedAt: profile.updated_at,
           notes: profile.notes,

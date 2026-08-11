@@ -34,6 +34,7 @@ export const OnboardingResponsesModal = ({
   const [amazon, setAmazon] = useState<any>(null);
   const [advertising, setAdvertising] = useState<any>(null);
   const [clientEmail, setClientEmail] = useState<string | null>(null);
+  const [clientPlan, setClientPlan] = useState<string | null>(null);
   const [onboardingType, setOnboardingType] = useState<string>("standard");
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export const OnboardingResponsesModal = ({
       setQuestionnaire(null);
       setAmazon(null);
       setAdvertising(null);
+      setClientPlan(null);
       setOnboardingType("standard");
     }
   }, [open, clientId]);
@@ -95,6 +97,7 @@ export const OnboardingResponsesModal = ({
         setClientEmail(profileRes.data.email);
         const services = profileRes.data.selected_services || [];
         const plan = profileRes.data.plan;
+        setClientPlan(plan);
         const formType = (profileRes.data as any).discovery_form_type;
 
         if (plan === "prospect" || formType === "general") {
@@ -124,6 +127,7 @@ export const OnboardingResponsesModal = ({
     }
 
     let reportContent = "";
+    const isProspect = clientPlan === "prospect";
 
     const reportHeader = `
       <div class="header">
@@ -738,7 +742,7 @@ export const OnboardingResponsesModal = ({
         }
 
         reportContent += `
-          <div class="section-title page-break">${onboardingType === "prospect" ? "Prospect Discovery Onboarding Questionnaire" : "Business Admin Onboarding Questionnaire"}</div>
+          <div class="section-title page-break">${onboardingType === "prospect" ? (isProspect ? "Prospect Discovery Onboarding Questionnaire" : "General Discovery Onboarding Questionnaire") : "Business Admin Onboarding Questionnaire"}</div>
           ${bizAdminHtml}
         `;
       } else {
@@ -1013,7 +1017,7 @@ export const OnboardingResponsesModal = ({
               ) : (onboardingType === "discovery" || onboardingType === "prospect") ? (
                 <TabsTrigger value="questionnaire" className="flex items-center gap-2">
                   <ClipboardList className="w-4 h-4" />
-                  {onboardingType === "prospect" ? "Prospect Discovery Onboarding" : "Business Admin Onboarding"}
+                  {onboardingType === "prospect" ? (clientPlan === "prospect" ? "Prospect Discovery Onboarding" : "General Discovery Onboarding") : "Business Admin Onboarding"}
                   {renderStatus(questionnaire)}
                 </TabsTrigger>
               ) : (

@@ -104,9 +104,11 @@ const Onboarding = () => {
       const hasGeneral = services.some((s: string) => !s.startsWith("channel-") && s !== "advertising-package" && s !== "amazon-design" && s !== "custom-tool");
       const hasAdvertising = profile.plan === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
       
-      if (profile.plan === "prospect") {
+      const formType = profile.discoveryFormType;
+
+      if (profile.plan === "prospect" || formType === "general") {
         type = "prospect";
-      } else if (services.includes("custom-tool")) {
+      } else if (services.includes("custom-tool") || formType === "business") {
         type = "discovery";
       } else if (services.includes("amazon-design")) {
         type = "amazon";

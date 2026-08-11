@@ -284,7 +284,7 @@ const AdminClients = () => {
     const type = getOnboardingType(client);
     switch (type) {
       case "prospect":
-        return "Prospect Discovery Onboarding";
+        return client.plan === "prospect" ? "Prospect Discovery Onboarding" : "General Discovery Onboarding";
       case "discovery":
         return "Business Admin Onboarding";
       case "amazon":

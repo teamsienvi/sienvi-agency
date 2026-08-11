@@ -109,7 +109,7 @@ const ClientDashboard = () => {
   const [managingBilling, setManagingBilling] = useState(false);
   const [showResponses, setShowResponses] = useState(false);
 
-  const isDiscovery = profile?.plan === "discovery" || profile?.plan === "prospect" || profile?.plan === "custom-lms" || (profile?.selectedServices || []).includes("custom-tool");
+  const isDiscovery = profile?.plan === "discovery" || profile?.plan === "prospect" || profile?.plan === "custom-lms";
   const isProspect = profile?.plan === "prospect";
 
   useEffect(() => {
@@ -164,7 +164,7 @@ const ClientDashboard = () => {
       // Route users based on onboarding sequence: Unique sign-up link -> Contract -> Payment -> Full Access
       // Skip enforcement for admins so they don't get stuck when testing client links
       const isAdvertising = clientProfile.plan === "advertising";
-      const isClientDiscovery = clientProfile.plan === "discovery" || clientProfile.plan === "prospect" || clientProfile.plan === "custom-lms" || (clientProfile.selectedServices || []).includes("custom-tool");
+      const isClientDiscovery = clientProfile.plan === "discovery" || clientProfile.plan === "prospect" || clientProfile.plan === "custom-lms";
       
       if (!response.data.isAdmin && !isAdvertising && !isClientDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
         // Step 2: Enforce Contract Signing before Payment & Full Access
@@ -331,7 +331,7 @@ const ClientDashboard = () => {
     // Step 2: Contract Signing
     if (profile.contractStatus === "not_signed" && !isDiscovery && profile.plan !== "advertising") {
       return (
-        <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" onClick={() => navigate("/contract")}>
+        <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}>
           <FileSignature className="w-5 h-5 mr-2" />
           Review & Sign Service Agreement
         </Button>
