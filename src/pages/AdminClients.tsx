@@ -281,6 +281,9 @@ const AdminClients = () => {
   };
 
   const getOnboardingTypeDisplay = (client: Client) => {
+    if (client.email === "sam@hairtamin.com") {
+      return "Custom SEO/AEO Discovery Onboarding";
+    }
     const type = getOnboardingType(client);
     switch (type) {
       case "prospect":
@@ -299,6 +302,10 @@ const AdminClients = () => {
   };
 
   const getRequiredOnboardingForms = (client: Client) => {
+    if (client.email === "sam@hairtamin.com") {
+      return ["Discovery Questionnaire", "SEO/AEO Discovery"];
+    }
+
     const type = getOnboardingType(client);
     if (type === "prospect") {
       return ["General Discovery Questionnaire"];
