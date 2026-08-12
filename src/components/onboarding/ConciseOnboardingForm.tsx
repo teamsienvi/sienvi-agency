@@ -202,16 +202,15 @@ export const ConciseOnboardingForm = ({ clientProfileId, onComplete, initialData
         <div className="mx-auto bg-primary/10 w-16 h-16 flex items-center justify-center rounded-full mb-4">
           <Clipboard className="w-8 h-8 text-primary" />
         </div>
-        <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">Concise Discovery Form</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">Discovery Questionnaire</CardTitle>
         <CardDescription className="text-base">
           Help us understand your business quickly so we can get started right away.
         </CardDescription>
         
         {/* Progress Bar */}
         <div className="mt-8 max-w-md w-full mx-auto">
-          <div className="flex justify-between text-xs font-medium text-muted-foreground mb-2 px-1">
-            <span>Section {currentSection + 1} of {SECTIONS.length}</span>
-            <span>{Math.round(((currentSection + 1) / SECTIONS.length) * 100)}%</span>
+          <div className="flex justify-center text-xs font-medium text-muted-foreground mb-2 px-1">
+            <span>Section {currentSection + 1} of {SECTIONS.length} ({Math.round(((currentSection + 1) / SECTIONS.length) * 100)}%)</span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
             {SECTIONS.map((section, idx) => (
