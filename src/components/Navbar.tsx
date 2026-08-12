@@ -91,6 +91,7 @@ const Navbar = () => {
           {isLandingPage && (
             <>
               <a href="#services" className="text-sm font-medium hover:text-primary transition-colors">Services</a>
+              <a href="#tools" className="text-sm font-medium hover:text-primary transition-colors">Tools</a>
               <a href="#about" className="text-sm font-medium hover:text-primary transition-colors">About</a>
               <a href="#process" className="text-sm font-medium hover:text-primary transition-colors">Process</a>
               <a href="#pricing" className="text-sm font-medium hover:text-primary transition-colors">Pricing</a>
@@ -163,8 +164,15 @@ const Navbar = () => {
                 >
                   Services
                 </a>
-                <a 
-                  href="#about" 
+                <a
+                  href="#tools"
+                  className="text-sm font-medium hover:text-primary transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Tools
+                </a>
+                <a
+                  href="#about"
                   className="text-sm font-medium hover:text-primary transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >

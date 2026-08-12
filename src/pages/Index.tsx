@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ServicePreview from "@/components/ServicePreview";
 import Services from "@/components/Services";
+import ToolsSection from "@/components/ToolsSection";
 import About from "@/components/About";
 import Process from "@/components/Process";
 import Pricing from "@/components/Pricing";
@@ -135,6 +136,7 @@ const Index = () => {
       <Hero />
       <ServicePreview />
       <Services />
+      <ToolsSection />
       <About />
       <TestimonialsCarousel testimonials={testimonials} />
       <SocialEducation />
