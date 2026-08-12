@@ -29,6 +29,7 @@ import { AmazonAdsOnboardingForm } from "@/components/onboarding/AmazonAdsOnboar
 import { GeneralDiscoveryOnboardingForm } from "@/components/onboarding/GeneralDiscoveryOnboardingForm";
 import { ShaneDiscoveryOnboardingForm } from "@/components/onboarding/ShaneDiscoveryOnboardingForm";
 import { ConciseOnboardingForm } from "@/components/onboarding/ConciseOnboardingForm";
+import { SeoAeoOnboardingForm } from "@/components/onboarding/SeoAeoOnboardingForm";
 
 interface StepData {
   goals: any;
@@ -235,6 +236,10 @@ const Onboarding = () => {
   };
 
   const getSteps = () => {
+    if (clientEmail === "sam@hairtamin.com") {
+      return [{ id: "seo-aeo-questionnaire", title: "SEO/AEO Discovery", icon: <ClipboardList className="w-6 h-6" /> }];
+    }
+
     if (onboardingType === "prospect") {
       return [{ id: "prospect-questionnaire", title: "Discovery Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
     }
@@ -353,6 +358,14 @@ const Onboarding = () => {
 
               {steps[currentStep]?.id === "concise-questionnaire" && (
                 <ConciseOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(currentStep)}
+                  initialData={stepData.questionnaire}
+                />
+              )}
+
+              {steps[currentStep]?.id === "seo-aeo-questionnaire" && (
+                <SeoAeoOnboardingForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(currentStep)}
                   initialData={stepData.questionnaire}
