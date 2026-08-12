@@ -2127,6 +2127,58 @@ export const OnboardingResponsesModal = ({
                   })()
                 )}
               </TabsContent>
+
+              {clientEmail === "sam@hairtamin.com" && (
+                <TabsContent value="seo_aeo" className="space-y-4">
+                  {!questionnaire ? (
+                    <Card><CardContent className="py-8 text-center text-muted-foreground">No SEO/AEO questionnaire submitted yet</CardContent></Card>
+                  ) : (
+                    <>
+                      <Card>
+                        <CardHeader><CardTitle className="text-base">1. Business Goals & Search Intent</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          {renderField("Business Outcome", questionnaire.businessOutcome)}
+                          {renderField("Prioritize Products", questionnaire.prioritizeProducts)}
+                          {renderField("Ideal Customer Search", questionnaire.idealCustomerSearch)}
+                          {renderField("Prospects Search Comparing", questionnaire.prospectsSearchComparing)}
+                          {renderField("Prospects Search Ready To Buy", questionnaire.prospectsSearchReadyToBuy)}
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader><CardTitle className="text-base">2. Conversion & Existing Organic Performance</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          {renderField("Questions Before Lead", questionnaire.questionsBeforeLead)}
+                          {renderField("Objections To Stop", questionnaire.objectionsToStop)}
+                          {renderField("Pages Generate Leads", questionnaire.pagesGenerateLeads)}
+                          {renderField("Pages Should Generate", questionnaire.pagesShouldGenerate)}
+                          {renderField("Valuable Keywords", questionnaire.valuableKeywords)}
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader><CardTitle className="text-base">3. Positioning, Proof & Answer Engine Visibility</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          {renderField("Avoid Keywords", questionnaire.avoidKeywords)}
+                          {renderField("Top Search Competitors", questionnaire.topSearchCompetitors)}
+                          {renderField("Differentiator", questionnaire.differentiator)}
+                          {renderField("Proof For Pages", questionnaire.proofForPages)}
+                          {renderField("Exact Questions To Answer", questionnaire.exactQuestionsToAnswer)}
+                          {renderField("Claims To Avoid", questionnaire.claimsToAvoid)}
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader><CardTitle className="text-base">4. Access, Local SEO, Measurement & Monthly Inputs</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                          {renderField("Current Access", questionnaire.currentAccess)}
+                          {renderField("Local SEO Priorities", questionnaire.localSeoPriorities)}
+                          {renderField("Organic Actions Conversions", questionnaire.organicActionsConversions)}
+                          {renderField("Assets Team Can Provide", questionnaire.assetsTeamCanProvide)}
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </TabsContent>
+              )}
+
             </ScrollArea>
           </Tabs>
         )}
