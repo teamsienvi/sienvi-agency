@@ -237,7 +237,10 @@ const Onboarding = () => {
 
   const getSteps = () => {
     if (clientEmail === "sam@hairtamin.com") {
-      return [{ id: "seo-aeo-questionnaire", title: "SEO/AEO Discovery", icon: <ClipboardList className="w-6 h-6" /> }];
+      return [
+        { id: "concise-questionnaire", title: "Discovery Questionnaire", icon: <ClipboardList className="w-6 h-6" /> },
+        { id: "seo-aeo-questionnaire", title: "SEO/AEO Discovery", icon: <ClipboardList className="w-6 h-6" /> }
+      ];
     }
 
     if (onboardingType === "prospect") {

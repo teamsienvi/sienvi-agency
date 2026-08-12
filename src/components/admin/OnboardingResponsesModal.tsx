@@ -1096,7 +1096,7 @@ export const OnboardingResponsesModal = ({
           </div>
         ) : (
           <Tabs defaultValue={onboardingType === "amazon" ? "amazon" : (onboardingType === "discovery" || onboardingType === "prospect") ? "questionnaire" : "goals"} className="w-full">
-            <TabsList className={`grid w-full h-auto ${onboardingType === "amazon" || onboardingType === "discovery" || onboardingType === "prospect" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-0"}`}>
+            <TabsList className={`grid w-full h-auto ${onboardingType === "amazon" ? "grid-cols-1" : (onboardingType === "discovery" || onboardingType === "prospect") ? (clientEmail === "sam@hairtamin.com" ? "grid-cols-2 gap-2" : "grid-cols-1") : "grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-0"}`}>
               {onboardingType === "amazon" ? (
                 <TabsTrigger value="amazon" className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4" />
@@ -1104,11 +1104,20 @@ export const OnboardingResponsesModal = ({
                   {renderStatus(amazon)}
                 </TabsTrigger>
               ) : (onboardingType === "discovery" || onboardingType === "prospect") ? (
-                <TabsTrigger value="questionnaire" className="flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4" />
-                  {onboardingType === "prospect" ? (clientPlan === "prospect" ? "Prospect Discovery Onboarding" : "General Discovery Onboarding") : "Business Admin Onboarding"}
-                  {renderStatus(questionnaire)}
-                </TabsTrigger>
+                <>
+                  <TabsTrigger value="questionnaire" className="flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4" />
+                    {onboardingType === "prospect" ? (clientPlan === "prospect" ? "Prospect Discovery Onboarding" : "General Discovery Onboarding") : "Business Admin Onboarding"}
+                    {renderStatus(questionnaire)}
+                  </TabsTrigger>
+                  {clientEmail === "sam@hairtamin.com" && (
+                    <TabsTrigger value="seo_aeo" className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      SEO/AEO Discovery Questionnaire
+                      {renderStatus(questionnaire)}
+                    </TabsTrigger>
+                  )}
+                </>
               ) : (
                 <>
                   <TabsTrigger value="goals" className="flex items-center gap-2">
@@ -1358,49 +1367,6 @@ export const OnboardingResponsesModal = ({
                           questionnaire.valuableToOwn
                         )}
                         {renderField("If we could solve only one problem for you in the next 90 days, what should it be?", questionnaire.oneProblem90Days)}
-                      </CardContent>
-                    </Card>
-                  </>
-                ) : (questionnaire.seo_aeo_version || clientEmail === "sam@hairtamin.com") ? (
-                  <>
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">1. Business Goals & Search Intent</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Business Outcome", questionnaire.businessOutcome)}
-                        {renderField("Prioritize Products", questionnaire.prioritizeProducts)}
-                        {renderField("Ideal Customer Search", questionnaire.idealCustomerSearch)}
-                        {renderField("Prospects Search Comparing", questionnaire.prospectsSearchComparing)}
-                        {renderField("Prospects Search Ready To Buy", questionnaire.prospectsSearchReadyToBuy)}
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">2. Conversion & Existing Organic Performance</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Questions Before Lead", questionnaire.questionsBeforeLead)}
-                        {renderField("Objections To Stop", questionnaire.objectionsToStop)}
-                        {renderField("Pages Generate Leads", questionnaire.pagesGenerateLeads)}
-                        {renderField("Pages Should Generate", questionnaire.pagesShouldGenerate)}
-                        {renderField("Valuable Keywords", questionnaire.valuableKeywords)}
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">3. Positioning, Proof & Answer Engine Visibility</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Avoid Keywords", questionnaire.avoidKeywords)}
-                        {renderField("Top Search Competitors", questionnaire.topSearchCompetitors)}
-                        {renderField("Differentiator", questionnaire.differentiator)}
-                        {renderField("Proof For Pages", questionnaire.proofForPages)}
-                        {renderField("Exact Questions To Answer", questionnaire.exactQuestionsToAnswer)}
-                        {renderField("Claims To Avoid", questionnaire.claimsToAvoid)}
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader><CardTitle className="text-base">4. Access, Local SEO, Measurement & Monthly Inputs</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderField("Current Access", questionnaire.currentAccess)}
-                        {renderField("Local SEO Priorities", questionnaire.localSeoPriorities)}
-                        {renderField("Organic Actions Conversions", questionnaire.organicActionsConversions)}
-                        {renderField("Assets Team Can Provide", questionnaire.assetsTeamCanProvide)}
                       </CardContent>
                     </Card>
                   </>
