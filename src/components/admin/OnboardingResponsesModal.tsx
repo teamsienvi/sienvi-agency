@@ -736,8 +736,6 @@ export const OnboardingResponsesModal = ({
         let sect20 = "";
         sect20 += renderPrintField("Outsourcing Worries", questionnaire.outsourcing_worries);
         sect20 += renderPrintField("Partnership Ease Factors", questionnaire.partnership_ease);
-        sect20 += renderPrintField("Boundaries & Preferences", questionnaire.boundaries_preferences);
-        sect20 += renderPrintField("Additional Notes", questionnaire.final_notes);
         bizAdminHtml += renderPrintCard("20. Final Notes", sect20);
         }
 
@@ -745,7 +743,7 @@ export const OnboardingResponsesModal = ({
           <div class="section-title page-break">${onboardingType === "prospect" ? (isProspect ? "Prospect Discovery Onboarding Questionnaire" : "General Discovery Onboarding Questionnaire") : "Business Admin Onboarding Questionnaire"}</div>
           ${bizAdminHtml}
         `;
-            } else if (questionnaire.seo_aeo_version) {
+            } else if (questionnaire.seo_aeo_version || clientEmail === "sam@hairtamin.com") {
         let seoHtml = "";
         
         let intent = "";
@@ -1129,6 +1127,12 @@ export const OnboardingResponsesModal = ({
                       Advertising Questionnaire
                       {renderStatus(advertising)}
                     </TabsTrigger>
+                  ) : (questionnaire?.seo_aeo_version || clientEmail === "sam@hairtamin.com") ? (
+                    <TabsTrigger value="questionnaire" className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      SEO/AEO Discovery Questionnaire
+                      {renderStatus(questionnaire)}
+                    </TabsTrigger>
                   ) : (questionnaire?.concise_version || !questionnaire?.completed_at) ? (
                     <TabsTrigger value="questionnaire" className="flex items-center gap-2">
                       <ClipboardList className="w-4 h-4" />
@@ -1357,7 +1361,7 @@ export const OnboardingResponsesModal = ({
                       </CardContent>
                     </Card>
                   </>
-                ) : questionnaire.seo_aeo_version ? (
+                ) : (questionnaire.seo_aeo_version || clientEmail === "sam@hairtamin.com") ? (
                   <>
                     <Card>
                       <CardHeader><CardTitle className="text-base">1. Business Goals & Search Intent</CardTitle></CardHeader>
