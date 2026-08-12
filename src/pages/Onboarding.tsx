@@ -162,7 +162,9 @@ const Onboarding = () => {
 
       // Determine completed steps based on active services
       let completed: boolean[];
-      if (type === "prospect") {
+      if (session.user.email === "sam@hairtamin.com") {
+        completed = [!!qData?.completed_at, !!qData?.businessOutcome];
+      } else if (type === "prospect") {
         completed = [!!qData?.completed_at];
       } else if (type === "discovery") {
         completed = [!!qData?.completed_at];
