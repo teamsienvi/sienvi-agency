@@ -28,6 +28,7 @@ import { BusinessAdminOnboardingForm } from "@/components/onboarding/BusinessAdm
 import { AmazonAdsOnboardingForm } from "@/components/onboarding/AmazonAdsOnboardingForm";
 import { GeneralDiscoveryOnboardingForm } from "@/components/onboarding/GeneralDiscoveryOnboardingForm";
 import { ShaneDiscoveryOnboardingForm } from "@/components/onboarding/ShaneDiscoveryOnboardingForm";
+import { ConciseOnboardingForm } from "@/components/onboarding/ConciseOnboardingForm";
 
 interface StepData {
   goals: any;
@@ -50,6 +51,7 @@ const Onboarding = () => {
   const [onboardingType, setOnboardingType] = useState<OnboardingType>("standard");
   const [totalSteps, setTotalSteps] = useState(3);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [clientFormType, setClientFormType] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccessAndLoadData();
@@ -105,10 +107,11 @@ const Onboarding = () => {
       const hasAdvertising = profile.plan === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
       
       const formType = profile.discoveryFormType;
+      setClientFormType(formType || null);
 
-      if (profile.plan === "prospect" || formType === "general") {
+      if (profile.plan === "prospect") {
         type = "prospect";
-      } else if (services.includes("custom-tool") || formType === "business") {
+      } else if (services.includes("custom-tool") || formType === "business" || formType === "general") {
         type = "discovery";
       } else if (services.includes("amazon-design")) {
         type = "amazon";
@@ -165,18 +168,10 @@ const Onboarding = () => {
       } else if (type === "amazon") {
         completed = [!!amazonRes.data?.completed_at];
       } else {
-        completed = [
-          !!goalsRes.data?.completed_at,
-          !!avatarsRes.data?.completed_at,
-        ];
+        completed = [!!qData?.completed_at];
         
-        if (hasGeneral && hasAdvertising) {
-          completed.push(!!questionnaireRes.data?.completed_at);
+        if (hasAdvertising) {
           completed.push(!!advertisingRes.data?.completed_at);
-        } else if (hasAdvertising) {
-          completed.push(!!advertisingRes.data?.completed_at);
-        } else {
-          completed.push(!!questionnaireRes.data?.completed_at);
         }
       }
       
@@ -243,27 +238,31 @@ const Onboarding = () => {
     if (onboardingType === "prospect") {
       return [{ id: "prospect-questionnaire", title: "Discovery Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
     }
+    
+    const services = selectedServices || [];
+    const hasGeneral = services.some((s: string) => !s.startsWith("channel-") && s !== "advertising-package" && s !== "amazon-design" && s !== "custom-tool");
+    const hasAdvertising = onboardingType === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
+
     if (onboardingType === "discovery") {
-      return [{ id: "discovery-questionnaire", title: "Business Admin Questionnaire", icon: <Briefcase className="w-6 h-6" /> }];
+      // General formType uses the new concise form, business uses the old admin form
+      if (clientFormType === "business") {
+         return [{ id: "discovery-questionnaire", title: "Business Admin Questionnaire", icon: <Briefcase className="w-6 h-6" /> }];
+      }
+      return [{ id: "concise-questionnaire", title: "Discovery Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
     }
+
     // Amazon Design only has 1 step - the Amazon questionnaire
     if (onboardingType === "amazon") {
       return [{ id: "amazon-questionnaire", title: "Amazon Questionnaire", icon: <ShoppingBag className="w-6 h-6" /> }];
     }
 
     const baseSteps = [
-      { id: "goal-sheet", title: "Goal Sheet", icon: <Target className="w-6 h-6" /> },
-      { id: "avatar-profile", title: "Avatar Profile", icon: <User className="w-6 h-6" /> },
+      { id: "concise-questionnaire", title: "Discovery Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }
     ];
-
-    const services = selectedServices || [];
-    const hasGeneral = services.some((s: string) => !s.startsWith("channel-") && s !== "advertising-package" && s !== "amazon-design" && s !== "custom-tool");
-    const hasAdvertising = onboardingType === "advertising" || services.includes("advertising-package") || services.some((s: string) => s.startsWith("advertising")) || services.some((s: string) => s.startsWith("channel-"));
 
     if (hasGeneral && hasAdvertising) {
       return [
         ...baseSteps,
-        { id: "questionnaire", title: "Questionnaire", icon: <ClipboardList className="w-6 h-6" /> },
         { id: "advertising-questionnaire", title: "Advertising Questionnaire", icon: <Megaphone className="w-6 h-6" /> }
       ];
     }
@@ -271,7 +270,7 @@ const Onboarding = () => {
     if (hasAdvertising) {
       return [...baseSteps, { id: "advertising-questionnaire", title: "Advertising Questionnaire", icon: <Megaphone className="w-6 h-6" /> }];
     }
-    return [...baseSteps, { id: "questionnaire", title: "Questionnaire", icon: <ClipboardList className="w-6 h-6" /> }];
+    return baseSteps;
   };
 
   const steps = getSteps();
@@ -352,35 +351,19 @@ const Onboarding = () => {
                 />
               )}
 
+              {steps[currentStep]?.id === "concise-questionnaire" && (
+                <ConciseOnboardingForm
+                  clientProfileId={clientProfileId}
+                  onComplete={() => handleStepComplete(currentStep)}
+                  initialData={stepData.questionnaire}
+                />
+              )}
+
               {steps[currentStep]?.id === "amazon-questionnaire" && (
                 <AmazonOnboardingForm
                   clientProfileId={clientProfileId}
                   onComplete={() => handleStepComplete(currentStep)}
                   initialData={stepData.amazon}
-                />
-              )}
-              
-              {steps[currentStep]?.id === "goal-sheet" && (
-                <GoalSheetForm
-                  clientProfileId={clientProfileId}
-                  onComplete={() => handleStepComplete(currentStep)}
-                  initialData={stepData.goals}
-                />
-              )}
-              
-              {steps[currentStep]?.id === "avatar-profile" && (
-                <AvatarProfileForm
-                  clientProfileId={clientProfileId}
-                  onComplete={() => handleStepComplete(currentStep)}
-                  initialData={stepData.avatars}
-                />
-              )}
-
-              {steps[currentStep]?.id === "questionnaire" && (
-                <QuestionnaireForm
-                  clientProfileId={clientProfileId}
-                  onComplete={() => handleStepComplete(currentStep)}
-                  initialData={stepData.questionnaire}
                 />
               )}
 

@@ -745,6 +745,58 @@ export const OnboardingResponsesModal = ({
           <div class="section-title page-break">${onboardingType === "prospect" ? (isProspect ? "Prospect Discovery Onboarding Questionnaire" : "General Discovery Onboarding Questionnaire") : "Business Admin Onboarding Questionnaire"}</div>
           ${bizAdminHtml}
         `;
+      } else if (questionnaire.concise_version || !questionnaire.completed_at) {
+        let conciseHtml = "";
+
+        
+        let basic = "";
+        basic += renderPrintField("Business Name", questionnaire.business_name);
+        basic += renderPrintField("Website", questionnaire.websiteUrl);
+        basic += renderPrintField("Primary Contact", questionnaire.primary_contact);
+        basic += renderPrintField("Communication Preference", questionnaire.communication_preference);
+        basic += renderPrintField("Time Zone & Hours", questionnaire.timeZoneAndHours);
+        conciseHtml += renderPrintCard("Basic Info", basic);
+
+        let snapshot = "";
+        snapshot += renderPrintField("Business Description", questionnaire.business_description);
+        snapshot += renderPrintField("Main Services", questionnaire.core_offers);
+        snapshot += renderPrintField("Business Stage", questionnaire.businessStage);
+        conciseHtml += renderPrintCard("Business Snapshot", snapshot);
+
+        let goals = "";
+        goals += renderPrintField("Top Goals", questionnaire.top_3_goals);
+        goals += renderPrintField("Clear Win", questionnaire.big_win_expectation);
+        goals += renderPrintField("Measure Success", questionnaire.performance_tracking);
+        conciseHtml += renderPrintCard("Goals & Success", goals);
+
+        let bottlenecks = "";
+        bottlenecks += renderPrintField("Current Bottlenecks", questionnaire.biggest_challenges);
+        bottlenecks += renderPrintField("Falling Through Cracks", questionnaire.stuck_areas);
+        bottlenecks += renderPrintField("Help Next 30 Days", questionnaire.helpNext30Days);
+        conciseHtml += renderPrintCard("Current Bottlenecks", bottlenecks);
+
+        let support = "";
+        support += renderPrintField("Recurring Tasks", questionnaire.recurringTasks);
+        support += renderPrintField("Areas to Avoid", questionnaire.areasToAvoid);
+        support += renderPrintField("Tools Access", questionnaire.toolsAccess);
+        conciseHtml += renderPrintCard("Support Needs", support);
+
+        let workflow = "";
+        workflow += renderPrintField("Decision Maker", questionnaire.decision_maker);
+        workflow += renderPrintField("Approval Needs", questionnaire.approvalNeeds);
+        workflow += renderPrintField("Deadlines & Launches", questionnaire.planned_launches);
+        conciseHtml += renderPrintCard("Workflow & Approval", workflow);
+
+        let brand = "";
+        brand += renderPrintField("Brand Voice", questionnaire.brand_identity);
+        brand += renderPrintField("Topics to Avoid", questionnaire.topicsToAvoid);
+        brand += renderPrintField("Anything Else", questionnaire.anythingElse);
+        conciseHtml += renderPrintCard("Brand & Boundaries", brand);
+
+        reportContent += `
+          <div class="section-title page-break">Concise Discovery Questionnaire</div>
+          ${conciseHtml}
+        `;
       } else {
         let generalHtml = "";
         
@@ -1038,6 +1090,12 @@ export const OnboardingResponsesModal = ({
                       Advertising Questionnaire
                       {renderStatus(advertising)}
                     </TabsTrigger>
+                  ) : (questionnaire?.concise_version || !questionnaire?.completed_at) ? (
+                    <TabsTrigger value="questionnaire" className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      Concise Discovery Questionnaire
+                      {renderStatus(questionnaire)}
+                    </TabsTrigger>
                   ) : (
                     <TabsTrigger value="questionnaire" className="flex items-center gap-2">
                       <ClipboardList className="w-4 h-4" />
@@ -1260,9 +1318,75 @@ export const OnboardingResponsesModal = ({
                       </CardContent>
                     </Card>
                   </>
+                ) : (questionnaire.concise_version || !questionnaire.completed_at) ? (
+                  <>
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">1. Basic Info</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Business Name", questionnaire.business_name)}
+                        {renderField("Website", questionnaire.websiteUrl)}
+                        {renderField("Primary Contact", questionnaire.primary_contact)}
+                        {renderField("Communication Preference", questionnaire.communication_preference)}
+                        {renderField("Time Zone & Hours", questionnaire.timeZoneAndHours)}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">2. Business Snapshot</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Business Description", questionnaire.business_description)}
+                        {renderField("Target Audience", questionnaire.target_audience)}
+                        {renderField("Core Offers", questionnaire.coreOffersDetails)}
+                        {renderField("Average Monthly Revenue", questionnaire.average_monthly_revenue)}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">3. Goals & Success</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Primary 90-Day Goal", questionnaire.primaryGoal)}
+                        {renderField("What does success look like?", questionnaire.successDefinition)}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">4. Current Bottlenecks</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Biggest Challenge", questionnaire.biggest_challenges)}
+                        {renderField("What tasks drain your time?", questionnaire.time_draining_tasks)}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">5. Support Needs</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Immediate Help Needed", questionnaire.immediate_help)}
+                        {renderField("Services of Interest", questionnaire.services_of_interest)}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">6. Workflow & Approval</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Current Project Management Tool", questionnaire.pm_tool)}
+                        {renderField("Who approves work?", questionnaire.work_approver)}
+                        {renderField("Feedback Preferences", questionnaire.feedback_preference)}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">7. Brand & Boundaries</CardTitle></CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderField("Brand Guidelines/Assets Link", questionnaire.brand_assets_link)}
+                        {renderField("Communication Boundaries", questionnaire.communication_boundaries)}
+                        {renderField("Additional Notes", questionnaire.additional_context)}
+                      </CardContent>
+                    </Card>
+                  </>
                 ) : onboardingType === "discovery" || onboardingType === "prospect" ? (
                   <>
                     <Card>
+
                       <CardHeader><CardTitle className="text-base">1. Business & Contact Info</CardTitle></CardHeader>
                       <CardContent className="space-y-3">
                         {renderField("Business Name", questionnaire.business_name || questionnaire.businessName)}
