@@ -208,7 +208,7 @@ export const ConciseOnboardingForm = ({ clientProfileId, onComplete, initialData
         </CardDescription>
         
         {/* Progress Bar */}
-        <div className="mt-8 max-w-md mx-auto">
+        <div className="mt-8 max-w-md w-full mx-auto">
           <div className="flex justify-between text-xs font-medium text-muted-foreground mb-2 px-1">
             <span>Section {currentSection + 1} of {SECTIONS.length}</span>
             <span>{Math.round(((currentSection + 1) / SECTIONS.length) * 100)}%</span>
