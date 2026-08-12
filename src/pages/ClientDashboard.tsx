@@ -319,7 +319,7 @@ const ClientDashboard = () => {
     if (isProspect) {
       if (profile.onboardingStatus !== "completed") {
         return (
-          <Button size="lg" className="w-full" onClick={() => navigate("/onboarding")}>
+          <Button size="lg" className="w-full" onClick={() => navigate(paramClientId ? `/onboarding?clientId=${paramClientId}` : "/onboarding")}>
             <ClipboardList className="w-5 h-5 mr-2" />
             {profile.onboardingStatus === "not_started" ? "Start Discovery Questionnaire" : "Continue Discovery Questionnaire"}
           </Button>
@@ -362,7 +362,7 @@ const ClientDashboard = () => {
     // Step 4: Full Access / Onboarding
     if (profile.onboardingStatus !== "completed") {
       return (
-        <Button size="lg" className="w-full" onClick={() => navigate("/onboarding")}>
+        <Button size="lg" className="w-full" onClick={() => navigate(paramClientId ? `/onboarding?clientId=${paramClientId}` : "/onboarding")}>
           <ClipboardList className="w-5 h-5 mr-2" />
           {profile.onboardingStatus === "not_started" ? "Start Onboarding Questionnaire" : "Continue Onboarding"}
         </Button>
