@@ -24,18 +24,7 @@ export const platformTools: PlatformTool[] = [
     badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
     features: ['Revenue Diagnosis', 'Sprint Planning', 'ACoS Calculator'],
   },
-  {
-    id: 'client-dashboard',
-    name: 'Sienvi Client Dashboard',
-    category: 'Analytics & BI',
-    tagline: 'Centralized client hub',
-    description: 'Marketing client dashboard integrating Shopify OAuth connections, multi-platform social follower timelines, and automated SEO report sync.',
-    logoUrl: '/assets/tools/client-dashboard-logo.svg',
-    redirectUrl: 'https://sienviagencyclientdashboard--sienvi-analytics-dashboard.us-east4.hosted.app/',
-    gradient: 'from-indigo-500/10 via-violet-500/5 to-transparent',
-    badgeColor: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
-    features: ['Shopify Integrations', 'Social Timelines', 'SEO Sync'],
-  },
+
   {
     id: 'spendshredder',
     name: 'SpendShredder V2',
