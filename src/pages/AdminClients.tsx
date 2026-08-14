@@ -79,6 +79,24 @@ interface Client {
   contractDetails?: any;
   contractSignature?: string | null;
   contractSignedAt?: string | null;
+  onboardingStatus?: string;
+  accountStatus?: string;
+  subscriptions?: Array<{
+    id: string;
+    label: string;
+    plan: string | null;
+    selectedServices: string[];
+    monthlyAmount: number;
+    billingDay: number | null;
+    nextBillingDate: string | null;
+    subscriptionStatus: string;
+    stripeSubscriptionId: string | null;
+    stripeCustomerId: string | null;
+    isPrimary: boolean;
+    notes: string | null;
+    contractStatus?: string;
+    contractDetails?: any;
+  }>;
 }
 
 const planPrices: Record<string, number> = {
@@ -854,11 +872,18 @@ const AdminClients = () => {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">
-                          {getPlanDisplay(client.plan, client.customPrice, client.selectedServices)}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium">
+                            {(client.subscriptions?.length ?? 0) > 0
+                              ? `Custom (${client.subscriptions!.length} subs)`
+                              : getPlanDisplay(client.plan, client.customPrice, client.selectedServices)}
+                          </p>
+                        </div>
                         <p className="text-sm text-muted-foreground">
-                          ${getMonthlyPrice(client.plan, client.customPrice, client.selectedServices).toLocaleString()}/mo
+                          ${((client.subscriptions?.length ?? 0) > 0
+                            ? client.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0)
+                            : getMonthlyPrice(client.plan, client.customPrice, client.selectedServices)
+                          ).toLocaleString()}/mo
                         </p>
                       </div>
                     </TableCell>
@@ -867,20 +892,28 @@ const AdminClients = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1 max-w-[150px]">
-                        {client.selectedServices.length > 0 ? (
-                          client.selectedServices.slice(0, 2).map((service, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {service}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">None</span>
-                        )}
-                        {client.selectedServices.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{client.selectedServices.length - 2}
-                          </Badge>
-                        )}
+                        {(() => {
+                          const allServices = (client.subscriptions?.length ?? 0) > 0
+                            ? client.subscriptions!.flatMap(s => s.selectedServices || [])
+                            : client.selectedServices;
+                          if (allServices.length > 0) {
+                            return (
+                              <>
+                                {allServices.slice(0, 2).map((service, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">
+                                    {service}
+                                  </Badge>
+                                ))}
+                                {allServices.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{allServices.length - 2}
+                                  </Badge>
+                                )}
+                              </>
+                            );
+                          }
+                          return <span className="text-muted-foreground text-sm">None</span>;
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1075,50 +1108,79 @@ const AdminClients = () => {
                     <p className="text-sm text-muted-foreground">Email</p>
                     <p className="font-medium">{selectedClient.email || "-"}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Plan</p>
-                    <p className="font-medium">
-                      {getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Monthly Price</p>
-                    <p className="font-medium">
-                      ${getMonthlyPrice(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices).toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <div className="mt-1">
-                      {getStatusBadge(selectedClient)}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Onboarding</p>
-                    <div className="mt-1">
-                      {selectedClient.onboardingCompleted ? (
-                        <Badge className="bg-green-100 text-green-700">Complete</Badge>
-                      ) : (
-                        <Badge variant="outline">Pending</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Contract</p>
-                    <div className="mt-1">
-                      {selectedClient.contractStatus === "signed" ? (
-                        <Badge className="bg-green-100 text-green-700">Signed</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">Not Signed</Badge>
-                      )}
-                    </div>
-                  </div>
-                  {selectedClient.maxServices && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Max Services</p>
-                      <p className="font-medium">{selectedClient.maxServices}</p>
-                    </div>
-                  )}
+                  {(() => {
+                    const hasSubs = (selectedClient.subscriptions?.length ?? 0) > 0;
+                    const combinedAmount = hasSubs
+                      ? selectedClient.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0)
+                      : getMonthlyPrice(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices);
+                    const allActive = hasSubs && selectedClient.subscriptions!.every(s => s.subscriptionStatus === "active");
+                    const anyActive = hasSubs && selectedClient.subscriptions!.some(s => s.subscriptionStatus === "active");
+                    const allSigned = hasSubs && selectedClient.subscriptions!.every(s => s.contractStatus === "signed");
+                    const anySigned = hasSubs && selectedClient.subscriptions!.some(s => s.contractStatus === "signed");
+                    const totalServices = hasSubs
+                      ? selectedClient.subscriptions!.reduce((sum, s) => sum + (s.selectedServices?.length || 0), 0)
+                      : (selectedClient.maxServices || 1);
+                    return (
+                      <>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Plan</p>
+                          <p className="font-medium">
+                            {hasSubs
+                              ? `Custom (${selectedClient.subscriptions!.length} subscriptions)`
+                              : getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Monthly Price</p>
+                          <p className="font-medium">${combinedAmount.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Status</p>
+                          <div className="mt-1">
+                            {hasSubs ? (
+                              allActive
+                                ? <Badge className="bg-green-100 text-green-700">Active</Badge>
+                                : anyActive
+                                  ? <Badge className="bg-yellow-100 text-yellow-700">Partially Active</Badge>
+                                  : <Badge className="bg-orange-100 text-orange-700">Awaiting Payment</Badge>
+                            ) : (
+                              getStatusBadge(selectedClient)
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Onboarding</p>
+                          <div className="mt-1">
+                            {selectedClient.onboardingCompleted ? (
+                              <Badge className="bg-green-100 text-green-700">Complete</Badge>
+                            ) : (
+                              <Badge variant="outline">Pending</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Contract</p>
+                          <div className="mt-1">
+                            {hasSubs ? (
+                              allSigned
+                                ? <Badge className="bg-green-100 text-green-700">All Signed</Badge>
+                                : anySigned
+                                  ? <Badge className="bg-yellow-100 text-yellow-700">Partially Signed</Badge>
+                                  : <Badge variant="outline" className="text-muted-foreground">Not Signed</Badge>
+                            ) : (
+                              selectedClient.contractStatus === "signed"
+                                ? <Badge className="bg-green-100 text-green-700">Signed</Badge>
+                                : <Badge variant="outline" className="text-muted-foreground">Not Signed</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{hasSubs ? "Total Services" : "Max Services"}</p>
+                          <p className="font-medium">{totalServices}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
                   <div>
                     <p className="text-sm text-muted-foreground">Subscribed</p>
                     <p className="font-medium">
@@ -1127,20 +1189,60 @@ const AdminClients = () => {
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Selected Services</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedClient.selectedServices.length > 0 ? (
-                      selectedClient.selectedServices.map((service, i) => (
-                        <Badge key={i} variant="secondary">
-                          {service}
-                        </Badge>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground">No services selected yet</p>
-                    )}
+                {/* Subscriptions & Services */}
+                {(selectedClient.subscriptions?.length ?? 0) > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground font-semibold">Subscriptions ({selectedClient.subscriptions!.length})</p>
+                    {selectedClient.subscriptions!.map((sub, idx) => (
+                      <div key={sub.id || idx} className={`border rounded-lg p-3 space-y-2 ${sub.isPrimary ? "border-primary/40 bg-primary/5" : ""}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">{sub.label}</p>
+                            {sub.isPrimary && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Primary</Badge>}
+                          </div>
+                          <p className="font-semibold text-sm">${sub.monthlyAmount.toLocaleString()}/mo</p>
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          {sub.billingDay && <span>Bills on the {sub.billingDay}{sub.billingDay === 1 ? "st" : sub.billingDay === 2 ? "nd" : sub.billingDay === 3 ? "rd" : "th"}</span>}
+                          <span>•</span>
+                          <Badge variant={sub.subscriptionStatus === "active" ? "default" : "outline"} className="text-[10px] px-1.5 py-0">
+                            {sub.subscriptionStatus === "pending_payment" ? "Awaiting Payment" : sub.subscriptionStatus}
+                          </Badge>
+                          <span>•</span>
+                          <span>Contract: {sub.contractStatus === "signed" ? "✅ Signed" : "⏳ Not Signed"}</span>
+                        </div>
+                        {sub.selectedServices && sub.selectedServices.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {sub.selectedServices.map((svc, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">{svc}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-sm font-medium">Combined Monthly Total</span>
+                      <span className="font-bold">
+                        ${selectedClient.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString()}/mo
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Selected Services</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedClient.selectedServices.length > 0 ? (
+                        selectedClient.selectedServices.map((service, i) => (
+                          <Badge key={i} variant="secondary">
+                            {service}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No services selected yet</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {selectedClient.notes && (
                   <div>

@@ -21,6 +21,18 @@ interface CreateClientRequest {
   notes?: string;
   selectedServices?: string[];
   contractDetails?: any;
+  subscriptions?: Array<{
+    label: string;
+    plan?: string;
+    selectedServices?: string[];
+    monthlyAmount: number;
+    billingDay?: number;
+    subscriptionStatus?: string;
+    isPrimary?: boolean;
+    stripeSubscriptionId?: string;
+    stripeCustomerId?: string;
+    notes?: string;
+  }>;
 }
 
 serve(async (req) => {
@@ -173,6 +185,34 @@ serve(async (req) => {
     if (subError) {
       console.error("Error creating subscription record:", subError);
       // Don't fail - client_profiles is the source of truth
+    }
+
+    // Insert multi-subscriptions if provided
+    if (Array.isArray(body.subscriptions) && body.subscriptions.length > 0) {
+      const subsToInsert = body.subscriptions.map((sub, idx) => ({
+        client_profile_id: newClient.id,
+        label: sub.label || `Subscription ${idx + 1}`,
+        plan: sub.plan || body.plan,
+        selected_services: sub.selectedServices || [],
+        monthly_amount: sub.monthlyAmount || 0,
+        billing_day: sub.billingDay || null,
+        subscription_status: sub.subscriptionStatus || "active",
+        is_primary: sub.isPrimary || (idx === 0),
+        stripe_subscription_id: sub.stripeSubscriptionId || null,
+        stripe_customer_id: sub.stripeCustomerId || null,
+        notes: sub.notes || null,
+      }));
+
+      const { error: multiSubError } = await supabaseAdmin
+        .from("client_subscriptions")
+        .insert(subsToInsert);
+
+      if (multiSubError) {
+        console.error("Error creating multi-subscriptions:", multiSubError);
+        // Don't fail - client_profiles is the source of truth
+      } else {
+        console.log(`Created ${subsToInsert.length} subscriptions for client ${newClient.id}`);
+      }
     }
 
     console.log("Client created:", newClient.id);

@@ -28,6 +28,25 @@ import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
 
+interface ClientSubscription {
+  id: string;
+  label: string;
+  plan: string | null;
+  selectedServices: string[];
+  monthlyAmount: number;
+  billingDay: number | null;
+  nextBillingDate: string | null;
+  subscriptionStatus: string;
+  stripeSubscriptionId: string | null;
+  stripeCustomerId: string | null;
+  isPrimary: boolean;
+  notes: string | null;
+  contractStatus?: string;
+  contractSignedAt?: string | null;
+  contractSignature?: string | null;
+  contractDetails?: any;
+}
+
 interface ClientProfile {
   id: string;
   email: string;
@@ -50,6 +69,7 @@ interface ClientProfile {
   createdAt: string;
   updatedAt: string;
   notes: string | null;
+  subscriptions?: ClientSubscription[];
 }
 
 const planDetails: Record<string, { name: string; price: number; services: number }> = {
@@ -99,6 +119,16 @@ const serviceLabels: Record<string, string> = {
   "video-production": "Video Production",
 };
 
+const getOrdinalSuffix = (day: number): string => {
+  if (day >= 11 && day <= 13) return `${day}th`;
+  switch (day % 10) {
+    case 1: return `${day}st`;
+    case 2: return `${day}nd`;
+    case 3: return `${day}rd`;
+    default: return `${day}th`;
+  }
+};
+
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -107,6 +137,7 @@ const ClientDashboard = () => {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [managingBilling, setManagingBilling] = useState(false);
+  const [checkingOutSubId, setCheckingOutSubId] = useState<string | null>(null);
   const [showResponses, setShowResponses] = useState(false);
 
   const isDiscovery = profile?.plan === "discovery" || profile?.plan === "prospect" || profile?.plan === "custom-lms";
@@ -264,6 +295,36 @@ const ClientDashboard = () => {
       toast.error(error.message || "Unable to start checkout. Please contact support.");
     } finally {
       setManagingBilling(false);
+    }
+  };
+
+  // Per-subscription checkout for multi-sub clients
+  const handleSubCheckout = async (sub: ClientSubscription) => {
+    if (!profile) return;
+    setCheckingOutSubId(sub.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: {
+          plan: "custom",
+          customPrice: sub.monthlyAmount,
+          customerEmail: profile.email,
+          selectedServices: sub.selectedServices || [],
+          subscriptionId: sub.id,
+          subscriptionLabel: sub.label,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.url) {
+        window.open(data.url, "_blank");
+        toast.success(`Checkout opened for ${sub.label}`);
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error: any) {
+      console.error("Error starting sub checkout:", error);
+      toast.error(error.message || "Unable to start checkout. Please contact support.");
+    } finally {
+      setCheckingOutSubId(null);
     }
   };
 
@@ -700,65 +761,179 @@ const ClientDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Plan & Billing Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  Your Plan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-semibold">{getPlanName()}</p>
-                  </div>
-                  {!isProspect && (
-                  <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
-                    {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus.replace("_", " ")}
-                  </Badge>
-                  )}
-                </div>
+            {/* Plan & Billing — Multi-subscription or single card */}
+            {profile.subscriptions && profile.subscriptions.length > 0 ? (
+              <>
+                {/* Combined total header */}
+                <Card className="md:col-span-1 overflow-visible">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="w-5 h-5" />
+                      Your Subscriptions
+                    </CardTitle>
+                    <CardDescription>
+                      {profile.subscriptions.length} subscription{profile.subscriptions.length !== 1 ? "s" : ""} · Combined total:{" "}
+                      <span className="font-semibold text-foreground">
+                        ${profile.subscriptions.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
+                      </span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0 overflow-visible">
+                    <div className="grid sm:grid-cols-2 gap-4 pb-1">
+                      {profile.subscriptions.map((sub) => (
+                        <div
+                          key={sub.id}
+                          className="relative flex flex-col rounded-xl border p-5 transition-shadow hover:shadow-md border-slate-200 bg-white shadow-sm"
+                        >
+                          {/* Header */}
+                          <div className="space-y-2 mb-4">
+                            <p className="font-semibold text-base leading-snug text-slate-800">{sub.label}</p>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-2xl font-bold text-slate-900">
+                                ${sub.monthlyAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </span>
+                              <span className="text-sm text-muted-foreground">/mo</span>
+                            </div>
+                          </div>
 
-                <Separator />
+                          {/* Details */}
+                          <div className="space-y-2.5 mb-4">
+                            {sub.billingDay && (
+                              <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <Calendar className="w-4 h-4 text-slate-400" />
+                                <span>Billed on the <span className="font-semibold text-slate-800">{getOrdinalSuffix(sub.billingDay)}</span></span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              {sub.subscriptionStatus === "active" ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 text-xs font-medium">
+                                  ✓ Active
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50 text-xs font-medium">
+                                  Awaiting Payment
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
 
-                {!isProspect && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Services Included ({profile.maxServices || 0})</p>
-                  {profile.selectedServices && profile.selectedServices.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {profile.selectedServices.map((service) => (
-                        <Badge key={service} variant="outline" className="text-xs">
-                          {serviceLabels[service] || service}
-                        </Badge>
+                          {/* Services — push to fill remaining space */}
+                          {sub.selectedServices && sub.selectedServices.length > 0 && (
+                            <div className="flex-1">
+                              <Separator className="mb-3" />
+                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Services</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {sub.selectedServices.map((service) => (
+                                  <Badge key={service} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50 border-slate-200 text-slate-600 font-normal">
+                                    {serviceLabels[service] || service}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Per-subscription checkout for pending_payment */}
+                          {sub.subscriptionStatus === "pending_payment" && !sub.stripeSubscriptionId && (
+                            <div className="mt-auto pt-4">
+                              <Button
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+                                onClick={() => handleSubCheckout(sub)}
+                                disabled={checkingOutSubId === sub.id}
+                              >
+                                {checkingOutSubId === sub.id ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                )}
+                                Complete Payment
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No services selected yet</p>
-                  )}
-                </div>
-                )}
 
-                {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
-                  <>
-                    <Separator />
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      onClick={handleManageBilling}
-                      disabled={managingBilling}
-                    >
-                      {managingBilling ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Settings className="w-4 h-4 mr-2" />
-                      )}
-                      Manage Billing
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleManageBilling}
+                          disabled={managingBilling}
+                        >
+                          {managingBilling ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Settings className="w-4 h-4 mr-2" />
+                          )}
+                          Manage Billing
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              /* Original single-plan card for backward compatibility */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-5 h-5" />
+                    Your Plan
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-semibold">{getPlanName()}</p>
+                    </div>
+                    {!isProspect && (
+                    <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
+                      {profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus.replace("_", " ")}
+                    </Badge>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {!isProspect && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Services Included ({profile.maxServices || 0})</p>
+                    {profile.selectedServices && profile.selectedServices.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {profile.selectedServices.map((service) => (
+                          <Badge key={service} variant="outline" className="text-xs">
+                            {serviceLabels[service] || service}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No services selected yet</p>
+                    )}
+                  </div>
+                  )}
+
+                  {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
+                    <>
+                      <Separator />
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleManageBilling}
+                        disabled={managingBilling}
+                      >
+                        {managingBilling ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Settings className="w-4 h-4 mr-2" />
+                        )}
+                        Manage Billing
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Contract Status Card - hidden for discovery */}
             {!isDiscovery && (
@@ -766,36 +941,69 @@ const ClientDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileSignature className="w-5 h-5" />
-                  Contract
+                  Contract{profile.subscriptions && profile.subscriptions.length > 1 ? "s" : ""}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Service Agreement</p>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.contractStatus === "signed" 
-                        ? `Signed on ${new Date(profile.contractSignedAt!).toLocaleDateString()}`
-                        : "Awaiting your signature"}
-                    </p>
-                  </div>
-                  {profile.contractStatus === "signed" ? (
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
-                      >
-                        View Signed Copy
-                      </Button>
-                      <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
+              <CardContent className="space-y-4">
+                {profile.subscriptions && profile.subscriptions.length > 0 ? (
+                  /* Per-subscription contracts */
+                  profile.subscriptions.map((sub) => {
+                    const cStatus = sub.contractStatus || profile.contractStatus;
+                    const cSignedAt = sub.contractSignedAt || profile.contractSignedAt;
+                    return (
+                      <div key={`contract-${sub.id}`} className="flex items-center justify-between border-b last:border-0 pb-3 last:pb-0">
+                        <div>
+                          <p className="font-medium text-sm">{sub.label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {cStatus === "signed"
+                              ? `Signed on ${new Date(cSignedAt!).toLocaleDateString()}`
+                              : "Awaiting your signature"}
+                          </p>
+                        </div>
+                        {cStatus === "signed" ? (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
+                            >
+                              View
+                            </Button>
+                            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          </div>
+                        ) : (
+                          <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>Sign</Button>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  /* Single contract fallback */
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Service Agreement</p>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.contractStatus === "signed" 
+                          ? `Signed on ${new Date(profile.contractSignedAt!).toLocaleDateString()}`
+                          : "Awaiting your signature"}
+                      </p>
                     </div>
-                  ) : (
-                    <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>
-                      Sign Now
-                    </Button>
-                  )}
-                </div>
+                    {profile.contractStatus === "signed" ? (
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
+                        >
+                          View Signed Copy
+                        </Button>
+                        <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
+                      </div>
+                    ) : (
+                      <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>Sign Now</Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
             )}

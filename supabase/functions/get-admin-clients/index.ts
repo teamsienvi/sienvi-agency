@@ -75,6 +75,39 @@ serve(async (req) => {
       if (sub.email) subsByEmail[sub.email.toLowerCase()] = sub;
     }
 
+    // Fetch multi-subscriptions from client_subscriptions table
+    const { data: allClientSubs } = await supabase
+      .from("client_subscriptions")
+      .select("*")
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    // Group by client_profile_id
+    const clientSubsByProfileId: Record<string, any[]> = {};
+    for (const cs of allClientSubs || []) {
+      if (!clientSubsByProfileId[cs.client_profile_id]) {
+        clientSubsByProfileId[cs.client_profile_id] = [];
+      }
+      clientSubsByProfileId[cs.client_profile_id].push({
+        id: cs.id,
+        label: cs.label,
+        plan: cs.plan,
+        selectedServices: cs.selected_services || [],
+        monthlyAmount: cs.monthly_amount,
+        billingDay: cs.billing_day,
+        nextBillingDate: cs.next_billing_date,
+        subscriptionStatus: cs.subscription_status,
+        stripeSubscriptionId: cs.stripe_subscription_id,
+        stripeCustomerId: cs.stripe_customer_id,
+        isPrimary: cs.is_primary,
+        notes: cs.notes,
+        contractStatus: cs.contract_status,
+        contractSignedAt: cs.contract_signed_at,
+        contractSignature: cs.contract_signature,
+        contractDetails: cs.contract_details,
+      });
+    }
+
     // Map client_profiles and enrich with Stripe data from subscriptions
     const clients = (clientProfiles || []).map((profile: any) => {
       const sub = subsByEmail[profile.email?.toLowerCase()];
@@ -115,6 +148,7 @@ serve(async (req) => {
         contractSignedAt: profile.contract_signed_at,
         onboardingStatus: profile.onboarding_status,
         accountStatus: profile.account_status,
+        subscriptions: clientSubsByProfileId[profile.id] || [],
       };
     });
 

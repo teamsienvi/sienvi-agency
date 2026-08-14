@@ -142,6 +142,35 @@ serve(async (req) => {
       console.log(`Successfully created client profile for: ${user.email}`);
     }
 
+    // Fetch multi-subscriptions for this client
+    const { data: clientSubscriptions } = await supabaseAdmin
+      .from("client_subscriptions")
+      .select("*")
+      .eq("client_profile_id", profile.id)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    const subscriptions = (clientSubscriptions || []).map((sub: any) => ({
+      id: sub.id,
+      label: sub.label,
+      plan: sub.plan,
+      selectedServices: sub.selected_services || [],
+      monthlyAmount: sub.monthly_amount,
+      billingDay: sub.billing_day,
+      nextBillingDate: sub.next_billing_date,
+      subscriptionStatus: sub.subscription_status,
+      stripeSubscriptionId: sub.stripe_subscription_id,
+      stripeCustomerId: sub.stripe_customer_id,
+      isPrimary: sub.is_primary,
+      notes: sub.notes,
+      contractStatus: sub.contract_status,
+      contractSignedAt: sub.contract_signed_at,
+      contractSignature: sub.contract_signature,
+      contractDetails: sub.contract_details,
+      createdAt: sub.created_at,
+      updatedAt: sub.updated_at,
+    }));
+
     return new Response(
       JSON.stringify({ 
         profile: {
@@ -168,6 +197,7 @@ serve(async (req) => {
           createdAt: profile.created_at,
           updatedAt: profile.updated_at,
           notes: profile.notes,
+          subscriptions,
         },
         isAdmin,
       }),

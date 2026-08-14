@@ -97,16 +97,17 @@ serve(async (req) => {
     const { data: profile } = clientId
       ? await supabaseAdmin
           .from("client_profiles")
-          .select("subscription_status, contract_status, onboarding_status, notes, plan")
+          .select("id, subscription_status, contract_status, onboarding_status, notes, plan")
           .eq("id", clientId)
           .maybeSingle()
       : await supabaseAdmin
           .from("client_profiles")
-          .select("subscription_status, contract_status, onboarding_status, notes, plan")
+          .select("id, subscription_status, contract_status, onboarding_status, notes, plan")
           .eq("email", targetEmail)
           .maybeSingle();
 
     let clientPlan: string | null = null;
+    let hasMultipleSubs = false;
 
     if (profile) {
       clientStatus = {
@@ -116,6 +117,13 @@ serve(async (req) => {
       };
       additionalEmails = parseAdditionalEmails(profile.notes);
       clientPlan = profile.plan || null;
+
+      // Check if client has multiple subscriptions
+      const { count } = await supabaseAdmin
+        .from("client_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("client_profile_id", profile.id);
+      hasMultipleSubs = (count || 0) > 1;
     }
 
     const isProspect = clientPlan === "prospect";
@@ -171,12 +179,22 @@ serve(async (req) => {
       emailIntro = "Please review and sign your service agreement to proceed to payment.";
       tipText = "Your next step is to review and sign the service agreement.";
     } else if (clientStatus.subscriptionStatus === "pending_payment") {
-      redirectPath = "/checkout-summary";
-      actionMessage = "Complete Subscription Payment";
-      emailSubject = "Complete Your Subscription";
-      headerTitle = "Complete Your Subscription";
-      emailIntro = "Agreement signed! Complete your payment to activate your workspace.";
-      tipText = "Complete your payment to unlock full workspace features.";
+      // Multi-sub clients go to dashboard where they see per-subscription checkout buttons
+      if (hasMultipleSubs) {
+        redirectPath = "/dashboard";
+        actionMessage = "Complete Your Payments";
+        emailSubject = "Complete Your Subscriptions";
+        headerTitle = "Complete Your Subscriptions";
+        emailIntro = "Agreement signed! Complete your subscription payments from your dashboard to activate your workspace.";
+        tipText = "You have multiple subscriptions — complete each payment from your dashboard.";
+      } else {
+        redirectPath = "/checkout-summary";
+        actionMessage = "Complete Subscription Payment";
+        emailSubject = "Complete Your Subscription";
+        headerTitle = "Complete Your Subscription";
+        emailIntro = "Agreement signed! Complete your payment to activate your workspace.";
+        tipText = "Complete your payment to unlock full workspace features.";
+      }
     } else if (clientStatus.contractStatus === "signed" && clientStatus.onboardingStatus !== "completed") {
       redirectPath = "/onboarding";
       actionMessage = "Continue Onboarding";

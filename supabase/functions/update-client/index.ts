@@ -57,6 +57,7 @@ serve(async (req) => {
       stripeSubscriptionId,
       contractDetails,
       contractStatus,
+      subscriptions: incomingSubscriptions,
     } = body;
 
     if (!clientId) {
@@ -103,6 +104,69 @@ serve(async (req) => {
 
     if (updateError) {
       throw new Error(`Failed to update client: ${updateError.message}`);
+    }
+
+    // Handle multi-subscriptions if provided
+    if (Array.isArray(incomingSubscriptions)) {
+      // Get existing subscriptions for this client
+      const { data: existingSubs } = await supabase
+        .from("client_subscriptions")
+        .select("id")
+        .eq("client_profile_id", clientId);
+
+      const existingIds = new Set((existingSubs || []).map((s: any) => s.id));
+      const incomingIds = new Set(
+        incomingSubscriptions.filter((s: any) => s.id).map((s: any) => s.id)
+      );
+
+      // Delete subscriptions that were removed
+      for (const existingId of existingIds) {
+        if (!incomingIds.has(existingId)) {
+          await supabase
+            .from("client_subscriptions")
+            .delete()
+            .eq("id", existingId);
+          console.log(`Deleted subscription ${existingId} for client ${clientId}`);
+        }
+      }
+
+      // Upsert each subscription
+      for (const sub of incomingSubscriptions) {
+        const subData = {
+          client_profile_id: clientId,
+          label: sub.label || "Unnamed Subscription",
+          plan: sub.plan || null,
+          selected_services: sub.selectedServices || [],
+          monthly_amount: sub.monthlyAmount || 0,
+          billing_day: sub.billingDay || null,
+          next_billing_date: sub.nextBillingDate || null,
+          subscription_status: sub.subscriptionStatus || "active",
+          stripe_subscription_id: sub.stripeSubscriptionId || null,
+          stripe_customer_id: sub.stripeCustomerId || null,
+          is_primary: sub.isPrimary || false,
+          notes: sub.notes || null,
+          contract_status: sub.contractStatus || "not_signed",
+          contract_signed_at: sub.contractSignedAt || null,
+          contract_signature: sub.contractSignature || null,
+          contract_details: sub.contractDetails || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (sub.id && existingIds.has(sub.id)) {
+          // Update existing
+          await supabase
+            .from("client_subscriptions")
+            .update(subData)
+            .eq("id", sub.id);
+        } else {
+          // Insert new
+          await supabase
+            .from("client_subscriptions")
+            .insert(subData);
+        }
+      }
+
+      console.log(`Synced ${incomingSubscriptions.length} subscriptions for client ${clientId}`);
     }
 
     console.log(`Client ${clientId} updated successfully:`, { plan, selectedServices, subscriptionStatus });

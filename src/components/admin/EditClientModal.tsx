@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2, CalendarDays } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 const automationServices = [
   { id: "social-media-suite", label: "Social Media Suite", price: 2450 },
@@ -75,6 +77,20 @@ interface Client {
   updatedAt: string;
   contractStatus?: string;
   onboardingStatus?: string;
+  subscriptions?: Array<{
+    id: string;
+    label: string;
+    plan: string | null;
+    selectedServices: string[];
+    monthlyAmount: number;
+    billingDay: number | null;
+    nextBillingDate: string | null;
+    subscriptionStatus: string;
+    stripeSubscriptionId: string | null;
+    stripeCustomerId: string | null;
+    isPrimary: boolean;
+    notes: string | null;
+  }>;
 }
 
 interface EditClientModalProps {
@@ -112,6 +128,24 @@ export const EditClientModal = ({
     notes: "",
     contractStatus: "not_signed" as string,
   });
+
+  interface SubscriptionFormItem {
+    id?: string; // existing DB id (undefined for new)
+    label: string;
+    plan: string;
+    monthlyAmount: number;
+    billingDay: number | null;
+    subscriptionStatus: string;
+    isPrimary: boolean;
+    selectedServices: string[];
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    notes: string;
+    contractStatus: string;
+    contractDetails: any;
+  }
+
+  const [clientSubscriptions, setClientSubscriptions] = useState<SubscriptionFormItem[]>([]);
 
   useEffect(() => {
     if (client) {
@@ -157,6 +191,25 @@ export const EditClientModal = ({
         serviceDelivery: cd.serviceDelivery || "Remote unless otherwise agreed in writing",
       });
       setContractFile(null);
+
+      // Initialize subscriptions
+      setClientSubscriptions(
+        (client.subscriptions || []).map((s) => ({
+          id: s.id,
+          label: s.label || "",
+          plan: s.plan || "custom",
+          monthlyAmount: s.monthlyAmount || 0,
+          billingDay: s.billingDay || null,
+          subscriptionStatus: s.subscriptionStatus || "active",
+          isPrimary: s.isPrimary || false,
+          selectedServices: s.selectedServices || [],
+          stripeSubscriptionId: s.stripeSubscriptionId || "",
+          stripeCustomerId: s.stripeCustomerId || "",
+          notes: s.notes || "",
+          contractStatus: s.contractStatus || "not_signed",
+          contractDetails: s.contractDetails || null,
+        }))
+      );
     }
   }, [client]);
 
@@ -276,6 +329,7 @@ export const EditClientModal = ({
           maxServices: formData.plan === "custom" ? (parseInt(formData.maxServices as any) || 1) : planConfigs[formData.plan].maxServices,
           notes: finalNotes,
           ...(contractDetails !== undefined ? { contractDetails } : {}),
+          subscriptions: clientSubscriptions.length > 0 ? clientSubscriptions : undefined,
         },
       });
 
@@ -644,6 +698,198 @@ export const EditClientModal = ({
               )}
             </div>
           )}
+
+          {/* Multi-Subscriptions Management */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Subscriptions (Multi-Billing)</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setClientSubscriptions((prev) => [
+                  ...prev,
+                  {
+                    label: "",
+                    plan: "custom",
+                    monthlyAmount: 0,
+                    billingDay: null,
+                    subscriptionStatus: "pending_payment",
+                    isPrimary: prev.length === 0,
+                    selectedServices: [],
+                    stripeSubscriptionId: "",
+                    stripeCustomerId: "",
+                    notes: "",
+                    contractStatus: "not_signed",
+                    contractDetails: null,
+                  },
+                ])}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Subscription
+              </Button>
+            </div>
+            {clientSubscriptions.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No separate subscriptions configured. The main plan fields above are used.</p>
+            ) : (
+              <div className="space-y-4">
+                {clientSubscriptions.map((sub, idx) => (
+                  <div key={sub.id || `new-${idx}`} className={`border rounded-lg p-4 space-y-3 ${
+                    sub.isPrimary ? "border-primary/40 bg-primary/5" : "border-border"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-muted-foreground">Subscription #{idx + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                          <input
+                            type="radio"
+                            name="primarySub"
+                            checked={sub.isPrimary}
+                            onChange={() => setClientSubscriptions((prev) =>
+                              prev.map((s, i) => ({ ...s, isPrimary: i === idx }))
+                            )}
+                            className="accent-primary"
+                          />
+                          Primary
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => setClientSubscriptions((prev) => prev.filter((_, i) => i !== idx))}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs">Label / Name</Label>
+                        <Input
+                          value={sub.label}
+                          onChange={(e) => setClientSubscriptions((prev) =>
+                            prev.map((s, i) => i === idx ? { ...s, label: e.target.value } : s)
+                          )}
+                          placeholder="e.g. PPC + Social Automation Package"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Monthly Amount ($)</Label>
+                        <Input
+                          type="number"
+                          value={sub.monthlyAmount}
+                          onChange={(e) => setClientSubscriptions((prev) =>
+                            prev.map((s, i) => i === idx ? { ...s, monthlyAmount: parseFloat(e.target.value) || 0 } : s)
+                          )}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center gap-1">
+                          <CalendarDays className="w-3 h-3" />
+                          Billing Day (1-31)
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={sub.billingDay ?? ""}
+                          onChange={(e) => setClientSubscriptions((prev) =>
+                            prev.map((s, i) => i === idx ? { ...s, billingDay: e.target.value ? parseInt(e.target.value) : null } : s)
+                          )}
+                          placeholder="e.g. 15"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Status</Label>
+                        <Select
+                          value={sub.subscriptionStatus}
+                          onValueChange={(v) => setClientSubscriptions((prev) =>
+                            prev.map((s, i) => i === idx ? { ...s, subscriptionStatus: v } : s)
+                          )}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending_payment">Pending</SelectItem>
+                            <SelectItem value="past_due">Past Due</SelectItem>
+                            <SelectItem value="canceled">Canceled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Stripe Subscription ID</Label>
+                        <Input
+                          value={sub.stripeSubscriptionId}
+                          onChange={(e) => setClientSubscriptions((prev) =>
+                            prev.map((s, i) => i === idx ? { ...s, stripeSubscriptionId: e.target.value } : s)
+                          )}
+                          placeholder="sub_..."
+                          className="h-8 text-sm font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Contract Status</Label>
+                        <Select
+                          value={sub.contractStatus}
+                          onValueChange={(v) => setClientSubscriptions((prev) =>
+                            prev.map((s, i) => i === idx ? { ...s, contractStatus: v } : s)
+                          )}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="not_signed">Not Signed</SelectItem>
+                            <SelectItem value="signed">Signed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {sub.contractDetails?.uploadedContractName && (
+                        <div className="space-y-1 col-span-2">
+                          <Label className="text-xs text-muted-foreground">Contract Document</Label>
+                          <p className="text-xs truncate">{sub.contractDetails.uploadedContractName}</p>
+                        </div>
+                      )}
+                      <div className="space-y-1.5 col-span-2">
+                        <Label className="text-xs">Services for this subscription</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[...automationServices, ...advertisingChannels].map((svc) => {
+                            const isChecked = (sub.selectedServices || []).includes(svc.id);
+                            return (
+                              <Badge
+                                key={svc.id}
+                                variant={isChecked ? "default" : "outline"}
+                                className={`text-[10px] cursor-pointer transition-colors ${isChecked ? "" : "opacity-50 hover:opacity-100"}`}
+                                onClick={() => setClientSubscriptions((prev) =>
+                                  prev.map((s, i) => i === idx ? {
+                                    ...s,
+                                    selectedServices: isChecked
+                                      ? s.selectedServices.filter((id) => id !== svc.id)
+                                      : [...s.selectedServices, svc.id],
+                                  } : s)
+                                )}
+                              >
+                                {isChecked ? "✓ " : ""}{svc.label}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Separator />
 
           {/* Price Summary */}
           <div className="p-4 bg-muted rounded-lg flex items-center justify-between">

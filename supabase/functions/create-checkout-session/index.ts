@@ -90,7 +90,7 @@ serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" });
-    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly, customPrice, customerEmail } = await req.json();
+    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly, customPrice, customerEmail, subscriptionId, subscriptionLabel } = await req.json();
     const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
 
     // ========================================
@@ -262,18 +262,29 @@ serve(async (req) => {
         "custom-tool": "Custom Tool",
         "custom-ai-assistant": "Custom AI Assistant",
         "amazon-design": "Amazon Design Package",
+        "channel-amazon": "Amazon Ads",
+        "channel-google": "Google Ads",
+        "channel-meta": "Meta Ads",
+        "channel-tiktok": "TikTok Ads",
+        "channel-pinterest": "Pinterest Ads",
+        "channel-linkedin": "LinkedIn Ads",
+        "channel-snapchat": "Snapchat Ads",
       };
       const serviceNames = (selectedServices || [])
-        .filter((s: string) => !s.startsWith("channel-"))
         .map((s: string) => SERVICE_LABELS[s] || s)
         .join(", ");
+
+      // Use subscription label if provided (per-subscription checkout), otherwise build from services
+      const productName = subscriptionLabel
+        ? `Sienvi — ${subscriptionLabel}`
+        : `Sienvi Custom Plan${serviceNames ? ` (${serviceNames})` : ""}`;
 
       const dynamicPrice = await stripe.prices.create({
         unit_amount: Math.round(price * 100),
         currency: "usd",
         recurring: { interval: "month" },
         product_data: {
-          name: `Sienvi Custom Plan${serviceNames ? ` (${serviceNames})` : ""}`,
+          name: productName,
         },
       });
 
@@ -312,6 +323,8 @@ serve(async (req) => {
           custom_price: price.toString(),
           selected_services: selectedServices ? JSON.stringify(selectedServices) : "",
           advertising_channels: advertisingChannels ? JSON.stringify(advertisingChannels) : "",
+          ...(subscriptionId ? { subscription_id: subscriptionId } : {}),
+          ...(subscriptionLabel ? { subscription_label: subscriptionLabel } : {}),
         },
         success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/dashboard`,

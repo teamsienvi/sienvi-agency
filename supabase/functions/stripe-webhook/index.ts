@@ -767,6 +767,28 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     }
   );
 
+  // If this checkout was for a specific subscription (multi-sub client),
+  // update that client_subscriptions row with the Stripe IDs and active status
+  const clientSubscriptionId = metadata.subscription_id;
+  if (clientSubscriptionId) {
+    console.log(`Updating client_subscriptions row: ${clientSubscriptionId} with stripe_subscription_id: ${subscriptionId}`);
+    const { error: subUpdateError } = await supabase
+      .from("client_subscriptions")
+      .update({
+        subscription_status: "active",
+        stripe_subscription_id: subscriptionId,
+        stripe_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", clientSubscriptionId);
+
+    if (subUpdateError) {
+      console.error("Error updating client_subscriptions row:", subUpdateError);
+    } else {
+      console.log(`Successfully updated client_subscriptions row: ${clientSubscriptionId}`);
+    }
+  }
+
   // Send payment confirmation email with full details
   if (customerEmail) {
     // Calculate channel count for advertising plans
