@@ -1,13 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@2.0.0";
+import { sendEmail } from "../_shared/ses-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Admin emails to notify
 const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com", "info@sienvi.com"];
@@ -52,7 +50,7 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
 
     console.log("Sending contract signed email to client:", email);
 
-    await resend.emails.send({
+    await sendEmail({
       from: "Sienvi <info@sienvi.com>",
       to: [email],
       subject: "Agreement Signed",
@@ -267,7 +265,7 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
 
     console.log("Sending contract signed notification to admins");
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail({
       from: "Sienvi Admin <info@sienvi.com>",
       to: ADMIN_EMAILS,
       subject: `📝 Contract Signed - ${displayName}`,
@@ -322,7 +320,7 @@ async function sendOnboardingCompleteClientEmail(email: string, name: string | n
 
     console.log("Sending onboarding complete email to client:", email);
 
-    await resend.emails.send({
+    await sendEmail({
       from: "Sienvi <info@sienvi.com>",
       to: [email],
       subject: "Onboarding Complete",
@@ -608,7 +606,7 @@ async function sendOnboardingCompleteAdminEmail(clientEmail: string, clientName:
 
     console.log("Sending onboarding complete notification to admins");
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail({
       from: "Sienvi Admin <info@sienvi.com>",
       to: ADMIN_EMAILS,
       subject: `🎉 Onboarding Completed - ${displayName}`,

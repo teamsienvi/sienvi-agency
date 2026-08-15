@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail } from "../_shared/ses-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -253,8 +251,8 @@ serve(async (req) => {
 
     console.log(`Sending admin notification for event: ${event}, client: ${clientEmail}`);
 
-    // Send to all admin emails in a single API call to prevent rate limiting
-    const { data, error } = await resend.emails.send({
+    // Send to all admin emails via Amazon SES
+    const { data, error } = await sendEmail({
       from: "Sienvi Admin <info@sienvi.com>",
       to: ADMIN_EMAILS,
       subject: `${config.subject} - ${displayName}`,

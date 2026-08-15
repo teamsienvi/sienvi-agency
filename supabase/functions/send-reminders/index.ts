@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail } from "../_shared/ses-client.ts";
 
 function parseAdditionalEmails(notes: string | null | undefined): string[] {
   if (!notes) return [];
@@ -182,8 +180,8 @@ serve(async (req) => {
         const additionalEmails = parseAdditionalEmails(client.notes);
         const recipients = [...new Set([primaryEmail, ...additionalEmails])];
 
-        // Send email
-        const emailResponse = await resend.emails.send({
+        // Send email via Amazon SES
+        const emailResponse = await sendEmail({
           from: "Sienvi <info@sienvi.com>",
           to: recipients,
           bcc: ["info@sienvi.com"], // Keep team notified
@@ -191,10 +189,9 @@ serve(async (req) => {
           html: emailContent.html,
         });
 
-        const resendError = (emailResponse as any).error;
-        if (resendError) {
-          console.error(`Resend error for ${client.email}:`, resendError);
-          results.push({ email: client.email, day: reminderDay, type: emailType, status: `failed: ${resendError.message}` });
+        if (emailResponse.error) {
+          console.error(`Amazon SES error for ${client.email}:`, emailResponse.error);
+          results.push({ email: client.email, day: reminderDay, type: emailType, status: `failed: ${emailResponse.error.message}` });
           continue;
         }
 

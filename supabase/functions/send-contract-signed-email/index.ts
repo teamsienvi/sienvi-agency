@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail } from "../_shared/ses-client.ts";
 
 function parseAdditionalEmails(notes: string | null | undefined): string[] {
   if (!notes) return [];
@@ -76,7 +74,7 @@ serve(async (req) => {
 
     console.log("Sending contract signed confirmation to:", recipients);
 
-    const emailResponse = await resend.emails.send({
+    const emailResponse = await sendEmail({
       from: "Sienvi <info@sienvi.com>",
       to: recipients,
       subject: "Agreement Signed",
@@ -181,13 +179,17 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Contract signed email sent successfully:", emailResponse);
+    if (emailResponse.error) {
+      throw new Error(emailResponse.error.message);
+    }
+
+    console.log("Contract signed email sent successfully:", emailResponse.data?.id);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Contract signed email sent",
-        emailId: emailResponse.id,
+        emailId: emailResponse.data?.id,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

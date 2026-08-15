@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail } from "../_shared/ses-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,7 +89,7 @@ serve(async (req) => {
 
     console.log("Sending payment confirmation to:", customerEmail, "Plan:", planLabel, "Amount:", formattedAmount);
 
-    const emailResponse = await resend.emails.send({
+    const emailResponse = await sendEmail({
       from: "Sienvi <info@sienvi.com>",
       to: [customerEmail],
       subject: "Payment Confirmed",
@@ -265,13 +263,17 @@ serve(async (req) => {
       `,
     });
 
-    console.log("Payment confirmation email sent successfully:", emailResponse);
+    if (emailResponse.error) {
+      throw new Error(emailResponse.error.message);
+    }
+
+    console.log("Payment confirmation email sent successfully:", emailResponse.data?.id);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Payment confirmation email sent",
-        emailId: emailResponse.id,
+        emailId: emailResponse.data?.id,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

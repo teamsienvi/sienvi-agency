@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@2.0.0";
+import { sendEmail } from "../_shared/ses-client.ts";
 
 function parseAdditionalEmails(notes: string | null | undefined): string[] {
   if (!notes) return [];
@@ -34,13 +34,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-
-    if (!resendApiKey) {
-      throw new Error("RESEND_API_KEY environment variable is missing in Edge Function secrets");
-    }
-
-    const resend = new Resend(resendApiKey);
+    const awsAccessKey = Deno.env.get("AWS_ACCESS_KEY_ID");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -277,10 +271,9 @@ serve(async (req) => {
     let emailId = null;
     let emailError = null;
 
-    if (resendApiKey && recipients.length > 0) {
+    if (recipients.length > 0) {
       try {
-        const resend = new Resend(resendApiKey);
-        const emailResponse = await resend.emails.send({
+        const emailResponse = await sendEmail({
           from: "Sienvi <info@sienvi.com>",
           to: recipients,
           subject: emailSubject,
@@ -355,17 +348,16 @@ serve(async (req) => {
           `,
         });
 
-        const resErr = (emailResponse as any)?.error;
-        if (!resErr) {
+        if (!emailResponse.error) {
           emailSent = true;
-          emailId = (emailResponse as any)?.data?.id || (emailResponse as any)?.id || null;
+          emailId = emailResponse.data?.id || null;
         } else {
-          emailError = resErr.message || JSON.stringify(resErr);
-          console.warn("Resend email delivery skipped (account issue):", emailError);
+          emailError = emailResponse.error.message;
+          console.warn("Amazon SES email delivery warning:", emailError);
         }
       } catch (err: any) {
         emailError = err.message || String(err);
-        console.warn("Resend email attempt caught error (bypassing email requirement):", emailError);
+        console.warn("Amazon SES email attempt caught error:", emailError);
       }
     }
 

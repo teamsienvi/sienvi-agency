@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail } from "../_shared/ses-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +23,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { name, email, phone, message }: BookingEmailRequest = await req.json();
 
     // Send notification email to team (internal, simple format is fine)
-    const emailResponse = await resend.emails.send({
+    const emailResponse = await sendEmail({
       from: "Sienvi Website <info@sienvi.com>",
       to: ["teamsienvi@gmail.com", "sienvifba@gmail.com", "info@sienvi.com"],
       subject: `Strategy Call Request from ${name}`,
@@ -82,9 +80,13 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    if (emailResponse.error) {
+      throw new Error(emailResponse.error.message);
+    }
 
-    return new Response(JSON.stringify({ success: true, data: emailResponse }), {
+    console.log("Email sent successfully via Amazon SES:", emailResponse.data?.id);
+
+    return new Response(JSON.stringify({ success: true, emailId: emailResponse.data?.id }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
