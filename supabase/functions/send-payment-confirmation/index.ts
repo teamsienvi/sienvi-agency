@@ -69,7 +69,7 @@ serve(async (req) => {
     }
     
     const formattedAmount = amount ? `$${(amount / 100).toLocaleString()}` : "N/A";
-    const loginUrl = dashboardUrl || "https://sienvi-agency-landing-page.lovable.app/login";
+    const loginUrl = dashboardUrl || "https://sienvi.com/login";
 
     // Build services list for email
     const servicesHtml = selectedServices && selectedServices.length > 0

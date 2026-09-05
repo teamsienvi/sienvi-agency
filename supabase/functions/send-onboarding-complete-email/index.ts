@@ -76,7 +76,7 @@ serve(async (req) => {
     }
 
     const displayName = customerName || primaryEmail.split("@")[0];
-    const dashboardUrl = "https://sienvi-agency-landing-page.lovable.app/dashboard";
+    const dashboardUrl = "https://sienvi.com/dashboard";
     
     const servicesHtml = selectedServices && selectedServices.length > 0 
       ? selectedServices.map(s => `

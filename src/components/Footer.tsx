@@ -6,7 +6,7 @@ const Footer = () => {
       <div className="container-custom py-12">
         <div className="flex justify-center mb-8">
           <img 
-            src="/lovable-uploads/9db0c2f7-eb51-4b0e-9a7f-6826c267607d.png" 
+            src="/assets/sienvi_logo_square.png" 
             alt="Sienvi Logo" 
             className="h-[100pt] w-auto"
           />

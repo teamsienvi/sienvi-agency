@@ -49,7 +49,7 @@ serve(async (req) => {
     console.log("Creating custom checkout session:", { clientName, email, customAmount, maxServices, notes });
 
     // Get the origin for redirect URLs
-    const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
+    const origin = req.headers.get("origin") || "https://sienvi.com";
 
     // Build checkout session options
     const sessionOptions: Stripe.Checkout.SessionCreateParams = {

@@ -87,7 +87,7 @@ serve(async (req) => {
     });
 
     // Get the origin from the request or use a default
-    const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
+    const origin = req.headers.get("origin") || "https://sienvi.com";
 
     // Create customer portal session
     const portalSession = await stripe.billingPortal.sessions.create({

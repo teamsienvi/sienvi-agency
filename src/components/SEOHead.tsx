@@ -14,7 +14,7 @@ export const SEOHead = ({
   description,
   canonical,
   noindex = false,
-  ogImage = "https://sienvi-agency-landing-page.lovable.app/og-image.png",
+  ogImage = "https://sienvi.com/og-image.png",
   ogType = "website",
 }: SEOHeadProps) => {
   useEffect(() => {

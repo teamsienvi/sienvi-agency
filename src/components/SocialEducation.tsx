@@ -98,7 +98,7 @@ const topics = [
     title: "No-Code AI Tools",
     description:
       "Build powerful AI-driven apps and automations without writing a single line of code.",
-    tags: ["Bubble", "Lovable", "FlutterFlow"],
+    tags: ["Bubble", "Antigravity", "FlutterFlow"],
     gradient: "from-yellow-500/20 to-lime-600/20",
     accentColor: "text-yellow-400",
   },

@@ -91,7 +91,7 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" });
     const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly, customPrice, customerEmail, subscriptionId, subscriptionLabel } = await req.json();
-    const origin = req.headers.get("origin") || "https://sienvi-agency-landing-page.lovable.app";
+    const origin = req.headers.get("origin") || "https://sienvi.com";
 
     // ========================================
     // ADVERTISING-ONLY CHECKOUT

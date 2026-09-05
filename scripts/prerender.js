@@ -313,7 +313,7 @@ routes.forEach(route => {
   const staticRootContent = `
 <div id="root">
   <header style="padding: 20px; text-align: center; background: #0A0D14; color: #fff;">
-    <a href="/"><img src="/lovable-uploads/9db0c2f7-eb51-4b0e-9a7f-6826c267607d.png" alt="Sienvi Logo" style="height: 60px;" /></a>
+    <a href="/"><img src="/assets/sienvi_logo_square.png" alt="Sienvi Logo" style="height: 60px;" /></a>
     <nav style="margin-top: 10px;">
       <a href="/" style="color: #fff; margin: 0 15px;">Home</a>
       <a href="/referral" style="color: #fff; margin: 0 15px;">Referral Program</a>
