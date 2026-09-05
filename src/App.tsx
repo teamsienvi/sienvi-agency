@@ -21,6 +21,7 @@ import Onboarding from "./pages/Onboarding";
 import Contract from "./pages/Contract";
 import Join from "./pages/Join";
 import Referral from "./pages/Referral";
+import UgcAiInfluencer from "./pages/UgcAiInfluencer";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/clients" element={<AdminClients />} />
             <Route path="/admin/create-client" element={<AdminCreateClient />} />
+            <Route path="/ugc-ai-influencer" element={<UgcAiInfluencer />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

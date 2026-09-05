@@ -221,6 +221,42 @@ const routes = [
         <p>We operate with clarity, integrity, and world-class standards. Under-promise. Over-deliver. Every time. We help business owners eliminate manual bottlenecks, scale paid customer acquisition, and build AI-driven business infrastructure.</p>
       </section>
     `
+  },
+  {
+    path: 'ugc-ai-influencer',
+    title: 'UGC AI Influencer & Video Lab | Autonomous Creator Fleets | Sienvi Agency',
+    description: 'Scale founder authority, relatable customer social proof, and multi-hook video ads with autonomous AI creator fleets, digital twin avatars, and 24–48h turnaround.',
+    canonical: 'https://sienvi.com/ugc-ai-influencer',
+    h1: 'Autonomous UGC AI Influencers & Video Fleets',
+    content: `
+      <section>
+        <p>Scale founder authority, relatable customer social proof, and multi-hook video ads without camera burnout, creator flakiness, or weeks of production delay.</p>
+        <a href="mailto:info@sienvi.com?subject=Inquiry%20about%20UGC%20AI%20Influencer%20Lab">Schedule Scoping Call</a>
+      </section>
+      <section>
+        <h2>The 3 Core Delivery Models & Hybrid Flywheel</h2>
+        <div>
+          <h3>Foundry UGC: Founder Digital Twin</h3>
+          <p>Digitize founders into high-authority avatars for thought-leadership reels and organic authority.</p>
+        </div>
+        <div>
+          <h3>Multi-Persona AI Fleets</h3>
+          <p>Relatable customer avatars tailored across diverse demographics for authentic social proof.</p>
+        </div>
+        <div>
+          <h3>High-Volume UGC Ad Creatives</h3>
+          <p>Rapid-fire PAS, '3 Reasons Why', and unboxing hooks engineered for high-converting paid social campaigns.</p>
+        </div>
+        <div>
+          <h3>The Hybrid Flywheel</h3>
+          <p>Founder authority top-of-funnel combined with persona fleets middle-and-bottom-of-funnel for maximum ROAS.</p>
+        </div>
+      </section>
+      <section>
+        <h2>The 6-Step SOP Production Pipeline</h2>
+        <p>Step 1: Trend & Angle Research | Step 2: Product Deconstruction | Step 3: Script & Choreography | Step 4: Persona Voice & Video Generation | Step 5: Post-Production & Sound Design | Step 6: Multi-Platform Syndication</p>
+      </section>
+    `
   }
 ];
 
@@ -312,4 +348,4 @@ routes.forEach(route => {
   }
 });
 
-console.log('[SEO Prerender] All 4 public pages pre-rendered successfully!');
+console.log(`[SEO Prerender] All ${routes.length} public pages pre-rendered successfully!`);

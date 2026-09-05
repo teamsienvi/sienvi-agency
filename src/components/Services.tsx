@@ -42,6 +42,8 @@ const Services = () => {
               serviceId={service.id}
               isAdvertising={'isAdvertising' in service ? service.isAdvertising : false}
               isAmazon={'isAmazon' in service ? service.isAmazon : false}
+              presentationRoute={'presentationRoute' in service ? (service as any).presentationRoute : undefined}
+              badge={'badge' in service ? (service as any).badge : undefined}
             />
           ))}
         </div>

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import ServiceFeature from "./ServiceFeature";
 
 interface ServiceCardProps {
@@ -12,6 +13,8 @@ interface ServiceCardProps {
   serviceId?: string;
   isAdvertising?: boolean;
   isAmazon?: boolean;
+  presentationRoute?: string;
+  badge?: string;
 }
 
 const cardVariants = {
@@ -47,6 +50,8 @@ const ServiceCard = ({
   serviceId,
   isAdvertising,
   isAmazon,
+  presentationRoute,
+  badge,
 }: ServiceCardProps) => {
   const handleInquire = () => {
     const subject = encodeURIComponent(`Inquiry about ${title}`);
@@ -60,7 +65,7 @@ const ServiceCard = ({
 
   return (
     <motion.div
-      className="service-card flex flex-col"
+      className="service-card flex flex-col relative"
       variants={cardVariants}
       initial="hidden"
       whileInView="visible"
@@ -69,6 +74,11 @@ const ServiceCard = ({
       custom={index}
       transition={{ delay: index * 0.1 }}
     >
+      {badge && (
+        <div className="absolute top-4 right-4 px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/40 text-primary text-[11px] font-bold tracking-wide">
+          {badge}
+        </div>
+      )}
       <motion.div className="mb-6" whileHover={{ rotate: [0, -10, 10, -5, 5, 0], transition: { duration: 0.5 } }}>
         <Icon className="service-icon" />
       </motion.div>
@@ -83,7 +93,7 @@ const ServiceCard = ({
       </ul>
 
       {/* Bundle suggestion and price at bottom */}
-      <div className="mt-auto space-y-4">
+      <div className="mt-auto space-y-3">
         {bundleFeature && (
           <div>
             <ServiceFeature feature={bundleFeature} index={regularFeatures.length} />
@@ -92,6 +102,13 @@ const ServiceCard = ({
         <motion.div className="text-primary font-bold text-xl" whileHover={{ scale: 1.05 }}>
           {price}
         </motion.div>
+        {presentationRoute && (
+          <Link to={presentationRoute} className="w-full block">
+            <Button variant="outline" className="w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-white transition font-medium">
+              Learn More & View Presentation →
+            </Button>
+          </Link>
+        )}
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleInquire}>
             Inquire Now

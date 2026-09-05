@@ -1,4 +1,4 @@
-import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon, ShoppingBagIcon, UserCogIcon, KanbanIcon, BarChart3Icon } from "lucide-react";
+import { GlobeIcon, PenToolIcon, SearchIcon, BookOpenIcon, BotIcon, MegaphoneIcon, ShoppingBagIcon, UserCogIcon, KanbanIcon, BarChart3Icon, VideoIcon } from "lucide-react";
 import React from "react";
 
 // Create wrapper functions without JSX syntax
@@ -12,8 +12,28 @@ const ShoppingBagIcon2 = (props: any) => React.createElement(ShoppingBagIcon, pr
 const UserCogIcon2 = (props: any) => React.createElement(UserCogIcon, props);
 const KanbanIcon2 = (props: any) => React.createElement(KanbanIcon, props);
 const BarChart3Icon2 = (props: any) => React.createElement(BarChart3Icon, props);
+const VideoIcon2 = (props: any) => React.createElement(VideoIcon, props);
 
 export const services = [
+  // Flagship AI Content Engine: UGC AI Influencer & Video Lab
+  {
+    id: "ugc-ai-influencer",
+    icon: VideoIcon2,
+    title: "UGC AI Influencer & Video Lab",
+    subtitle: "Autonomous AI creator fleets & founder digital twins that script, choreograph, and post converting UGC",
+    features: [
+      "Foundry UGC: Founder Digital Twin avatar for infinite authority reels without studio fatigue",
+      "Multi-Persona AI Fleets: Relatable customer avatars tailored to every buyer demographic",
+      "High-Volume UGC Video Creative: Rapid-fire PAS, '3 Reasons Why' & Morning Routine ad formats",
+      "Autonomous Intelligence: Real-time trend & hook mining + personality-calibrated scriptwriting",
+      "Built-In Compliance: Strict FTC & FDA regulatory safeguards built directly into the script engine",
+      "13-Column Storyboard CSV export ready for Kling AI, Runway Gen-3, LivePortrait, and Sora",
+      "💡 Explore the complete 3-option delivery presentation and interactive demo"
+    ],
+    price: "Custom Scoping",
+    presentationRoute: "/ugc-ai-influencer",
+    badge: "Featured AI Lab"
+  },
   // Row 1: Custom Agent, Custom Project Management, Custom Data Dashboard
   {
     id: "custom-agent",
