@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import UgcVideoCarousel from "@/components/ugc/UgcVideoCarousel";
+import { UgcVideoShowcase } from "@/components/ugc/UgcVideoShowcase";
 
 export default function UgcAiInfluencer() {
   const [activeModel, setActiveModel] = useState<"foundry" | "fleet" | "ads" | "hybrid">("hybrid");
@@ -159,9 +159,9 @@ export default function UgcAiInfluencer() {
           </div>
         </section>
 
-        {/* UGC AI VIDEO CAROUSEL & LIVE SHOWCASE */}
+        {/* UGC AI VIDEO DIRECT 3-VIDEO SHOWCASE & SOCIAL GATEWAY */}
         <div id="video-showcase">
-          <UgcVideoCarousel onInquire={handleInquire} />
+          <UgcVideoShowcase onInquire={handleInquire} />
         </div>
 
         {/* THE 3 CORE DELIVERY MODELS & HYBRID FLYWHEEL */}
