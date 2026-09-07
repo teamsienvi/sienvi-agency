@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import UgcVideoCarousel from "@/components/ugc/UgcVideoCarousel";
 
 export default function UgcAiInfluencer() {
   const [activeModel, setActiveModel] = useState<"foundry" | "fleet" | "ads" | "hybrid">("hybrid");
@@ -90,12 +91,23 @@ export default function UgcAiInfluencer() {
               <Button 
                 variant="outline" 
                 size="lg" 
+                className="w-full sm:w-auto border-primary/50 text-primary hover:bg-primary/10 hover:text-white font-bold"
+                onClick={() => {
+                  document.getElementById("video-showcase")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <Play className="w-4 h-4 mr-2 fill-primary text-primary" />
+                Watch UGC Video Showcase
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
                 className="w-full sm:w-auto border-border text-foreground hover:bg-muted font-medium"
                 onClick={() => {
                   document.getElementById("three-models")?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
-                Explore The 3 Delivery Models
+                Explore The 3 Models
               </Button>
             </motion.div>
           </div>
@@ -146,6 +158,11 @@ export default function UgcAiInfluencer() {
             </div>
           </div>
         </section>
+
+        {/* UGC AI VIDEO CAROUSEL & LIVE SHOWCASE */}
+        <div id="video-showcase">
+          <UgcVideoCarousel onInquire={handleInquire} />
+        </div>
 
         {/* THE 3 CORE DELIVERY MODELS & HYBRID FLYWHEEL */}
         <section id="three-models" className="py-20 border-b border-border/40">
