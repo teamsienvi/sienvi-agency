@@ -142,6 +142,12 @@ async function sendAdminNotification(
         title: "New Payment Received",
         color: "#10b981",
       },
+      payment_failed: {
+        subject: "🚨 Payment Failed",
+        emoji: "🚨",
+        title: "Client Payment Failed",
+        color: "#dc2626",
+      },
       subscription_canceled: {
         subject: "⚠️ Subscription Canceled",
         emoji: "⚠️",
@@ -871,6 +877,42 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   await updateClientProfile(customerEmail, {
     subscription_status: "past_due",
   });
+
+  // Send admin notification for failed payment
+  if (customerEmail) {
+    // Look up subscription details from DB for the notification
+    let plan: string | undefined;
+    let selectedServices: string[] = [];
+    let amount: number | undefined;
+    let clientName: string | undefined;
+
+    const { data: subRecord } = await supabase
+      .from("subscriptions")
+      .select("plan, selected_services, amount, client_name")
+      .eq("stripe_subscription_id", subscriptionId)
+      .single();
+
+    if (subRecord) {
+      plan = subRecord.plan || undefined;
+      selectedServices = subRecord.selected_services || [];
+      amount = subRecord.amount ? Math.round(subRecord.amount * 100) : undefined;
+      clientName = subRecord.client_name || undefined;
+    }
+
+    // Fallback: try client_profiles for the name
+    if (!clientName) {
+      const { data: profile } = await supabase
+        .from("client_profiles")
+        .select("business_name, full_name")
+        .eq("email", customerEmail)
+        .single();
+      if (profile) {
+        clientName = profile.business_name || profile.full_name || undefined;
+      }
+    }
+
+    await sendAdminNotification("payment_failed", customerEmail, clientName, plan, amount, selectedServices);
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
