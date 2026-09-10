@@ -130,8 +130,18 @@ const Contract = () => {
   };
 
   const getPlanPrice = () => {
-    if (profile?.customPrice) {
-      return `$${profile.customPrice} USD/month`;
+    const price = profile?.customPrice ?? profile?.custom_price;
+    if (price !== null && price !== undefined) {
+      if (price === 0) {
+        return "None ($0 USD/month)";
+      }
+      return `$${price} USD/month`;
+    }
+    if (profile?.plan === "prospect") {
+      return "None ($0 USD/month)";
+    }
+    if (profile?.plan === "custom") {
+      return "None ($0 USD/month)";
     }
     switch (profile?.plan) {
       case "single":

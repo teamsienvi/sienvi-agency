@@ -77,67 +77,49 @@ serve(async (req) => {
       );
     }
 
-    // --- Derive redirect path from profile status ---
-    // For most steps, the profile data alone tells us the redirect. The only ambiguous case
-    // is when contract_status="not_signed" — could be a brand-new user needing password setup
-    // or an existing user who needs to sign their contract. We resolve this by trying
-    // generateLink(magiclink) — if it succeeds, the user exists and we check last_sign_in_at.
-    let redirectPath = "/dashboard";
-    let linkType: "invite" | "magiclink" = "magiclink";
-
+    // --- Universal password check ---
+    // Before any status-based routing, check if the user has set their password.
+    // If not, they MUST set a password first regardless of contract/payment status.
     const isProspect = profile.plan === "prospect";
     const isDiscovery = isProspect || profile.plan === "discovery" || profile.plan === "custom-lms";
 
-    if (isProspect && profile.contract_status === "not_signed") {
-      // Prospects skip contract entirely — check if they need password setup
-      const probe = await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email: targetEmail,
-        options: { redirectTo: "https://sienvi.com/onboarding" },
-      });
+    let redirectPath = "/dashboard";
+    let linkType: "invite" | "magiclink" = "magiclink";
 
-      if (!probe.error && probe.data?.user) {
-        const hasSetPassword = !!probe.data.user.user_metadata?.password_set;
-        if (!hasSetPassword) {
-          redirectPath = "/login?setup=password";
-          linkType = "invite";
-        } else {
-          redirectPath = "/onboarding";
-          linkType = "magiclink";
-        }
-      } else {
-        redirectPath = "/login?setup=password";
-        linkType = "invite";
-      }
+    const passwordProbe = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email: targetEmail,
+      options: { redirectTo: `https://sienvi.com/dashboard` },
+    });
+
+    const authUserExists = !passwordProbe.error && passwordProbe.data?.user;
+    const hasSetPassword = authUserExists && !!passwordProbe.data.user.user_metadata?.password_set;
+
+    if (!hasSetPassword) {
+      // Password not set → must set password first, then they'll be routed on next login
+      redirectPath = "/login?setup=password";
+      linkType = authUserExists ? "magiclink" : "invite";
+    } else if (isProspect && profile.contract_status === "not_signed") {
+      // Password already set (checked above) → go straight to onboarding
+      redirectPath = "/onboarding";
     } else if (profile.contract_status === "not_signed") {
-      // Ambiguous: new user or needs contract? Try magiclink to probe user state.
-      const probe = await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email: targetEmail,
-        options: { redirectTo: "https://sienvi.com/contract" },
-      });
-
-      if (!probe.error && probe.data?.user) {
-        // Check user_metadata.password_set (set by the password setup form).
-        // We DON'T use last_sign_in_at because admin test clicks contaminate it.
-        const hasSetPassword = !!probe.data.user.user_metadata?.password_set;
-        if (!hasSetPassword) {
-          // Password not yet set → password setup first
-          // Use "invite" type so auth redirect hash contains type=invite,
-          // which AuthErrorHandler catches and routes to /login?setup=password
-          redirectPath = "/login?setup=password";
-          linkType = "invite";
-        } else {
-          redirectPath = "/contract";
-          linkType = "magiclink";
-        }
-      } else {
-        // User doesn't exist at all → brand new → invite + password setup
-        redirectPath = "/login?setup=password";
-        linkType = "invite";
-      }
+      // Password already set (checked above) → go to contract signing
+      redirectPath = "/contract";
     } else if (profile.subscription_status === "pending_payment" && !isProspect) {
-      redirectPath = profile.plan ? `/checkout-summary?plan=${profile.plan}` : "/checkout-summary";
+      // Check if client has multiple subscriptions or a custom plan —
+      // these should go to /dashboard where per-subscription checkout buttons are
+      const { count } = await supabaseAdmin
+        .from("client_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("client_profile_id", profile.id);
+      const hasMultipleSubs = (count || 0) > 1;
+      const isCustomPlan = profile.plan === "custom";
+
+      if (hasMultipleSubs || isCustomPlan) {
+        redirectPath = "/dashboard";
+      } else {
+        redirectPath = profile.plan ? `/checkout-summary?plan=${profile.plan}` : "/checkout-summary";
+      }
     } else if ((profile.contract_status === "signed" || isDiscovery) && profile.onboarding_status !== "completed") {
       redirectPath = "/onboarding";
     }

@@ -218,8 +218,12 @@ const AdminClients = () => {
     if (plan === "prospect") {
       return "Prospect (Discovery)";
     }
-    if (plan === "custom" && customPrice) {
+    if (plan === "custom" && customPrice !== null && customPrice !== undefined) {
+      if (customPrice === 0) return "Custom (No Monthly Fee)";
       return `Custom ($${customPrice}/mo)`;
+    }
+    if (plan === "custom") {
+      return "Custom (No Monthly Fee)";
     }
     
     // Check if it's Amazon Design (either by plan or selected service)
@@ -242,7 +246,8 @@ const AdminClients = () => {
   };
 
   const getMonthlyPrice = (plan: string | null, customPrice: number | null, selectedServices: string[] = []) => {
-    if (plan === "custom" && customPrice) return customPrice;
+    if (plan === "custom" && customPrice !== null && customPrice !== undefined) return customPrice;
+    if (plan === "custom" || plan === "prospect") return 0;
     
     // Amazon Design Package
     if (plan === "amazon" || selectedServices.includes("amazon-design")) {
@@ -1090,9 +1095,9 @@ const AdminClients = () => {
                   size="sm"
                   variant="outline"
                   onClick={() => window.open(`/dashboard?clientId=${selectedClient.id}`, "_blank")}
-                  className="h-8 text-xs font-normal"
+                  className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
                 >
-                  <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
+                  <LayoutDashboard className="w-3.5 h-3.5 mr-1.5 text-primary" />
                   Preview Dashboard
                 </Button>
               )}
@@ -1262,7 +1267,7 @@ const AdminClients = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => window.open(selectedClient.contractDetails.uploadedContractUrl, "_blank")}
-                              className="h-8 text-xs"
+                              className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
                             >
                               <Download className="w-3.5 h-3.5 mr-1.5" />
                               Download Original
@@ -1272,7 +1277,7 @@ const AdminClients = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => window.open(`/contract?view=true&clientId=${selectedClient.id}`, "_blank")}
-                            className="h-8 text-xs"
+                            className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
                           >
                             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
                             View Signed Web Contract
@@ -1283,7 +1288,7 @@ const AdminClients = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => window.open(`/contract?view=true&clientId=${selectedClient.id}`, "_blank")}
-                          className="h-8 text-xs"
+                          className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
                           Preview Draft Contract
@@ -1393,9 +1398,9 @@ const AdminClients = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => setOnboardingViewClient(selectedClient)}
-                        className="h-8 text-xs"
+                        className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
                       >
-                        <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
+                        <ClipboardList className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
                         {selectedClient.onboardingCompleted ? "View Onboarding Responses" : "Preview Onboarding Forms"}
                       </Button>
                     </div>
@@ -1435,71 +1440,93 @@ const AdminClients = () => {
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h4 className="font-semibold text-sm">1-Click Client Access & Onboarding Link</h4>
-                      <p className="text-xs text-muted-foreground">
+                      <h4 className="font-semibold text-sm flex items-center gap-2">
+                        <span>1-Click Client Access & Onboarding Link</span>
+                        <span className="text-[10px] font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
+                          Instant Setup
+                        </span>
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Single setup URL: Sign Up ➔ Contract ➔ Payment ➔ Onboarding Access
                       </p>
                     </div>
                     <Button
                       size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                      className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs h-8 px-3 rounded-lg shadow-sm hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] transition-all duration-200"
                       onClick={() => handleGenerateOnboardingLink(selectedClient)}
                       disabled={generatingOnboardingLink === selectedClient.id}
                     >
                       {generatingOnboardingLink === selectedClient.id ? (
                         <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       ) : onboardingLinks[selectedClient.id] ? (
-                        <Check className="w-3.5 h-3.5 mr-1.5 text-green-300" />
+                        <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-300" />
                       ) : (
                         <Link className="w-3.5 h-3.5 mr-1.5" />
                       )}
-                      {onboardingLinks[selectedClient.id] ? "Regenerate 1-Click Link" : "Generate 1-Click Link"}
+                      {onboardingLinks[selectedClient.id] ? "Regenerate Link" : "Generate 1-Click Link"}
                     </Button>
                   </div>
 
                   {onboardingLinks[selectedClient.id] ? (
-                    <div className="bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 space-y-2">
+                    <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/50 to-slate-50/70 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-slate-900/40 border border-indigo-200/90 dark:border-indigo-800/80 rounded-xl p-3.5 space-y-2.5 shadow-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">1-Click Client Onboarding URL:</span>
-                        <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 px-1.5 py-0.5 rounded font-mono">
+                        <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                          <Link className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                          Active 1-Click URL
+                        </span>
+                        <span className="text-[10px] bg-indigo-200/70 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200 px-2 py-0.5 rounded-full font-mono">
                           Sign Up ➔ Contract ➔ Payment ➔ Access
                         </span>
                       </div>
-                      <div className="flex gap-2">
-                        <code className="flex-1 text-xs bg-white dark:bg-background p-2 rounded border border-indigo-200 dark:border-indigo-800 text-indigo-950 dark:text-indigo-100 font-mono break-all max-h-20 overflow-y-auto">
+                      <div className="flex gap-2 items-center">
+                        <code className="flex-1 text-xs bg-white/90 dark:bg-background/90 p-2.5 rounded-lg border border-indigo-200/80 dark:border-indigo-800/80 text-indigo-950 dark:text-indigo-100 font-mono break-all max-h-20 overflow-y-auto">
                           {onboardingLinks[selectedClient.id]}
                         </code>
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => copyToClipboard(onboardingLinks[selectedClient.id], "modal-onboarding-link")}
-                          className="bg-white dark:bg-card"
+                          className="h-9 px-3 bg-white hover:bg-indigo-50 dark:bg-card dark:hover:bg-muted border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-medium text-xs rounded-lg shadow-xs active:scale-[0.98] transition-all"
                         >
-                          {copiedId === "modal-onboarding-link" ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-indigo-600" />}
+                          {copiedId === "modal-onboarding-link" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                              <span>Copy</span>
+                            </>
+                          )}
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="outline" 
-                          className="bg-white dark:bg-card"
+                          className="h-9 px-3 bg-white hover:bg-indigo-50 dark:bg-card dark:hover:bg-muted border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-medium text-xs rounded-lg shadow-xs active:scale-[0.98] transition-all"
                           onClick={() => window.open(onboardingLinks[selectedClient.id], "_blank")}
+                          title="Open in new tab"
                         >
-                          <ExternalLink className="w-4 h-4 text-indigo-600" />
+                          <ExternalLink className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                          <span>Open</span>
                         </Button>
                       </div>
-                      <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-light">
-                        Send this single link directly to your client via chat, SMS, or email.
+                      <p className="text-[11px] text-indigo-700/90 dark:text-indigo-300/90 font-medium">
+                        Send this single link directly to your client via Slack, SMS, or email.
                       </p>
                     </div>
                   ) : (
-                    <div className="bg-muted/50 p-3 rounded-lg text-xs text-muted-foreground flex items-center justify-between">
-                      <span>Generate a single 1-Click link for this client to easily send over Slack, SMS, or Email.</span>
+                    <div className="bg-gradient-to-r from-indigo-50/50 via-purple-50/30 to-slate-50/50 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-slate-900/30 border border-indigo-100 dark:border-indigo-900/50 p-3.5 rounded-xl text-xs text-muted-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                      <span className="leading-relaxed">Generate a single 1-Click link for this client to easily send over Slack, SMS, or Email.</span>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs h-8 px-3.5 rounded-lg shadow-xs active:scale-[0.98] transition-all shrink-0"
                         onClick={() => handleGenerateOnboardingLink(selectedClient)}
                         disabled={generatingOnboardingLink === selectedClient.id}
                       >
+                        {generatingOnboardingLink === selectedClient.id ? (
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        ) : (
+                          <Link className="w-3.5 h-3.5 mr-1.5" />
+                        )}
                         Generate Now
                       </Button>
                     </div>
@@ -1508,27 +1535,45 @@ const AdminClients = () => {
 
                 {selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") && (
                   <div className="border-t pt-4">
-                    <p className="text-sm text-muted-foreground mb-2">Stripe IDs</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between bg-muted p-2 rounded">
-                        <span className="text-sm font-mono">{selectedClient.stripeCustomerId}</span>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">Stripe Identifiers</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="flex items-center justify-between bg-muted/40 hover:bg-muted/60 border border-border/60 p-2.5 rounded-lg transition-colors">
+                        <div className="min-w-0 flex-1 mr-2">
+                          <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Customer ID</p>
+                          <span className="text-xs font-mono font-medium truncate block text-foreground">{selectedClient.stripeCustomerId}</span>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8 w-8 p-0 rounded-md hover:bg-background border border-transparent hover:border-border/50 text-muted-foreground hover:text-foreground shrink-0"
                           onClick={() => copyToClipboard(selectedClient.stripeCustomerId, "modal-cus")}
+                          title="Copy Customer ID"
                         >
-                          <Copy className="w-4 h-4" />
+                          {copiedId === "modal-cus" ? (
+                            <Check className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
                       {selectedClient.stripeSubscriptionId && (
-                        <div className="flex items-center justify-between bg-muted p-2 rounded">
-                          <span className="text-sm font-mono">{selectedClient.stripeSubscriptionId}</span>
+                        <div className="flex items-center justify-between bg-muted/40 hover:bg-muted/60 border border-border/60 p-2.5 rounded-lg transition-colors">
+                          <div className="min-w-0 flex-1 mr-2">
+                            <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Subscription ID</p>
+                            <span className="text-xs font-mono font-medium truncate block text-foreground">{selectedClient.stripeSubscriptionId}</span>
+                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="h-8 w-8 p-0 rounded-md hover:bg-background border border-transparent hover:border-border/50 text-muted-foreground hover:text-foreground shrink-0"
                             onClick={() => copyToClipboard(selectedClient.stripeSubscriptionId!, "modal-sub")}
+                            title="Copy Subscription ID"
                           >
-                            <Copy className="w-4 h-4" />
+                            {copiedId === "modal-sub" ? (
+                              <Check className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       )}
@@ -1536,89 +1581,98 @@ const AdminClients = () => {
                   </div>
                 )}
 
-                <div className="flex gap-2 flex-wrap">
-                  {selectedClient.subscriptionStatus === "pending_payment" ? (
-                    <>
+                <div className="border-t pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Quick Actions</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    {selectedClient.subscriptionStatus === "pending_payment" ? (
+                      <>
+                        <Button
+                          onClick={() => handleGenerateCheckoutLink(selectedClient)}
+                          variant="outline"
+                          disabled={generatingLink === selectedClient.id}
+                          className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                        >
+                          {generatingLink === selectedClient.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                          ) : (
+                            <Link className="w-4 h-4 text-primary shrink-0" />
+                          )}
+                          <span className="truncate">Copy Checkout Link</span>
+                        </Button>
+                        <Button
+                          onClick={() => handleEmailCheckoutLink(selectedClient)}
+                          disabled={emailingCheckoutLink === selectedClient.id}
+                          className="h-10 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs sm:text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                        >
+                          {emailingCheckoutLink === selectedClient.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                          ) : (
+                            <Send className="w-4 h-4 shrink-0" />
+                          )}
+                          <span className="truncate">Email Checkout</span>
+                        </Button>
+                      </>
+                    ) : selectedClient.subscriptionStatus === "active" && 
+                       (!selectedClient.stripeSubscriptionId || selectedClient.stripeCustomerId?.startsWith("pending_")) ? (
                       <Button
-                        onClick={() => handleGenerateCheckoutLink(selectedClient)}
+                        onClick={() => handleMigrateToStripe(selectedClient)}
                         variant="outline"
-                        disabled={generatingLink === selectedClient.id}
+                        disabled={migratingToStripe === selectedClient.id}
+                        className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
                       >
-                        {generatingLink === selectedClient.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {migratingToStripe === selectedClient.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                         ) : (
-                          <Link className="w-4 h-4 mr-2" />
+                          <CreditCard className="w-4 h-4 text-primary shrink-0" />
                         )}
-                        Copy Checkout Link
+                        <span className="truncate">Migrate to Stripe</span>
                       </Button>
+                    ) : selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") ? (
                       <Button
-                        onClick={() => handleEmailCheckoutLink(selectedClient)}
-                        className="flex-1"
-                        disabled={emailingCheckoutLink === selectedClient.id}
+                        onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
+                        className="h-10 px-3 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white font-medium text-xs sm:text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
                       >
-                        {emailingCheckoutLink === selectedClient.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4 mr-2" />
-                        )}
-                        Email Checkout Link
+                        <ExternalLink className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
+                        <span className="truncate">View in Stripe</span>
                       </Button>
-                    </>
-                  ) : selectedClient.subscriptionStatus === "active" && 
-                     (!selectedClient.stripeSubscriptionId || selectedClient.stripeCustomerId?.startsWith("pending_")) ? (
+                    ) : null}
+
                     <Button
-                      onClick={() => handleMigrateToStripe(selectedClient)}
-                      className="flex-1"
-                      variant="outline"
-                      disabled={migratingToStripe === selectedClient.id}
+                      className="h-10 px-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs sm:text-sm shadow-sm hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                      onClick={() => handleGenerateOnboardingLink(selectedClient)}
+                      disabled={generatingOnboardingLink === selectedClient.id}
                     >
-                      {migratingToStripe === selectedClient.id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {generatingOnboardingLink === selectedClient.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                       ) : (
-                        <CreditCard className="w-4 h-4 mr-2" />
+                        <Link className="w-4 h-4 shrink-0" />
                       )}
-                      Migrate to Stripe
+                      <span className="truncate">{onboardingLinks[selectedClient.id] ? "Copy 1-Click Link" : "Generate 1-Click Link"}</span>
                     </Button>
-                  ) : selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") ? (
+
                     <Button
-                      onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
-                      className="flex-1"
+                      variant="outline"
+                      onClick={() => handleSendLoginInvite(selectedClient)}
+                      disabled={sendingEmail === selectedClient.id}
+                      className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View in Stripe
+                      {sendingEmail === selectedClient.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      ) : (
+                        <Mail className="w-4 h-4 text-blue-500 shrink-0" />
+                      )}
+                      <span className="truncate">Send Email Invite</span>
                     </Button>
-                  ) : null}
-                  <Button
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                    onClick={() => handleGenerateOnboardingLink(selectedClient)}
-                    disabled={generatingOnboardingLink === selectedClient.id}
-                  >
-                    {generatingOnboardingLink === selectedClient.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Link className="w-4 h-4 mr-2" />
-                    )}
-                    {onboardingLinks[selectedClient.id] ? "Copy 1-Click Link" : "Generate 1-Click Link"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleSendLoginInvite(selectedClient)}
-                    disabled={sendingEmail === selectedClient.id}
-                  >
-                    {sendingEmail === selectedClient.id ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Mail className="w-4 h-4 mr-2" />
-                    )}
-                    Send Email Invite
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setOnboardingViewClient(selectedClient)}
-                  >
-                    <ClipboardList className="w-4 h-4 mr-2" />
-                    {selectedClient.onboardingCompleted ? "View Onboarding" : "Preview / View Onboarding"}
-                  </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => setOnboardingViewClient(selectedClient)}
+                      className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                    >
+                      <ClipboardList className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="truncate">{selectedClient.onboardingCompleted ? "View Onboarding" : "Preview Forms"}</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
