@@ -219,11 +219,11 @@ const AdminClients = () => {
       return "Prospect (Discovery)";
     }
     if (plan === "custom" && customPrice !== null && customPrice !== undefined) {
-      if (customPrice === 0) return "Custom (No Monthly Fee)";
+      if (customPrice === 0) return "Custom (Commission-based)";
       return `Custom ($${customPrice}/mo)`;
     }
     if (plan === "custom") {
-      return "Custom (No Monthly Fee)";
+      return "Custom (Commission-based)";
     }
     
     // Check if it's Amazon Design (either by plan or selected service)

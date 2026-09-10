@@ -130,18 +130,21 @@ const Contract = () => {
   };
 
   const getPlanPrice = () => {
+    if (profile?.contractDetails?.monthlyFee) {
+      return profile.contractDetails.monthlyFee;
+    }
     const price = profile?.customPrice ?? profile?.custom_price;
     if (price !== null && price !== undefined) {
       if (price === 0) {
-        return "None ($0 USD/month)";
+        return "Commission-based";
       }
       return `$${price} USD/month`;
     }
     if (profile?.plan === "prospect") {
-      return "None ($0 USD/month)";
+      return "Commission-based";
     }
     if (profile?.plan === "custom") {
-      return "None ($0 USD/month)";
+      return "Commission-based";
     }
     switch (profile?.plan) {
       case "single":
