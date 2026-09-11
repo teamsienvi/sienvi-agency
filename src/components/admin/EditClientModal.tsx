@@ -110,6 +110,8 @@ export const EditClientModal = ({
   const [additionalEmails, setAdditionalEmails] = useState("");
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [existingContractName, setExistingContractName] = useState<string | null>(null);
+  const [proposalFile, setProposalFile] = useState<File | null>(null);
+  const [existingProposalName, setExistingProposalName] = useState<string | null>(null);
   const [contractTerms, setContractTerms] = useState({
     initialTerm: "6 months",
     noticePeriod: "30 days",
@@ -184,6 +186,7 @@ export const EditClientModal = ({
       // Load existing contract name and terms if available
       const cd = (client as any).contractDetails || {};
       setExistingContractName(cd.uploadedContractName || null);
+      setExistingProposalName(cd.uploadedProposalName || null);
       setContractTerms({
         initialTerm: cd.initialTerm || "6 months",
         noticePeriod: cd.noticePeriod || "30 days",
@@ -191,6 +194,7 @@ export const EditClientModal = ({
         serviceDelivery: cd.serviceDelivery || "Remote unless otherwise agreed in writing",
       });
       setContractFile(null);
+      setProposalFile(null);
 
       // Initialize subscriptions
       setClientSubscriptions(
@@ -289,8 +293,12 @@ export const EditClientModal = ({
         ? `[Additional Emails: ${additionalEmails.trim()}]\n${formData.notes}`
         : formData.notes;
 
-      // Handle contract file upload if a new file was selected
-      let contractDetails: any = undefined; // undefined = don't update
+      // Handle contract & proposal file uploads if new files were selected
+      let contractDetails: any = {
+        ...((client as any)?.contractDetails || {}),
+        ...contractTerms,
+      };
+
       if (contractFile) {
         toast.info("Uploading contract document...");
         const fileExt = contractFile.name.split(".").pop();
@@ -308,18 +316,29 @@ export const EditClientModal = ({
           .from("contracts")
           .getPublicUrl(fileName);
 
-        contractDetails = {
-          ...((client as any)?.contractDetails || {}),
-          uploadedContractUrl: urlData?.publicUrl || null,
-          uploadedContractName: contractFile.name,
-          ...contractTerms,
-        };
-      } else {
-        // Even without a new file upload, always send contract terms
-        contractDetails = {
-          ...((client as any)?.contractDetails || {}),
-          ...contractTerms,
-        };
+        contractDetails.uploadedContractUrl = urlData?.publicUrl || null;
+        contractDetails.uploadedContractName = contractFile.name;
+      }
+
+      if (proposalFile) {
+        toast.info("Uploading proposal document...");
+        const fileExt = proposalFile.name.split(".").pop();
+        const fileName = `${Date.now()}_proposal_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("contracts")
+          .upload(fileName, proposalFile);
+
+        if (uploadError) {
+          throw new Error(`Failed to upload proposal file: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(fileName);
+
+        contractDetails.uploadedProposalUrl = urlData?.publicUrl || null;
+        contractDetails.uploadedProposalName = proposalFile.name;
       }
 
       const response = await supabase.functions.invoke("update-client", {
@@ -470,7 +489,26 @@ export const EditClientModal = ({
                 className="bg-background cursor-pointer text-foreground file:text-foreground"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Upload a contract document (PDF or Word). This can be a signed copy or a template for the client to review and sign.
+                Upload a contract document (PDF or Word). This is the agreement requiring the client's review and signature.
+              </p>
+            </div>
+
+            <div className="space-y-2 col-span-2 mt-2">
+              <Label htmlFor="edit-proposalFile" className="font-semibold text-sm">Upload/Replace Proposal Document (Optional)</Label>
+              {existingProposalName && !proposalFile && (
+                <p className="text-xs text-muted-foreground">Current: {existingProposalName}</p>
+              )}
+              <Input
+                id="edit-proposalFile"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  setProposalFile(e.target.files?.[0] || null);
+                }}
+                className="bg-background cursor-pointer text-foreground file:text-foreground"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload a proposal document (PDF or Word) for the client to review alongside their agreement.
               </p>
             </div>
             {/* Contract Terms */}

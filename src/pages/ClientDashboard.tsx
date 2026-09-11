@@ -935,16 +935,45 @@ const ClientDashboard = () => {
               </Card>
             )}
 
-            {/* Contract Status Card - hidden for discovery */}
+            {/* Documents & Agreements Card - hidden for discovery */}
             {!isDiscovery && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileSignature className="w-5 h-5" />
-                  Contract{profile.subscriptions && profile.subscriptions.length > 1 ? "s" : ""}
+                  Documents & Agreements
                 </CardTitle>
+                <CardDescription>
+                  Review proposals, scopes of work, and active legal agreements
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Proposal Document (if present) */}
+                {profile.contractDetails?.uploadedProposalUrl && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/50">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-indigo-600 text-white text-[10px] py-0 px-2 font-semibold">PROPOSAL</Badge>
+                        <p className="font-semibold text-sm text-slate-900">
+                          {profile.contractDetails.uploadedProposalName || "B2B Revenue Pipeline & Wholesale Portal Proposal"}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Proposal document prepared for your business review
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-semibold shrink-0"
+                      onClick={() => window.open(profile.contractDetails.uploadedProposalUrl, "_blank")}
+                    >
+                      <FileText className="w-3.5 h-3.5 mr-1.5" />
+                      View Proposal PDF
+                    </Button>
+                  </div>
+                )}
+
                 {profile.subscriptions && profile.subscriptions.length > 0 ? (
                   /* Per-subscription contracts */
                   profile.subscriptions.map((sub) => {
@@ -967,25 +996,27 @@ const ClientDashboard = () => {
                               variant="outline"
                               onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
                             >
-                              View
+                              View Signed Copy
                             </Button>
                             <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
                           </div>
                         ) : (
-                          <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>Sign</Button>
+                          <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>Review & Sign</Button>
                         )}
                       </div>
                     );
                   })
                 ) : (
                   /* Single contract fallback */
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between border-t pt-3 first:border-t-0 first:pt-0">
                     <div>
-                      <p className="font-medium">Service Agreement</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-medium text-sm">
+                        {profile.contractDetails?.uploadedContractName || "Service Agreement"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         {profile.contractStatus === "signed" 
                           ? `Signed on ${new Date(profile.contractSignedAt!).toLocaleDateString()}`
-                          : "Awaiting your signature"}
+                          : "Awaiting your digital signature"}
                       </p>
                     </div>
                     {profile.contractStatus === "signed" ? (
@@ -1000,8 +1031,29 @@ const ClientDashboard = () => {
                         <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
                       </div>
                     ) : (
-                      <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>Sign Now</Button>
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-medium" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>
+                        Review & Sign
+                      </Button>
                     )}
+                  </div>
+                )}
+
+                {/* Previous / Archived Agreements */}
+                {profile.contractDetails?.previousContractUrl && (
+                  <div className="flex items-center justify-between pt-3 border-t text-xs text-muted-foreground">
+                    <div className="truncate mr-2">
+                      <span className="font-medium text-slate-700">Archived Agreement: </span>
+                      <span className="truncate">{profile.contractDetails.previousContractName || "Previous Services Agreement"}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-slate-600 hover:text-slate-900 shrink-0"
+                      onClick={() => window.open(profile.contractDetails.previousContractUrl, "_blank")}
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      View Original
+                    </Button>
                   </div>
                 )}
               </CardContent>

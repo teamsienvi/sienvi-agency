@@ -1258,8 +1258,19 @@ const AdminClients = () => {
 
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-sm">Contract Details</h4>
-                    <div className="flex gap-2">
+                    <h4 className="font-semibold text-sm">Contract & Proposal Details</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedClient.contractDetails?.uploadedProposalUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(selectedClient.contractDetails.uploadedProposalUrl, "_blank")}
+                          className="h-8 text-xs font-medium rounded-lg border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 shadow-2xs active:scale-[0.98] transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5 mr-1.5" />
+                          View Proposal PDF
+                        </Button>
+                      )}
                       {selectedClient.contractStatus === "signed" ? (
                         <>
                           {selectedClient.contractDetails?.uploadedContractUrl && (
@@ -1270,7 +1281,7 @@ const AdminClients = () => {
                               className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
                             >
                               <Download className="w-3.5 h-3.5 mr-1.5" />
-                              Download Original
+                              Download Original Contract
                             </Button>
                           )}
                           <Button
@@ -1298,6 +1309,14 @@ const AdminClients = () => {
                   </div>
 
                   <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-3">
+                    {selectedClient.contractDetails?.uploadedProposalUrl && (
+                      <div className="border-b pb-3 mb-2">
+                        <p className="text-xs text-muted-foreground">Attached Proposal Document</p>
+                        <p className="font-medium text-indigo-700 dark:text-indigo-300">
+                          {selectedClient.contractDetails.uploadedProposalName || "Proposal PDF"}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs text-muted-foreground">Contract Template Type</p>
                       <p className="font-medium">

@@ -20,6 +20,9 @@ import {
   Loader2,
   CheckCircle2,
   Shield,
+  FileText,
+  ExternalLink,
+  Download,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -679,6 +682,36 @@ const Contract = () => {
                     {/* Show agreement details: static in view mode, editable in signing mode */}
                     {renderAgreementDetailsTable()}
                     
+                    {profile?.contractDetails?.uploadedProposalUrl && (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 mb-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-blue-50/60 shadow-sm print:hidden">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 rounded-lg bg-indigo-100 text-indigo-700">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-indigo-600 text-white text-[10px] py-0 px-2 font-semibold">PROPOSAL</Badge>
+                              <p className="font-semibold text-sm text-slate-900">
+                                {profile.contractDetails.uploadedProposalName || "B2B Revenue Pipeline & Wholesale Portal Proposal"}
+                              </p>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Comprehensive proposal outlining project scope, revenue architecture, and delivery timeline
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(profile.contractDetails.uploadedProposalUrl, "_blank")}
+                          className="bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200 shrink-0 font-medium text-xs shadow-2xs"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                          View Proposal PDF
+                        </Button>
+                      </div>
+                    )}
+
                     <h3 className="font-semibold text-base mt-4 mb-2">Contract Document</h3>
 
                     {isPdf ? (
