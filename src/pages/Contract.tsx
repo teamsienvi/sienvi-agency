@@ -47,6 +47,7 @@ const Contract = () => {
   const [confidentialityPeriod, setConfidentialityPeriod] = useState("5 years");
   const [approvedWebsites, setApprovedWebsites] = useState("");
   const [shopifySite, setShopifySite] = useState("");
+  const [signerTitle, setSignerTitle] = useState("Authorized Signatory");
   const [pdfNumPages, setPdfNumPages] = useState<number>(0);
 
   const onPdfLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
@@ -116,6 +117,7 @@ const Contract = () => {
       setClientAddress(details.clientAddress || "");
       setClientContactName(details.clientContactName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim());
       setClientEmail(details.clientEmail || profile.email || "");
+      setSignerTitle(details.signerTitle || "Authorized Signatory");
       setStrategyPeriod(details.strategyPeriod || "");
       setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
       setApprovedWebsites(details.approvedWebsites || "");
@@ -216,6 +218,7 @@ const Contract = () => {
         clientAddress: clientAddress.trim(),
         clientContactName: clientContactName.trim(),
         clientEmail: clientEmail.trim(),
+        signerTitle: signerTitle.trim(),
         approvedWebsites: approvedWebsites.trim(),
         shopifySite: shopifySite.trim(),
         strategyPeriod: strategyPeriod.trim(),
@@ -911,88 +914,134 @@ const Contract = () => {
               )}
             </CardContent>
             <CardFooter className="flex-col gap-4 print:p-0 print:pt-4">
-              {isViewMode ? (
-                <div className="w-full space-y-6 pt-4 border-t">
-                  <div className="grid grid-cols-2 gap-8 text-sm">
-                    <div className="space-y-1">
-                      <p className="font-semibold text-slate-500">For SIENVI Agency:</p>
-                      <p className="font-bold font-serif italic text-lg py-2 border-b">SIENVI Agency</p>
-                      <p className="text-xs text-muted-foreground">Authorized Representative</p>
+              {(() => {
+                const clientEntityName = clientLegalName || clientTradeName || profile?.contractDetails?.clientLegalName || profile?.contractDetails?.clientTradeName || "In the Dome";
+                const displaySignerName = profile?.contractSignature || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || signatureName || "Jordan";
+                const displaySignerTitle = profile?.contractDetails?.signerTitle || signerTitle || "Authorized Signatory";
+                const displaySignDate = profile?.contractSignedAt 
+                  ? new Date(profile.contractSignedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+                  : (effectiveDate ? new Date(effectiveDate + 'T00:00:00').toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }));
+
+                if (isViewMode) {
+                  return (
+                    <div className="w-full space-y-6 pt-4 border-t">
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Authorized Signature</h4>
+                        <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/60 space-y-3 max-w-lg">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-500 uppercase">For and on behalf of:</p>
+                            <p className="font-bold text-base text-slate-900">{clientEntityName}</p>
+                          </div>
+                          <div className="pt-2 border-t border-slate-200">
+                            <p className="text-xs text-slate-500">Authorized Digital Signature:</p>
+                            <p className="font-serif italic font-bold text-2xl text-indigo-700 py-1">
+                              {displaySignerName}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                            <div>
+                              <span className="text-slate-400 block">Title:</span>
+                              <span className="font-semibold text-slate-700">{displaySignerTitle}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Date Signed:</span>
+                              <span className="font-semibold text-slate-700">{displaySignDate}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg no-print print:hidden">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-green-500" />
+                          This document is digitally signed and securely archived.
+                        </span>
+                        <Button size="sm" variant="default" onClick={() => window.print()}>
+                          Print / Save as PDF
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-slate-500">For Client:</p>
-                      <p className="font-bold font-serif italic text-lg py-2 border-b text-indigo-700">
-                        {profile?.contractSignature || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || "Client"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Digitally Signed Name</p>
-                      {profile?.contractSignedAt && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Date: {new Date(profile.contractSignedAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })} at {new Date(profile.contractSignedAt).toLocaleTimeString()}
+                  );
+                }
+
+                return (
+                  <div className="w-full space-y-4">
+                    <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
+                      <div className="border-b border-slate-200 pb-3">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Signing Entity</p>
+                        <p className="text-base font-bold text-slate-900">
+                          {clientEntityName}
                         </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="signatureName" className="text-xs font-semibold text-slate-600">
+                            Full Legal Name (Digital Signature) *
+                          </Label>
+                          <Input 
+                            id="signatureName"
+                            placeholder="Type your full name to sign"
+                            value={signatureName}
+                            onChange={(e) => setSignatureName(e.target.value)}
+                            className="font-medium bg-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="signerTitle" className="text-xs font-semibold text-slate-600">
+                            Title / Role
+                          </Label>
+                          <Input 
+                            id="signerTitle"
+                            placeholder="e.g. Authorized Signatory / Host"
+                            value={signerTitle}
+                            onChange={(e) => setSignerTitle(e.target.value)}
+                            className="font-medium bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-500 pt-1">
+                        <span>Date: </span>
+                        <span className="font-semibold text-slate-700">{displaySignDate}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3 w-full p-4 bg-muted/50 rounded-lg">
+                      <Checkbox 
+                        id="agree" 
+                        checked={agreed}
+                        onCheckedChange={(checked) => setAgreed(checked as boolean)}
+                      />
+                      <label 
+                        htmlFor="agree" 
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        I have read and agree to the terms of this {isAmazonContract ? "Business Agreement" : "Service Agreement"} on behalf of {clientEntityName}
+                      </label>
+                    </div>
+
+                    <Button 
+                      onClick={handleSign} 
+                      disabled={!agreed || signing || !signatureName.trim()}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {signing ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileSignature className="w-4 h-4 mr-2" />
                       )}
+                      Sign Agreement
+                    </Button>
+
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <Shield className="w-4 h-4 text-emerald-500" />
+                      <span>Your signature is legally binding and securely stored</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg no-print print:hidden">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="w-4 h-4 text-green-500" />
-                      This document is digitally signed and securely archived.
-                    </span>
-                    <Button size="sm" variant="default" onClick={() => window.print()}>
-                      Print / Save as PDF
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="w-full space-y-2 mb-2">
-                    <Label htmlFor="signatureName">Full Name (Acts as your digital signature)</Label>
-                    <Input 
-                      id="signatureName"
-                      placeholder="Type your full name to sign"
-                      value={signatureName}
-                      onChange={(e) => setSignatureName(e.target.value)}
-                      className="font-medium"
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-3 w-full p-4 bg-muted/50 rounded-lg">
-                    <Checkbox 
-                      id="agree" 
-                      checked={agreed}
-                      onCheckedChange={(checked) => setAgreed(checked as boolean)}
-                    />
-                    <label 
-                      htmlFor="agree" 
-                      className="text-sm font-medium leading-none cursor-pointer"
-                    >
-                      I have read and agree to the terms of this {isAmazonContract ? "Business Agreement" : "Service Agreement"}
-                    </label>
-                  </div>
-
-                  <Button 
-                    onClick={handleSign} 
-                    disabled={!agreed || signing}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {signing ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <FileSignature className="w-4 h-4 mr-2" />
-                    )}
-                    Sign Agreement
-                  </Button>
-
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>Your signature is legally binding and securely stored</span>
-                  </div>
-                </>
-              )}
+                );
+              })()}
             </CardFooter>
           </Card>
         </motion.div>
