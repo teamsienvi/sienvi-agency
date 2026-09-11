@@ -1351,6 +1351,30 @@ const AdminClients = () => {
                       </p>
                     </div>
 
+                    {(selectedClient.contractDetails?.setupFee || selectedClient.contractDetails?.compensationStructure) && (
+                      <div className="border-t pt-3 space-y-1.5">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Compensation Terms</p>
+                        {selectedClient.contractDetails?.monthlyFee && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Monthly Admin Fee:</span>
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{selectedClient.contractDetails.monthlyFee}</span>
+                          </div>
+                        )}
+                        {selectedClient.contractDetails?.setupFee && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Setup Fee:</span>
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{selectedClient.contractDetails.setupFee}</span>
+                          </div>
+                        )}
+                        {selectedClient.contractDetails?.commissionTerms && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Commissions:</span>
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">{selectedClient.contractDetails.commissionTerms}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {selectedClient.contractStatus === "signed" && (
                       <div className="grid grid-cols-2 gap-4 border-t pt-3 mt-3">
                         <div>

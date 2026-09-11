@@ -355,6 +355,24 @@ const Contract = () => {
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Monthly Fee</td>
                 <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{getPlanPrice()}</td>
               </tr>
+              {profile?.contractDetails?.setupFee && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">One-Time Setup Fee</td>
+                  <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{profile.contractDetails.setupFee}</td>
+                </tr>
+              )}
+              {profile?.contractDetails?.commissionTerms && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Lead Generation Commissions</td>
+                  <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{profile.contractDetails.commissionTerms}</td>
+                </tr>
+              )}
+              {profile?.contractDetails?.compensationStructure && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Compensation Breakdown</td>
+                  <td className="px-4 py-3 text-slate-800 print:text-slate-800 leading-relaxed">{profile.contractDetails.compensationStructure}</td>
+                </tr>
+              )}
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Billing and Due Date</td>
                 <td className="px-4 py-3 text-slate-800">{billingTerms}</td>
@@ -547,6 +565,24 @@ const Contract = () => {
               <td className="px-4 py-3 font-semibold text-slate-600">Monthly Fee</td>
               <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{getPlanPrice()}</td>
             </tr>
+            {profile?.contractDetails?.setupFee && (
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">One-Time Setup Fee</td>
+                <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{profile.contractDetails.setupFee}</td>
+              </tr>
+            )}
+            {profile?.contractDetails?.commissionTerms && (
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Lead Generation Commissions</td>
+                <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{profile.contractDetails.commissionTerms}</td>
+              </tr>
+            )}
+            {profile?.contractDetails?.compensationStructure && (
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Compensation Breakdown</td>
+                <td className="px-4 py-3 text-slate-800 leading-relaxed">{profile.contractDetails.compensationStructure}</td>
+              </tr>
+            )}
             <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Billing and Due Date</td>
               <td className="px-4 py-3 text-slate-800">{billingTerms}</td>
