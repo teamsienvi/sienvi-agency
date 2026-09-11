@@ -530,8 +530,70 @@ const ClientDashboard = () => {
             </div>
           </div>
 
-          {/* Onboarding Completion Banner or Next Step CTA */}
-          {isProspect && profile.onboardingStatus === "completed" ? (
+          {/* Contract Signing Required Banner (Always Highest Priority for pending contracts) */}
+          {!isDiscovery && profile.plan !== "advertising" && profile.contractStatus === "not_signed" ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="border-blue-500/30 bg-gradient-to-br from-blue-50/95 via-indigo-50/80 to-white backdrop-blur-md overflow-hidden relative shadow-md">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                  <FileSignature className="w-40 h-40 text-blue-600" />
+                </div>
+                <CardContent className="pt-8 pb-6 px-6 sm:px-8 space-y-5">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg shadow-blue-500/20 flex-shrink-0 text-white">
+                      <FileSignature className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-semibold tracking-wider">ACTION REQUIRED</Badge>
+                      <h2 className="text-2xl font-bold text-slate-900">
+                        {profile.contractDetails?.uploadedContractName
+                          ? "New Service Agreement Ready for Signature"
+                          : "Service Agreement Awaiting Signature"}
+                      </h2>
+                      <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
+                        {profile.contractDetails?.uploadedContractName
+                          ? `We have prepared the "${profile.contractDetails.uploadedContractName}" for your review and digital signature.`
+                          : "Please review and digitally sign your client service agreement to proceed with your onboarding and active services."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator className="bg-blue-100" />
+
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-1">
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <Shield className="w-4 h-4 text-blue-600" />
+                      <span>Legally binding electronic signature powered by Sienvi Security</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      {profile.contractDetails?.uploadedProposalUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(profile.contractDetails.uploadedProposalUrl, "_blank")}
+                          className="bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200"
+                        >
+                          <FileText className="w-4 h-4 mr-1.5" />
+                          View Proposal PDF
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-500/20 px-5"
+                      >
+                        <FileSignature className="w-4 h-4 mr-2" />
+                        Review & Sign Agreement
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : isProspect && profile.onboardingStatus === "completed" ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -974,67 +1036,61 @@ const ClientDashboard = () => {
                   </div>
                 )}
 
-                {profile.subscriptions && profile.subscriptions.length > 0 ? (
-                  /* Per-subscription contracts */
-                  profile.subscriptions.map((sub) => {
-                    const cStatus = sub.contractStatus || profile.contractStatus;
-                    const cSignedAt = sub.contractSignedAt || profile.contractSignedAt;
-                    return (
-                      <div key={`contract-${sub.id}`} className="flex items-center justify-between border-b last:border-0 pb-3 last:pb-0">
-                        <div>
-                          <p className="font-medium text-sm">{sub.label}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {cStatus === "signed"
-                              ? `Signed on ${new Date(cSignedAt!).toLocaleDateString()}`
-                              : "Awaiting your signature"}
-                          </p>
-                        </div>
-                        {cStatus === "signed" ? (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
-                            >
-                              View Signed Copy
-                            </Button>
-                            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                          </div>
-                        ) : (
-                          <Button size="sm" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>Review & Sign</Button>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  /* Single contract fallback */
-                  <div className="flex items-center justify-between border-t pt-3 first:border-t-0 first:pt-0">
-                    <div>
-                      <p className="font-medium text-sm">
+                {/* Primary / Active Agreement */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={profile.contractStatus === "signed" ? "default" : "secondary"} className={profile.contractStatus === "signed" ? "bg-emerald-600 text-white text-[10px]" : "bg-amber-100 text-amber-800 text-[10px]"}>
+                        {profile.contractStatus === "signed" ? "✓ SIGNED" : "AWAITING SIGNATURE"}
+                      </Badge>
+                      <p className="font-semibold text-sm text-slate-900">
                         {profile.contractDetails?.uploadedContractName || "Service Agreement"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {profile.contractStatus === "signed" 
-                          ? `Signed on ${new Date(profile.contractSignedAt!).toLocaleDateString()}`
-                          : "Awaiting your digital signature"}
-                      </p>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {profile.contractStatus === "signed"
+                        ? `Signed on ${profile.contractSignedAt ? new Date(profile.contractSignedAt).toLocaleDateString() : "file"}`
+                        : "Legal services agreement requiring digital signature"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
                     {profile.contractStatus === "signed" ? (
-                      <div className="flex items-center gap-2">
+                      <>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => window.open(`/contract?view=true${paramClientId ? `&clientId=${paramClientId}` : ""}`, "_blank")}
+                          className="text-xs"
                         >
                           View Signed Copy
                         </Button>
-                        <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
-                      </div>
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      </>
                     ) : (
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-medium" onClick={() => navigate(`/contract${paramClientId ? `?clientId=${paramClientId}` : ""}`)}>
+                      <Button 
+                        size="sm" 
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 shadow-sm" 
+                        onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}
+                      >
+                        <FileSignature className="w-3.5 h-3.5 mr-1.5" />
                         Review & Sign
                       </Button>
                     )}
+                  </div>
+                </div>
+
+                {/* Per-subscription scopes (if multiple exist) */}
+                {profile.subscriptions && profile.subscriptions.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subscription Scopes</p>
+                    {profile.subscriptions.map((sub) => (
+                      <div key={`sub-scope-${sub.id}`} className="flex items-center justify-between text-xs py-1.5 border-b last:border-0 text-slate-600">
+                        <span className="font-medium">{sub.label}</span>
+                        <Badge variant="outline" className="text-[10px] text-slate-500">
+                          ${sub.monthlyAmount}/mo · {sub.subscriptionStatus === "active" ? "Active" : sub.subscriptionStatus}
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
                 )}
 

@@ -953,6 +953,17 @@ const AdminClients = () => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                        {client.contractStatus === "not_signed" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`/contract?clientId=${client.id}`, "_blank")}
+                            title="Open / Review Contract Signing Page"
+                            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                          >
+                            <FileSignature className="w-4 h-4" />
+                          </Button>
+                        )}
                         {client.subscriptionStatus === "pending_payment" && (
                           <>
                             <Button
@@ -1295,15 +1306,25 @@ const AdminClients = () => {
                           </Button>
                         </>
                       ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(`/contract?view=true&clientId=${selectedClient.id}`, "_blank")}
-                          className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                          Preview Draft Contract
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-2xs active:scale-[0.98] transition-all"
+                            onClick={() => window.open(`/contract?clientId=${selectedClient.id}`, "_blank")}
+                          >
+                            <FileSignature className="w-3.5 h-3.5 mr-1.5" />
+                            Open Client Sign Page
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(`/contract?view=true&clientId=${selectedClient.id}`, "_blank")}
+                            className="h-8 text-xs font-medium rounded-lg border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-background hover:bg-muted/60 shadow-2xs active:scale-[0.98] transition-all"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                            Preview Draft Contract
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1402,9 +1423,33 @@ const AdminClients = () => {
                     )}
 
                     {selectedClient.contractStatus !== "signed" && (
-                      <p className="text-xs text-muted-foreground border-t pt-3 mt-3">
-                        This client has not signed their agreement yet. You can preview the exact terms they will see by clicking the <strong>Preview Draft Contract</strong> button.
-                      </p>
+                      <div className="border-t pt-3 mt-3 space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          This client has not signed their agreement yet. You can share this direct signing link or open it directly:
+                        </p>
+                        <div className="flex gap-2 items-center">
+                          <code className="flex-1 text-xs bg-white dark:bg-background p-2 rounded-lg border text-indigo-950 dark:text-indigo-100 font-mono break-all">
+                            {`${window.location.origin}/contract?clientId=${selectedClient.id}`}
+                          </code>
+                          <Button
+                            size="sm"
+                            onClick={() => copyToClipboard(`${window.location.origin}/contract?clientId=${selectedClient.id}`, "modal-contract-link")}
+                            className="h-8 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 shrink-0"
+                          >
+                            {copiedId === "modal-contract-link" ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                                <span>Copy Link</span>
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
