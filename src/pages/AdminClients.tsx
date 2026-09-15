@@ -194,7 +194,45 @@ const AdminClients = () => {
     }
   };
 
+  const isPartnershipClient = (client: Client) => {
+    const email = (client.email || "").toLowerCase();
+    const name = (client.clientName || "").toLowerCase();
+    const cd = client.contractDetails || {};
+    return (
+      client.plan === "partnership" ||
+      client.plan === "nda" ||
+      email === "info@fabcheer.com" ||
+      name.includes("corey robert rickett") ||
+      name.includes("fabcheer") ||
+      cd.relationshipType === "partnership" ||
+      cd.isNda === true ||
+      cd.uploadedContractName?.includes("CHEERCPT") ||
+      cd.uploadedContractName?.includes("CONFIDENTIALITY")
+    );
+  };
+
+  const isCommissionClient = (client: Client) => {
+    const email = (client.email || "").toLowerCase();
+    const name = (client.clientName || "").toLowerCase();
+    const cd = client.contractDetails || {};
+    return (
+      email === "jordan@jordanellams.com" ||
+      email === "michaelrrwilson@gmail.com" ||
+      name.includes("jordan ellams") ||
+      name.includes("michael wilson") ||
+      cd.pricingModel === "commission" ||
+      cd.uploadedContractName?.includes("IN THE DOME") ||
+      cd.uploadedProposalName?.includes("IN THE DOME")
+    );
+  };
+
   const getStatusBadge = (client: Client) => {
+    if (isPartnershipClient(client)) {
+      if (client.contractStatus === "signed") {
+        return <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-medium">Partner (NDA Active)</Badge>;
+      }
+      return <Badge className="bg-purple-500 hover:bg-purple-600 text-white font-medium">Awaiting NDA Sign</Badge>;
+    }
     // Explicitly canceled subscription takes highest priority
     if (client.subscriptionStatus === "canceled") {
       return <Badge variant="destructive">Canceled</Badge>;
@@ -214,22 +252,10 @@ const AdminClients = () => {
     return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
   };
 
-  const isCommissionClient = (client: Client) => {
-    const email = (client.email || "").toLowerCase();
-    const name = (client.clientName || "").toLowerCase();
-    const cd = client.contractDetails || {};
-    return (
-      email === "jordan@jordanellams.com" ||
-      email === "michaelrrwilson@gmail.com" ||
-      name.includes("jordan ellams") ||
-      name.includes("michael wilson") ||
-      cd.pricingModel === "commission" ||
-      cd.uploadedContractName?.includes("IN THE DOME") ||
-      cd.uploadedProposalName?.includes("IN THE DOME")
-    );
-  };
-
   const getPlanDisplay = (plan: string | null, customPrice: number | null, selectedServices: string[] = [], client?: Client) => {
+    if ((client && isPartnershipClient(client)) || plan === "partnership" || plan === "nda") {
+      return "Partnership (Mutual NDA)";
+    }
     if (plan === "prospect") {
       return "Prospect (Discovery)";
     }
@@ -264,6 +290,7 @@ const AdminClients = () => {
   };
 
   const getMonthlyPrice = (plan: string | null, customPrice: number | null, selectedServices: string[] = []) => {
+    if (plan === "partnership" || plan === "nda") return 0;
     if (plan === "custom" && customPrice !== null && customPrice !== undefined) return customPrice;
     if (plan === "custom" || plan === "prospect") return 0;
     
@@ -824,6 +851,7 @@ const AdminClients = () => {
                 <SelectItem value="amazon">Amazon Design</SelectItem>
                 <SelectItem value="advertising">Advertising</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
+                <SelectItem value="partnership">Partnership (NDA)</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -903,6 +931,14 @@ const AdminClients = () => {
                           </p>
                         </div>
                         {(() => {
+                          const isPartnership = isPartnershipClient(client);
+                          if (isPartnership) {
+                            return (
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[11px] font-medium mt-0.5">
+                                Partnership (No Fees)
+                              </Badge>
+                            );
+                          }
                           const total = (client.subscriptions?.length ?? 0) > 0
                             ? client.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0)
                             : getMonthlyPrice(client.plan, client.customPrice, client.selectedServices);
@@ -980,18 +1016,18 @@ const AdminClients = () => {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        {client.contractStatus === "not_signed" && (
+                        {client.contractStatus !== "signed" && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => window.open(`/contract?clientId=${client.id}`, "_blank")}
-                            title="Open / Review Contract Signing Page"
+                            title={isPartnershipClient(client) ? "Open / Review NDA Signing Page" : "Open / Review Contract Signing Page"}
                             className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                           >
                             <FileSignature className="w-4 h-4" />
                           </Button>
                         )}
-                        {client.subscriptionStatus === "pending_payment" && (
+                        {!isPartnershipClient(client) && client.subscriptionStatus === "pending_payment" && (
                           <>
                             <Button
                               variant="ghost"
@@ -1176,7 +1212,9 @@ const AdminClients = () => {
                         <div>
                           <p className="text-sm text-muted-foreground">Monthly Price</p>
                           <p className="font-medium">
-                            {isCommissionClient(selectedClient) ? (
+                            {isPartnershipClient(selectedClient) ? (
+                              <span className="text-purple-700 font-semibold">$0.00 (Strategic Partnership)</span>
+                            ) : isCommissionClient(selectedClient) ? (
                               <span className="text-emerald-700 font-semibold">Commission-Based</span>
                             ) : (
                               `$${combinedAmount.toLocaleString()}`
@@ -1208,7 +1246,7 @@ const AdminClients = () => {
                           </div>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Contract</p>
+                          <p className="text-sm text-muted-foreground">{isPartnershipClient(selectedClient) ? "NDA Status" : "Contract"}</p>
                           <div className="mt-1">
                             {hasSubs ? (
                               allSigned
@@ -1218,8 +1256,8 @@ const AdminClients = () => {
                                   : <Badge variant="outline" className="text-muted-foreground">Not Signed</Badge>
                             ) : (
                               selectedClient.contractStatus === "signed"
-                                ? <Badge className="bg-green-100 text-green-700">Signed</Badge>
-                                : <Badge variant="outline" className="text-muted-foreground">Not Signed</Badge>
+                                ? <Badge className="bg-green-100 text-green-700">{isPartnershipClient(selectedClient) ? "NDA Signed" : "Signed"}</Badge>
+                                : <Badge variant="outline" className="text-muted-foreground">{isPartnershipClient(selectedClient) ? "NDA Pending" : "Not Signed"}</Badge>
                             )}
                           </div>
                         </div>

@@ -66,28 +66,53 @@ const Contract = () => {
     (profile?.selectedServices || []).includes("channel-amazon") || 
     (profile?.selectedServices || []).includes("amazon-design");
 
-  const isCommissionBased = profile?.isCommissionBased || 
+  const isPartnership = Boolean(
+    profile?.isPartnership ||
+    profile?.plan === "partnership" ||
+    profile?.plan === "nda" ||
+    profile?.email === "info@fabcheer.com" ||
+    profile?.contractDetails?.isNda ||
+    profile?.contractDetails?.relationshipType === "partnership"
+  );
+
+  const isNda = Boolean(
+    isPartnership ||
+    profile?.isNda ||
+    profile?.contractDetails?.uploadedContractName?.toLowerCase()?.includes("confidentiality") ||
+    profile?.contractDetails?.uploadedContractName?.toLowerCase()?.includes("nda") ||
+    profile?.contractDetails?.uploadedContractName?.toLowerCase()?.includes("cheercpt") ||
+    profile?.contractDetails?.uploadedContractName?.toLowerCase()?.includes("non-use")
+  );
+
+  const isCommissionBased = (profile?.isCommissionBased || 
     profile?.customPrice === 0 || 
     profile?.custom_price === 0 || 
     profile?.plan === "custom" || 
-    profile?.plan === "prospect";
+    profile?.plan === "prospect") && !isPartnership && !isNda;
 
   // Resolve the monthly price from profile or plan defaults
   const planDefaultPrices: Record<string, number> = {
     single: 888, triple: 2398.20, full: 3996,
     amazon: 999, advertising: 999, custom: 0,
+    partnership: 0, nda: 0,
   };
   const monthlyPrice = profile?.customPrice ?? profile?.custom_price ?? planDefaultPrices[profile?.plan] ?? 0;
-  const formattedPrice = isCommissionBased ? "Commission-Based (Performance / Revenue Share)" : `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
+  const formattedPrice = isPartnership || isNda
+    ? "Strategic Partnership (No Service / Subscription Fees)"
+    : isCommissionBased 
+    ? "Commission-Based (Performance / Revenue Share)" 
+    : `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
 
   // Contract terms — per-client values from contractDetails, with sensible defaults
   const cd = profile?.contractDetails || {};
-  const initialTerm = cd.initialTerm || "6 months";
-  const noticePeriod = cd.noticePeriod || "30 days";
-  const billingTerms = isCommissionBased 
+  const initialTerm = cd.initialTerm || (isPartnership ? "Indefinite / Strategic" : "6 months");
+  const noticePeriod = cd.noticePeriod || (isPartnership ? "30 days" : "30 days");
+  const billingTerms = isPartnership || isNda
+    ? (cd.billingTerms || "None. Mutual strategic collaboration; no subscription or recurring service fees.")
+    : isCommissionBased 
     ? (cd.billingTerms || "Commission-based; invoiced according to agreed performance milestones and revenue share terms")
     : (cd.billingTerms || "Initial payment due upon full execution; recurring invoices monthly from Effective Date");
-  const serviceDelivery = cd.serviceDelivery || "Remote unless otherwise agreed in writing";
+  const serviceDelivery = cd.serviceDelivery || (isPartnership ? "Collaborative & remote evaluation" : "Remote unless otherwise agreed in writing");
 
   useEffect(() => {
     checkAccess();
@@ -128,7 +153,8 @@ const Contract = () => {
       const mySigner = signers.find((s: any) => 
         s.email?.toLowerCase() === userEmail ||
         (userEmail.includes("jordan") && s.email?.toLowerCase().includes("jordan")) ||
-        (userEmail.includes("michael") && s.email?.toLowerCase().includes("michael"))
+        (userEmail.includes("michael") && s.email?.toLowerCase().includes("michael")) ||
+        (userEmail.includes("fabcheer") && s.email?.toLowerCase().includes("fabcheer"))
       );
 
       const isMySignerSigned = mySigner?.status === "signed" || !!mySigner?.signature;
@@ -140,6 +166,12 @@ const Contract = () => {
         setAlreadySigned(true);
       }
 
+      const isPartnerAcc = fetchedProfile.isPartnership || 
+        fetchedProfile.plan === "partnership" || 
+        fetchedProfile.plan === "nda" || 
+        userEmail === "info@fabcheer.com" || 
+        fetchedProfile.email === "info@fabcheer.com";
+
       // Pre-populate signature name
       if (mySigner?.signature) {
         setSignatureName(mySigner.signature);
@@ -147,6 +179,8 @@ const Contract = () => {
         setSignatureName(mySigner.name);
       } else if (fetchedProfile.currentSignerName) {
         setSignatureName(fetchedProfile.currentSignerName);
+      } else if (isPartnerAcc || userEmail.includes("fabcheer")) {
+        setSignatureName("Corey Robert Rickett");
       } else if (fetchedProfile.firstName) {
         setSignatureName(`${fetchedProfile.firstName} ${fetchedProfile.lastName || ""}`.trim());
       } else if (userEmail.includes("michael")) {
@@ -157,15 +191,18 @@ const Contract = () => {
 
       // Pre-populate Agreement Details fields
       const details = fetchedProfile.contractDetails || {};
+      const fallbackEntity = isPartnerAcc ? "FabCheer" : (fetchedProfile.entityName || "In the Dome");
+      const fallbackLegal = isPartnerAcc ? "Corey Robert Rickett" : (fetchedProfile.entityName || "In the Dome");
+
       setEffectiveDate(details.effectiveDate || new Date().toISOString().substring(0, 10));
-      setClientLegalName(details.clientLegalName || "In the Dome");
-      setClientTradeName(details.clientTradeName || "In the Dome");
-      setClientJurisdiction(details.clientJurisdiction || "California, USA");
+      setClientLegalName(details.clientLegalName || fallbackLegal);
+      setClientTradeName(details.clientTradeName || fallbackEntity);
+      setClientJurisdiction(details.clientJurisdiction || (isPartnerAcc ? "United States" : "California, USA"));
       setClientAddress(details.clientAddress || "");
-      setClientContactName(details.clientContactName || (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson"));
+      setClientContactName(details.clientContactName || (isPartnerAcc ? "Corey Robert Rickett" : (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson")));
       setClientEmail(details.clientEmail || userEmail || fetchedProfile.email || "");
-      setSignerTitle(mySigner?.title || details.signerTitle || "Co-Founder / Principal");
-      setStrategyPeriod(details.strategyPeriod || "Initial 6-Month Strategy");
+      setSignerTitle(mySigner?.title || details.signerTitle || (isPartnerAcc ? "Partner / Authorized Signatory" : "Co-Founder / Principal"));
+      setStrategyPeriod(details.strategyPeriod || (isPartnerAcc ? "Strategic Collaboration" : "Initial 6-Month Strategy"));
       setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
       setApprovedWebsites(details.approvedWebsites || "");
       setShopifySite(details.shopifySite || "");
@@ -179,6 +216,9 @@ const Contract = () => {
   };
 
   const getPlanPrice = () => {
+    if (isPartnership || isNda) {
+      return "Strategic Partnership (No Service Fees)";
+    }
     if (isCommissionBased) {
       return "Commission-Based";
     }
@@ -193,6 +233,9 @@ const Contract = () => {
       return `$${price} USD/month`;
     }
     switch (profile?.plan) {
+      case "partnership":
+      case "nda":
+        return "Strategic Partnership (No Service Fees)";
       case "single":
         return "$888 USD/month";
       case "triple":
@@ -300,6 +343,242 @@ const Contract = () => {
   };
 
   const renderAgreementDetailsTable = () => {
+    if (isPartnership || isNda) {
+      if (isViewMode) {
+        return (
+          <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:shadow-none print:border-slate-300">
+            <div className="bg-purple-50/70 border-b border-purple-100 px-4 py-3 print:bg-slate-100 print:border-slate-300 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase print:text-slate-900">Partnership & NDA Details</h3>
+              <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">Mutual NDA</Badge>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider print:border-slate-300 print:bg-transparent">
+                  <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Field</th>
+                  <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800 w-1/2">Effective Date</td>
+                  <td className="px-4 py-3 text-slate-800 w-1/2">{effectiveDate}</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Legal Name</td>
+                  <td className="px-4 py-3 text-slate-800 font-medium">{clientLegalName}</td>
+                </tr>
+                {clientTradeName && (
+                  <tr>
+                    <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Trade Name / Brand</td>
+                    <td className="px-4 py-3 text-slate-800">{clientTradeName}</td>
+                  </tr>
+                )}
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Jurisdiction</td>
+                  <td className="px-4 py-3 text-slate-800">{clientJurisdiction}</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Address</td>
+                  <td className="px-4 py-3 text-slate-800">{clientAddress}</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Contact Name</td>
+                  <td className="px-4 py-3 text-slate-800">{clientContactName}</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Email</td>
+                  <td className="px-4 py-3 text-slate-800">{clientEmail}</td>
+                </tr>
+                <tr className="bg-slate-50/30 print:bg-transparent">
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Legal Name</td>
+                  <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Description</td>
+                  <td className="px-4 py-3 text-slate-800">AI automation, software engineering, digital optimization, and business consulting</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Jurisdiction</td>
+                  <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Principal Office</td>
+                  <td className="px-4 py-3 text-slate-800">9194 Tronson Road, Vernon, BC, V1H1E2</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Email</td>
+                  <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agreement Purpose</td>
+                  <td className="px-4 py-3 text-slate-800 font-medium text-purple-700 print:text-slate-800">
+                    Confidentiality, Non-Use, Non-Build & Feedback Collaboration
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Financial Obligations</td>
+                  <td className="px-4 py-3 text-emerald-700 font-semibold print:text-slate-800">
+                    None (Strategic Partnership — Zero Subscription or Monthly Service Fees)
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Confidentiality Survival Period</td>
+                  <td className="px-4 py-3 text-slate-800">{confidentialityPeriod}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      return (
+        <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:border-slate-300">
+          <div className="bg-purple-50/70 border-b border-purple-100 px-4 py-3 flex items-center justify-between">
+            <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase">Partnership & NDA Details</h3>
+            <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs font-semibold">Mutual NDA</Badge>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left w-1/2">Field</th>
+                <th className="px-4 py-2.5 text-left w-1/2">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1 w-1/2">
+                  Effective Date <span className="text-red-500">*</span>
+                </td>
+                <td className="px-4 py-2 w-1/2">
+                  <Input
+                    type="date"
+                    value={effectiveDate}
+                    onChange={(e) => setEffectiveDate(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                    required
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                  Partner Legal Name <span className="text-red-500">*</span>
+                </td>
+                <td className="px-4 py-2">
+                  <Input
+                    placeholder="e.g. Corey Robert Rickett"
+                    value={clientLegalName}
+                    onChange={(e) => setClientLegalName(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                    required
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Partner Trade Name / Brand (if applicable)</td>
+                <td className="px-4 py-2">
+                  <Input
+                    placeholder="e.g. FabCheer"
+                    value={clientTradeName}
+                    onChange={(e) => setClientTradeName(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                  Partner Jurisdiction <span className="text-red-500">*</span>
+                </td>
+                <td className="px-4 py-2">
+                  <Input
+                    placeholder="e.g., California, USA or United States"
+                    value={clientJurisdiction}
+                    onChange={(e) => setClientJurisdiction(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                    required
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                  Partner Address <span className="text-red-500">*</span>
+                </td>
+                <td className="px-4 py-2">
+                  <Input
+                    placeholder="Full address / City, State, ZIP"
+                    value={clientAddress}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                    required
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                  Partner Contact Name <span className="text-red-500">*</span>
+                </td>
+                <td className="px-4 py-2">
+                  <Input
+                    placeholder="Full Contact Name"
+                    value={clientContactName}
+                    onChange={(e) => setClientContactName(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                    required
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Partner Email</td>
+                <td className="px-4 py-2">
+                  <Input
+                    type="email"
+                    value={clientEmail}
+                    readOnly
+                    disabled
+                    className="max-w-md h-9 text-sm bg-slate-50 cursor-not-allowed"
+                  />
+                </td>
+              </tr>
+              <tr className="bg-slate-50/30">
+                <td className="px-4 py-3 font-semibold text-slate-600">Agency Legal Name</td>
+                <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Agency Jurisdiction</td>
+                <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Agency Email</td>
+                <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Agreement Purpose</td>
+                <td className="px-4 py-3 font-medium text-purple-700">
+                  Confidentiality, Non-Use, Non-Build & Feedback Collaboration
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Financial Terms</td>
+                <td className="px-4 py-3 text-emerald-700 font-semibold">
+                  None (Strategic Partnership — Zero Subscription or Monthly Service Fees)
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Confidentiality Survival Period</td>
+                <td className="px-4 py-2">
+                  <Input
+                    placeholder="e.g., 5 years"
+                    value={confidentialityPeriod}
+                    onChange={(e) => setConfidentialityPeriod(e.target.value)}
+                    className="max-w-md h-9 text-sm"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     if (isViewMode) {
       return (
         <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:shadow-none print:border-slate-300">
@@ -722,12 +1001,22 @@ const Contract = () => {
           </div>
 
           <div className="text-center space-y-2 print:hidden">
-            <Badge className="bg-blue-500">Step 2 of 4</Badge>
+            {isPartnership ? (
+              <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">Partnership NDA</Badge>
+            ) : (
+              <Badge className="bg-blue-500">Step 2 of 4</Badge>
+            )}
             <h1 className="text-3xl font-bold">
-              {isAmazonContract ? "Business Agreement" : "Service Agreement"}
+              {isPartnership
+                ? "Confidentiality & Non-Disclosure Agreement"
+                : isAmazonContract
+                ? "Business Agreement"
+                : "Service Agreement"}
             </h1>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Please review and sign the agreement to continue.
+              {isPartnership
+                ? "Please review and digitally sign the Confidentiality, Non-Use, Non-Build & Feedback Agreement to confirm our strategic partnership."
+                : "Please review and sign the agreement to continue."}
             </p>
           </div>
 
@@ -737,7 +1026,9 @@ const Contract = () => {
               <div className="flex items-center gap-2">
                 <FileSignature className="w-5 h-5 text-primary print:hidden" />
                 <CardTitle className="print:text-xl print:font-bold">
-                  {isAmazonContract 
+                  {isPartnership
+                    ? (profile?.contractDetails?.uploadedContractName || "CHEERCPT — Confidentiality, Non-Use, Non-Build & Feedback Agreement")
+                    : isAmazonContract 
                     ? "Business Agreement for Amazon Advertising Services" 
                     : "Client Service Agreement"}
                 </CardTitle>
@@ -1021,7 +1312,7 @@ const Contract = () => {
             </CardContent>
             <CardFooter className="flex-col gap-4 print:p-0 print:pt-4">
               {(() => {
-                const clientEntityName = clientLegalName || clientTradeName || profile?.contractDetails?.clientLegalName || profile?.contractDetails?.clientTradeName || "In the Dome";
+                const clientEntityName = clientLegalName || clientTradeName || profile?.contractDetails?.clientLegalName || profile?.contractDetails?.clientTradeName || profile?.entityName || (isPartnership ? "FabCheer" : "In the Dome");
                 const displaySignDate = effectiveDate ? new Date(effectiveDate + 'T00:00:00').toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
                 const isDual = coSigners && coSigners.length > 1;
 
@@ -1031,7 +1322,11 @@ const Contract = () => {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            {isDual ? "Authorized Co-Signatures (In the Dome)" : "Authorized Digital Signature"}
+                            {isDual 
+                              ? `Authorized Co-Signatures (${profile?.entityName || "In the Dome"})` 
+                              : isPartnership
+                              ? "Authorized Strategic Partner Digital Signature"
+                              : "Authorized Digital Signature"}
                           </h4>
                           <span className="text-xs text-slate-500 font-medium">Entity: <strong className="text-slate-800">{clientEntityName}</strong></span>
                         </div>
@@ -1091,7 +1386,7 @@ const Contract = () => {
                             <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 pt-1 border-t border-slate-100">
                               <div>
                                 <span className="text-slate-400 block">Title:</span>
-                                <span className="font-semibold text-slate-700">{signerTitle || "Authorized Signatory"}</span>
+                                <span className="font-semibold text-slate-700">{signerTitle || (isPartnership ? "Partner / Principal" : "Authorized Signatory")}</span>
                               </div>
                               <div>
                                 <span className="text-slate-400 block">Date Signed:</span>
@@ -1130,7 +1425,9 @@ const Contract = () => {
                           <span>You have submitted your signature as {signatureName || currentSignerName}</span>
                         </div>
                         <p className="text-xs text-emerald-700 leading-relaxed">
-                          This agreement requires co-signatures from both co-founders before full execution. We are awaiting the second signature.
+                          {isDual 
+                            ? "This agreement requires co-signatures from both co-founders before full execution. We are awaiting the second signature."
+                            : "Your signature has been securely submitted and recorded."}
                         </p>
                       </div>
 
@@ -1205,7 +1502,7 @@ const Contract = () => {
                           </Label>
                           <Input 
                             id="signerTitle"
-                            placeholder="e.g. Co-Founder / Principal"
+                            placeholder={isPartnership ? "e.g. Partner / Principal" : "e.g. Co-Founder / Principal"}
                             value={signerTitle}
                             onChange={(e) => setSignerTitle(e.target.value)}
                             className="font-medium bg-white"
@@ -1229,14 +1526,14 @@ const Contract = () => {
                         htmlFor="agree" 
                         className="text-sm font-medium leading-none cursor-pointer"
                       >
-                        I have read and agree to the terms of this {isAmazonContract ? "Business Agreement" : "Service Agreement"} on behalf of {clientEntityName}
+                        I have read and agree to the terms of this {isPartnership ? "Confidentiality & Non-Disclosure Agreement" : isAmazonContract ? "Business Agreement" : "Service Agreement"} on behalf of {clientEntityName}
                       </label>
                     </div>
 
                     <Button 
                       onClick={handleSign} 
                       disabled={!agreed || signing || !signatureName.trim()}
-                      className="w-full"
+                      className={isPartnership ? "w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold" : "w-full"}
                       size="lg"
                     >
                       {signing ? (
@@ -1244,7 +1541,7 @@ const Contract = () => {
                       ) : (
                         <FileSignature className="w-4 h-4 mr-2" />
                       )}
-                      Sign Agreement
+                      {isPartnership ? "Sign & Accept NDA" : "Sign Agreement"}
                     </Button>
 
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">

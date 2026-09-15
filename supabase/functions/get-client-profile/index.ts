@@ -251,6 +251,17 @@ serve(async (req) => {
       (profile.first_name ? `${profile.first_name} ${profile.last_name || ""}`.trim() : null);
 
     const isCommissionBased = isDomeProfile || contractDetails.pricingModel === "commission";
+    const isPartnership = 
+      profile.plan === "partnership" || 
+      profile.plan === "nda" ||
+      profile.email === "info@fabcheer.com" ||
+      contractDetails.relationshipType === "partnership" ||
+      contractDetails.pricingModel === "nda" ||
+      contractDetails.isNda === true ||
+      contractDetails.uploadedContractName?.toLowerCase().includes("confidentiality") ||
+      contractDetails.uploadedContractName?.toLowerCase().includes("nda") ||
+      contractDetails.uploadedContractName?.toLowerCase().includes("non-use") ||
+      contractDetails.uploadedContractName?.toLowerCase().includes("cheercpt");
 
     // Organization co-owners
     const coOwners = isDomeProfile ? [
@@ -278,6 +289,8 @@ serve(async (req) => {
             ...contractDetails,
             signers,
             isDualSignature: requiresDualSignature,
+            isNda: isPartnership,
+            relationshipType: isPartnership ? "partnership" : (contractDetails.relationshipType || "client"),
           },
           onboardingStatus: profile.onboarding_status,
           onboardingCompletedAt: profile.onboarding_completed_at,
@@ -296,7 +309,9 @@ serve(async (req) => {
           currentSignerEmail: userEmail,
           currentSignerName,
           isCommissionBased,
-          entityName: isDomeProfile ? "In the Dome" : (contractDetails.clientLegalName || contractDetails.clientTradeName || null),
+          isPartnership,
+          isNda: isPartnership,
+          entityName: isDomeProfile ? "In the Dome" : (isPartnership ? (contractDetails.clientTradeName || "FabCheer") : (contractDetails.clientLegalName || contractDetails.clientTradeName || null)),
         },
         isAdmin,
       }),

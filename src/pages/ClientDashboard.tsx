@@ -23,6 +23,8 @@ import {
   Settings,
   FileText,
   Shield,
+  ShieldCheck,
+  Clock,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -76,6 +78,9 @@ interface ClientProfile {
   signers?: any[];
   requiresDualSignature?: boolean;
   isCommissionBased?: boolean;
+  isCommissionBased?: boolean;
+  isPartnership?: boolean;
+  isNda?: boolean;
   entityName?: string | null;
 }
 
@@ -87,6 +92,8 @@ const planDetails: Record<string, { name: string; price: number; services: numbe
   advertising: { name: "Advertising Package", price: 888, services: 7 },
   custom: { name: "Custom Plan", price: 0, services: 0 },
   prospect: { name: "Prospect Discovery", price: 0, services: 0 },
+  partnership: { name: "Strategic Partnership", price: 0, services: 0 },
+  nda: { name: "Strategic Partnership (NDA)", price: 0, services: 0 },
 };
 
 const serviceLabels: Record<string, string> = {
@@ -147,6 +154,14 @@ const ClientDashboard = () => {
   const [checkingOutSubId, setCheckingOutSubId] = useState<string | null>(null);
   const [showResponses, setShowResponses] = useState(false);
 
+  const isPartnership = Boolean(
+    profile?.isPartnership ||
+    profile?.plan === "partnership" ||
+    profile?.plan === "nda" ||
+    profile?.email === "info@fabcheer.com" ||
+    profile?.contractDetails?.isNda ||
+    profile?.contractDetails?.relationshipType === "partnership"
+  );
   const isDiscovery = profile?.plan === "discovery" || profile?.plan === "prospect" || profile?.plan === "custom-lms";
   const isProspect = profile?.plan === "prospect";
 
@@ -203,8 +218,9 @@ const ClientDashboard = () => {
       // Skip enforcement for admins so they don't get stuck when testing client links
       const isAdvertising = clientProfile.plan === "advertising";
       const isClientDiscovery = clientProfile.plan === "discovery" || clientProfile.plan === "prospect" || clientProfile.plan === "custom-lms";
+      const isClientPartnership = clientProfile.plan === "partnership" || clientProfile.plan === "nda" || clientProfile.email === "info@fabcheer.com" || clientProfile.isPartnership;
       
-      if (!response.data.isAdmin && !isAdvertising && !isClientDiscovery && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
+      if (!response.data.isAdmin && !isAdvertising && !isClientDiscovery && !isClientPartnership && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
         // Step 2: Enforce Contract Signing before Payment & Full Access
         navigate("/contract");
         return;
@@ -337,6 +353,13 @@ const ClientDashboard = () => {
 
   const getStatusBadge = () => {
     if (!profile) return null;
+
+    if (isPartnership) {
+      if (profile.contractStatus === "signed") {
+        return <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-medium">Strategic Partner</Badge>;
+      }
+      return <Badge className="bg-purple-500 hover:bg-purple-600 text-white font-medium">Awaiting NDA Signature</Badge>;
+    }
     
     if (isProspect && profile.onboardingStatus === "completed") {
       return <Badge className="bg-teal-500 hover:bg-teal-600">Discovery Complete</Badge>;
@@ -361,6 +384,11 @@ const ClientDashboard = () => {
 
   const getProgress = () => {
     if (!profile) return 0;
+    if (isPartnership) {
+      let completed = 1; // Account Created
+      if (profile.contractStatus === "signed") completed += 2; // NDA Signed & Active
+      return (completed / 3) * 100;
+    }
     if (isProspect) {
       let completed = 1; // Account Created
       if (profile.onboardingStatus === "completed") completed++;
@@ -382,6 +410,19 @@ const ClientDashboard = () => {
 
   const getPrimaryCTA = () => {
     if (!profile) return null;
+
+    // Partnership CTA: review & sign NDA (no payment)
+    if (isPartnership) {
+      if (profile.contractStatus !== "signed") {
+        return (
+          <Button size="lg" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md" onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}>
+            <FileSignature className="w-5 h-5 mr-2" />
+            Review & Sign Confidentiality Agreement (NDA)
+          </Button>
+        );
+      }
+      return null;
+    }
     
     // Prospect CTA: skip contract + payment, go straight to discovery
     if (isProspect) {
@@ -442,6 +483,7 @@ const ClientDashboard = () => {
 
   const getPlanPrice = () => {
     if (!profile) return 0;
+    if (isPartnership) return 0;
     if (profile.plan === "custom" && profile.customPrice) {
       return profile.customPrice;
     }
@@ -450,6 +492,9 @@ const ClientDashboard = () => {
 
   const getPlanName = () => {
     if (!profile?.plan) return "No Plan Selected";
+    if (isPartnership) {
+      return "Strategic Partnership (Mutual NDA)";
+    }
     if (profile.plan === "custom") {
       return `Custom Plan`;
     }
@@ -556,19 +601,19 @@ const ClientDashboard = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="border-blue-500/30 bg-gradient-to-br from-blue-50/95 via-indigo-50/80 to-white backdrop-blur-md overflow-hidden relative shadow-md">
+              <Card className={isPartnership ? "border-purple-500/30 bg-gradient-to-br from-purple-50/95 via-indigo-50/80 to-white backdrop-blur-md overflow-hidden relative shadow-md" : "border-blue-500/30 bg-gradient-to-br from-blue-50/95 via-indigo-50/80 to-white backdrop-blur-md overflow-hidden relative shadow-md"}>
                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                  <FileSignature className="w-40 h-40 text-blue-600" />
+                  <FileSignature className={isPartnership ? "w-40 h-40 text-purple-600" : "w-40 h-40 text-blue-600"} />
                 </div>
                 <CardContent className="pt-8 pb-6 px-6 sm:px-8 space-y-5">
                   <div className="flex flex-col sm:flex-row items-start gap-4">
-                    <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg shadow-blue-500/20 flex-shrink-0 text-white">
+                    <div className={isPartnership ? "p-3 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl shadow-lg shadow-purple-500/20 flex-shrink-0 text-white" : "p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg shadow-blue-500/20 flex-shrink-0 text-white"}>
                       <FileSignature className="w-7 h-7" />
                     </div>
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-semibold tracking-wider">
-                          {profile.contractStatus === "partially_signed" ? "1 OF 2 SIGNATURES COMPLETED" : "ACTION REQUIRED"}
+                        <Badge className={isPartnership ? "bg-purple-600 hover:bg-purple-700 text-white font-semibold tracking-wider" : "bg-blue-600 hover:bg-blue-700 text-white font-semibold tracking-wider"}>
+                          {isPartnership ? "PARTNERSHIP NDA REQUIRED" : profile.contractStatus === "partially_signed" ? "1 OF 2 SIGNATURES COMPLETED" : "ACTION REQUIRED"}
                         </Badge>
                         {profile.requiresDualSignature && (
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium">
@@ -577,27 +622,31 @@ const ClientDashboard = () => {
                         )}
                       </div>
                       <h2 className="text-2xl font-bold text-slate-900">
-                        {profile.contractStatus === "partially_signed"
+                        {isPartnership
+                          ? "Confidentiality & Non-Disclosure Agreement (NDA) Ready for Review"
+                          : profile.contractStatus === "partially_signed"
                           ? "Service Agreement Partially Signed (Awaiting 2nd Signature)"
                           : (profile.contractDetails?.uploadedContractName
                               ? "New Service Agreement Ready for Review & Signature"
                               : "Service Agreement Awaiting Signature")}
                       </h2>
                       <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
-                        {profile.contractStatus === "partially_signed"
+                        {isPartnership
+                          ? `We have prepared the "${profile.contractDetails?.uploadedContractName || 'CHEERCPT — Confidentiality Agreement'}" for ${profile.firstName || 'partner'} to review and digitally sign to confirm our strategic collaboration.`
+                          : profile.contractStatus === "partially_signed"
                           ? "One of the co-founders has completed their signature. Please review and sign to complete full agreement execution."
                           : (profile.contractDetails?.uploadedContractName
-                              ? `We have prepared the "${profile.contractDetails.uploadedContractName}" for In the Dome co-founders to review and digitally sign.`
+                              ? `We have prepared the "${profile.contractDetails.uploadedContractName}" for ${profile.entityName || 'the client'} to review and digitally sign.`
                               : "Please review and digitally sign your client service agreement to proceed with your active services.")}
                       </p>
                     </div>
                   </div>
 
-                  <Separator className="bg-blue-100" />
+                  <Separator className={isPartnership ? "bg-purple-100" : "bg-blue-100"} />
 
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-1">
                     <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <Shield className="w-4 h-4 text-blue-600" />
+                      <Shield className={isPartnership ? "w-4 h-4 text-purple-600" : "w-4 h-4 text-blue-600"} />
                       <span>Legally binding electronic signature powered by Sienvi Security</span>
                     </div>
                     <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -615,10 +664,10 @@ const ClientDashboard = () => {
                       <Button
                         size="sm"
                         onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-500/20 px-5"
+                        className={isPartnership ? "bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md shadow-purple-500/20 px-5" : "bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-500/20 px-5"}
                       >
                         <FileSignature className="w-4 h-4 mr-2" />
-                        Review & Sign Agreement
+                        {isPartnership ? "Review & Sign NDA" : "Review & Sign Agreement"}
                       </Button>
                     </div>
                   </div>
@@ -753,8 +802,48 @@ const ClientDashboard = () => {
               <CardContent className="space-y-6">
                 <Progress value={getProgress()} className="h-3" />
                 
-                {/* Steps for prospects: simplified 2-step progress */}
-                {isProspect ? (
+                {/* Steps for partnership: 3-step progress (no payment) */}
+                {isPartnership ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Partner Account Created</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(profile.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {profile.contractStatus === "signed" ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Confidentiality Agreement (NDA)</p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.contractStatus === "signed" && profile.contractSignedAt
+                            ? `Signed ${new Date(profile.contractSignedAt).toLocaleDateString()}`
+                            : "Pending partner signature"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {profile.contractStatus === "signed" ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Strategic Partnership</p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.contractStatus === "signed" ? "Active Collaboration" : "Pending NDA"}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : isProspect ? (
                   <>
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -996,6 +1085,59 @@ const ClientDashboard = () => {
                   </CardContent>
                 </Card>
               </>
+            ) : isPartnership ? (
+              /* Strategic Partnership & NDA Card */
+              <Card className="border-purple-200/80 bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/30 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-purple-950">
+                      <ShieldCheck className="w-5 h-5 text-purple-600" />
+                      Strategic Partnership
+                    </CardTitle>
+                    <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-medium">
+                      Mutual NDA
+                    </Badge>
+                  </div>
+                  <CardDescription>
+                    Confidentiality, non-disclosure, and strategic collaboration agreement
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                    <div className="p-3 rounded-lg bg-white/80 border border-purple-100/80">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Partner Entity</p>
+                      <p className="font-semibold text-slate-900">{profile.entityName || "FabCheer"}</p>
+                      <p className="text-xs text-slate-500">Corey Robert Rickett</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/80 border border-purple-100/80">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Financial Obligation</p>
+                      <p className="font-semibold text-purple-700">$0.00 / None</p>
+                      <p className="text-xs text-slate-500">Non-commercial partnership</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/80 border border-purple-100/80">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Agreement Type</p>
+                      <p className="font-semibold text-slate-900">Mutual NDA & Non-Use</p>
+                      <p className="text-xs text-slate-500">5-Year Confidentiality Period</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/80 border border-purple-100/80">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Status</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {profile.contractStatus === "signed" ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span className="font-semibold text-emerald-700 text-xs">Executed & Active</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-4 h-4 text-purple-600" />
+                            <span className="font-semibold text-purple-700 text-xs">Pending Digital Signature</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               /* Original single-plan card for backward compatibility */
               <Card>
@@ -1064,15 +1206,17 @@ const ClientDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileSignature className="w-5 h-5" />
-                  Documents & Agreements
+                  {isPartnership ? "Partnership Documents & NDA" : "Documents & Agreements"}
                 </CardTitle>
                 <CardDescription>
-                  Review proposals, scopes of work, and active legal agreements
+                  {isPartnership 
+                    ? "Review strategic partnership agreements and confidentiality documents"
+                    : "Review proposals, scopes of work, and active legal agreements"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Proposal Document (if present) */}
-                {profile.contractDetails?.uploadedProposalUrl && (
+                {profile.contractDetails?.uploadedProposalUrl && !isPartnership && (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/50">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -1108,6 +1252,8 @@ const ClientDashboard = () => {
                             ? "bg-emerald-600 text-white text-[10px]" 
                             : profile.contractStatus === "partially_signed"
                             ? "bg-amber-500 text-white text-[10px]"
+                            : isPartnership
+                            ? "bg-purple-100 text-purple-800 text-[10px]"
                             : "bg-amber-100 text-amber-800 text-[10px]"
                         }
                       >
@@ -1118,7 +1264,7 @@ const ClientDashboard = () => {
                           : "AWAITING SIGNATURE"}
                       </Badge>
                       <p className="font-semibold text-sm text-slate-900">
-                        {profile.contractDetails?.uploadedContractName || "Service Agreement"}
+                        {profile.contractDetails?.uploadedContractName || (isPartnership ? "CHEERCPT - CONFIDENTIALITY, NON-USE, NON-BUILD & FEEDBACK AGREEMENT.pdf" : "Service Agreement")}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -1126,6 +1272,8 @@ const ClientDashboard = () => {
                         ? `Signed on ${profile.contractSignedAt ? new Date(profile.contractSignedAt).toLocaleDateString() : "file"}`
                         : profile.contractStatus === "partially_signed"
                         ? "1 of 2 co-signatures completed. Awaiting full execution."
+                        : isPartnership
+                        ? "Mutual confidentiality and non-disclosure agreement requiring digital signature"
                         : "Legal services agreement requiring digital signature"}
                     </p>
                   </div>
@@ -1145,11 +1293,11 @@ const ClientDashboard = () => {
                     ) : (
                       <Button 
                         size="sm" 
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 shadow-sm" 
+                        className={isPartnership ? "bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs px-4 shadow-sm" : "bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 shadow-sm"} 
                         onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}
                       >
                         <FileSignature className="w-3.5 h-3.5 mr-1.5" />
-                        {profile.contractStatus === "partially_signed" ? "Sign / View Status" : "Review & Sign"}
+                        {profile.contractStatus === "partially_signed" ? "Sign / View Status" : isPartnership ? "Review & Sign NDA" : "Review & Sign"}
                       </Button>
                     )}
                   </div>
