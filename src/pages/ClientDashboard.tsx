@@ -162,6 +162,15 @@ const ClientDashboard = () => {
     profile?.contractDetails?.isNda ||
     profile?.contractDetails?.relationshipType === "partnership"
   );
+  const isCommissionBased = Boolean(
+    profile?.isCommissionBased ||
+    profile?.email === "jordan@jordanellams.com" ||
+    profile?.email === "michaelrrwilson@gmail.com" ||
+    profile?.contractDetails?.pricingModel === "commission" ||
+    profile?.contractDetails?.uploadedContractName?.includes("IN THE DOME") ||
+    profile?.contractDetails?.uploadedProposalName?.includes("IN THE DOME") ||
+    profile?.coOwners?.some(c => c.email === "jordan@jordanellams.com" || c.email === "michaelrrwilson@gmail.com")
+  );
   const isDiscovery = profile?.plan === "discovery" || profile?.plan === "prospect" || profile?.plan === "custom-lms";
   const isProspect = profile?.plan === "prospect";
 
@@ -495,7 +504,7 @@ const ClientDashboard = () => {
     if (isPartnership) {
       return "Strategic Partnership (Mutual NDA)";
     }
-    if (profile.isCommissionBased) {
+    if (isCommissionBased) {
       return "Custom (Commission-based)";
     }
     if (profile.plan === "custom") {
@@ -916,10 +925,10 @@ const ClientDashboard = () => {
                     )}
                     <div className="flex-1">
                       <p className="font-medium text-sm">
-                        {profile.isCommissionBased ? "Commission Terms Active" : "Payment Completed"}
+                        {isCommissionBased ? "Commission Agreement Active" : "Payment Completed"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {profile.isCommissionBased
+                        {isCommissionBased
                           ? (profile.subscriptionStatus === "active" ? "Revenue share structure active" : "Awaiting activation")
                           : profile.subscriptionStatus === "active" 
                           ? "Subscription active"
@@ -963,7 +972,7 @@ const ClientDashboard = () => {
                     </CardTitle>
                     <CardDescription>
                       {profile.subscriptions.length} subscription{profile.subscriptions.length !== 1 ? "s" : ""} · Combined total:{" "}
-                      {profile.isCommissionBased ? (
+                      {isCommissionBased ? (
                         <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                           Commission-Based (Performance Share)
                         </span>
@@ -977,7 +986,7 @@ const ClientDashboard = () => {
                   <CardContent className="pt-0 overflow-visible">
                     <div className="grid sm:grid-cols-2 gap-4 pb-1">
                       {profile.subscriptions.map((sub) => {
-                        const isSubCommission = Boolean(profile.isCommissionBased && (sub.monthlyAmount === 0 || !sub.monthlyAmount));
+                        const isSubCommission = Boolean(isCommissionBased && (sub.monthlyAmount === 0 || !sub.monthlyAmount));
                         return (
                           <div
                             key={sub.id}
@@ -1161,7 +1170,7 @@ const ClientDashboard = () => {
                     </div>
                     {!isProspect && (
                     <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
-                      {profile.isCommissionBased
+                      {isCommissionBased
                         ? "Commission-Based"
                         : profile.subscriptionStatus === "active" ? "Active" : profile.subscriptionStatus.replace("_", " ")}
                     </Badge>

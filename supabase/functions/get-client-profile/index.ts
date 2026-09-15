@@ -210,6 +210,7 @@ serve(async (req) => {
     // Auto-populate In the Dome co-signers if this is the Dome profile
     const isDomeProfile = 
       profile.email === "jordan@jordanellams.com" || 
+      profile.email === "michaelrrwilson@gmail.com" ||
       userEmail === "jordan@jordanellams.com" || 
       userEmail === "michaelrrwilson@gmail.com" ||
       contractDetails.uploadedContractName?.includes("IN THE DOME") ||
