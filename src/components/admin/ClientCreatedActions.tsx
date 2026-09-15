@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Mail, Link, Loader2, Check, Copy, ExternalLink } from "lucide-react";
+import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
 
 interface CreatedClient {
   id: string;
@@ -65,10 +66,14 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
       const generatedUrl = response.data.loginUrl;
       if (generatedUrl) {
         setOnboardingLink(generatedUrl);
-        await navigator.clipboard.writeText(generatedUrl);
-        setCopiedLink(true);
-        toast.success("1-Click Onboarding Link copied to clipboard!");
-        setTimeout(() => setCopiedLink(false), 3000);
+        const ok = await safeCopyToClipboard(generatedUrl);
+        if (ok) {
+          setCopiedLink(true);
+          toast.success("1-Click Onboarding Link copied to clipboard!");
+          setTimeout(() => setCopiedLink(false), 3000);
+        } else {
+          toast.success("1-Click link generated!");
+        }
       } else {
         toast.success(response.data.message || "Invite created!");
       }
@@ -117,18 +122,26 @@ export const ClientCreatedActions = ({ client, onDone }: ClientCreatedActionsPro
 
   const copyOnboardingToClipboard = async () => {
     if (!onboardingLink) return;
-    await navigator.clipboard.writeText(onboardingLink);
-    setCopiedLink(true);
-    toast.success("Onboarding link copied to clipboard");
-    setTimeout(() => setCopiedLink(false), 2000);
+    const ok = await safeCopyToClipboard(onboardingLink);
+    if (ok) {
+      setCopiedLink(true);
+      toast.success("Onboarding link copied to clipboard");
+      setTimeout(() => setCopiedLink(false), 2000);
+    } else {
+      toast.info("Link generated. You can select and copy it manually.");
+    }
   };
 
   const copyCheckoutToClipboard = async () => {
     if (!checkoutLink) return;
-    await navigator.clipboard.writeText(checkoutLink);
-    setCopiedCheckout(true);
-    toast.success("Checkout link copied to clipboard");
-    setTimeout(() => setCopiedCheckout(false), 2000);
+    const ok = await safeCopyToClipboard(checkoutLink);
+    if (ok) {
+      setCopiedCheckout(true);
+      toast.success("Checkout link copied to clipboard");
+      setTimeout(() => setCopiedCheckout(false), 2000);
+    } else {
+      toast.info("Link generated. You can select and copy it manually.");
+    }
   };
 
   const clientName = [client.firstName, client.lastName].filter(Boolean).join(" ") || client.email;

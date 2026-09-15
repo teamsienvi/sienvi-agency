@@ -58,6 +58,7 @@ import { toast } from "sonner";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
+import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
 
 interface Client {
   id: string;
@@ -400,10 +401,14 @@ const AdminClients = () => {
   };
 
   const copyToClipboard = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    toast.success("Copied to clipboard");
-    setTimeout(() => setCopiedId(null), 2000);
+    const success = await safeCopyToClipboard(text);
+    if (success) {
+      setCopiedId(id);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopiedId(null), 2000);
+    } else {
+      toast.info("Link generated. You can select and copy it manually.");
+    }
   };
 
   const openStripeCustomer = (customerId: string) => {
@@ -435,8 +440,12 @@ const AdminClients = () => {
       if (response.data.error) throw new Error(response.data.error);
 
       const checkoutUrl = response.data.checkoutUrl;
-      await navigator.clipboard.writeText(checkoutUrl);
-      toast.success("Checkout link copied to clipboard!");
+      const copied = await safeCopyToClipboard(checkoutUrl);
+      if (copied) {
+        toast.success("Checkout link copied to clipboard!");
+      } else {
+        toast.success("Checkout link generated!");
+      }
     } catch (error: any) {
       console.error("Error generating checkout link:", error);
       toast.error(error.message || "Failed to generate checkout link");
@@ -525,8 +534,12 @@ const AdminClients = () => {
       if (response.data.error) throw new Error(response.data.error);
 
       const checkoutUrl = response.data.checkoutUrl;
-      await navigator.clipboard.writeText(checkoutUrl);
-      toast.success("Migration checkout link copied! Send to client to complete Stripe setup.");
+      const copied = await safeCopyToClipboard(checkoutUrl);
+      if (copied) {
+        toast.success("Migration checkout link copied! Send to client to complete Stripe setup.");
+      } else {
+        toast.success("Migration link generated!");
+      }
     } catch (error: any) {
       console.error("Error generating migration link:", error);
       toast.error(error.message || "Failed to generate migration link");
@@ -569,8 +582,12 @@ const AdminClients = () => {
 
       if (response.data?.loginUrl) {
         setOnboardingLinks((prev) => ({ ...prev, [client.id]: response.data.loginUrl }));
-        await navigator.clipboard.writeText(response.data.loginUrl);
-        toast.success("1-Click Onboarding Link copied to clipboard for " + client.email);
+        const copied = await safeCopyToClipboard(response.data.loginUrl);
+        if (copied) {
+          toast.success("1-Click Onboarding Link copied to clipboard for " + client.email);
+        } else {
+          toast.success("1-Click link created for " + client.email);
+        }
       } else {
         toast.success("Login invite processed for " + client.email);
       }
@@ -617,8 +634,12 @@ const AdminClients = () => {
       const generatedUrl = response.data?.loginUrl;
       if (generatedUrl) {
         setOnboardingLinks((prev) => ({ ...prev, [client.id]: generatedUrl }));
-        await navigator.clipboard.writeText(generatedUrl);
-        toast.success("1-Click Onboarding Link copied to clipboard!");
+        const copied = await safeCopyToClipboard(generatedUrl);
+        if (copied) {
+          toast.success("1-Click Onboarding Link copied to clipboard!");
+        } else {
+          toast.success("1-Click Onboarding Link generated!");
+        }
       } else {
         toast.success(response.data?.message || "Link generated");
       }

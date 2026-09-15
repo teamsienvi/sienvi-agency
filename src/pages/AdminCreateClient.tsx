@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2, UserPlus, Link, Mail, Copy, Check, ExternalLink, Plus, Trash2, CalendarDays } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
 
 const automationServices = [
   { id: "social-media-suite", label: "Social Media Suite" },
@@ -271,10 +272,14 @@ const AdminCreateClient = () => {
 
   const copyToClipboard = async () => {
     if (!checkoutUrl) return;
-    await navigator.clipboard.writeText(checkoutUrl);
-    setCopied(true);
-    toast.success("Link copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await safeCopyToClipboard(checkoutUrl);
+    if (ok) {
+      setCopied(true);
+      toast.success("Link copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.info("Link generated. You can select and copy it manually.");
+    }
   };
 
   const handleGenerateOnboardingLink = async () => {
@@ -312,10 +317,14 @@ const AdminCreateClient = () => {
       const generatedUrl = response.data?.loginUrl;
       if (generatedUrl) {
         setOnboardingLink(generatedUrl);
-        await navigator.clipboard.writeText(generatedUrl);
-        setCopiedOnboarding(true);
-        toast.success("1-Click Onboarding Link copied to clipboard!");
-        setTimeout(() => setCopiedOnboarding(false), 3000);
+        const ok = await safeCopyToClipboard(generatedUrl);
+        if (ok) {
+          setCopiedOnboarding(true);
+          toast.success("1-Click Onboarding Link copied to clipboard!");
+          setTimeout(() => setCopiedOnboarding(false), 3000);
+        } else {
+          toast.success("1-Click link generated!");
+        }
       } else {
         toast.success(response.data?.message || "Invite processed!");
       }
@@ -329,10 +338,14 @@ const AdminCreateClient = () => {
 
   const copyOnboardingLink = async () => {
     if (!onboardingLink) return;
-    await navigator.clipboard.writeText(onboardingLink);
-    setCopiedOnboarding(true);
-    toast.success("Onboarding link copied to clipboard!");
-    setTimeout(() => setCopiedOnboarding(false), 2000);
+    const ok = await safeCopyToClipboard(onboardingLink);
+    if (ok) {
+      setCopiedOnboarding(true);
+      toast.success("Onboarding link copied to clipboard!");
+      setTimeout(() => setCopiedOnboarding(false), 2000);
+    } else {
+      toast.info("Link generated. You can select and copy it manually.");
+    }
   };
 
   const handleSendCheckoutEmail = async () => {
