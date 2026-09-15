@@ -34,6 +34,8 @@ serve(async (req) => {
       );
     }
 
+    const userEmail = user.email?.toLowerCase() || "";
+
     // Check if user is admin first
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
@@ -55,7 +57,7 @@ serve(async (req) => {
       }
     }
 
-    let profile = null;
+    let profile: any = null;
     let profileError = null;
 
     if (isAdmin && requestedClientId) {
@@ -67,38 +69,70 @@ serve(async (req) => {
       profile = clientProfile;
       profileError = err;
     } else {
-      // Get client profile by user_id first, then by email
-      const { data: clientProfile, error: err } = await supabaseAdmin
+      // 1. Try finding direct profile by user_id
+      const { data: clientProfileByUid } = await supabaseAdmin
         .from("client_profiles")
         .select("*")
         .eq("user_id", user.id)
-        .single();
-      profile = clientProfile;
-      profileError = err;
+        .maybeSingle();
 
-      // If not found by user_id, try by email
-      if (profileError || !profile) {
-        const { data: profileByEmail, error: emailError } = await supabaseAdmin
+      if (clientProfileByUid) {
+        profile = clientProfileByUid;
+      } else {
+        // 2. Try finding by email
+        const { data: clientProfileByEmail } = await supabaseAdmin
           .from("client_profiles")
           .select("*")
-          .eq("email", user.email?.toLowerCase())
-          .single();
-        
-        if (!emailError && profileByEmail) {
-          profile = profileByEmail;
-          
+          .eq("email", userEmail)
+          .maybeSingle();
+
+        if (clientProfileByEmail) {
+          profile = clientProfileByEmail;
           // Link user_id to the profile
           await supabaseAdmin
             .from("client_profiles")
             .update({ user_id: user.id })
-            .eq("id", profileByEmail.id);
+            .eq("id", profile.id);
+        } else {
+          // 3. Check if user is a co-signer / linked partner on an existing shared profile (e.g. In the Dome)
+          const { data: allProfiles } = await supabaseAdmin
+            .from("client_profiles")
+            .select("*");
+
+          const sharedProfile = (allProfiles || []).find((p: any) => {
+            const cd = p.contract_details || {};
+            const signers = cd.signers || [];
+            const linkedEmails = cd.linkedClientEmails || [];
+            const notes = p.notes || "";
+            return (
+              signers.some((s: any) => s.email?.toLowerCase() === userEmail) ||
+              linkedEmails.some((em: string) => em.toLowerCase() === userEmail) ||
+              notes.toLowerCase().includes(userEmail)
+            );
+          });
+
+          if (sharedProfile) {
+            console.log(`User ${userEmail} recognized as co-owner of shared profile: ${sharedProfile.id}`);
+            profile = sharedProfile;
+          }
+        }
+      }
+
+      // If the found profile points to a shared root profile, resolve the shared root profile
+      if (profile && profile.contract_details?.sharedProfileId) {
+        const { data: sharedRoot } = await supabaseAdmin
+          .from("client_profiles")
+          .select("*")
+          .eq("id", profile.contract_details.sharedProfileId)
+          .maybeSingle();
+        if (sharedRoot) {
+          profile = sharedRoot;
         }
       }
     }
 
-    // If no profile found, auto-create one for regular users
+    // If still no profile found, auto-create one for regular users
     if (!profile) {
-      // Admins don't need client profiles - return success with admin flag
       if (isAdmin) {
         return new Response(
           JSON.stringify({ 
@@ -110,13 +144,12 @@ serve(async (req) => {
         );
       }
 
-      // Auto-create a client profile with safe defaults
       console.log(`Auto-creating client profile for user: ${user.email}`);
       
       const { data: newProfile, error: createError } = await supabaseAdmin
         .from("client_profiles")
         .insert({
-          email: user.email?.toLowerCase() || "",
+          email: userEmail,
           user_id: user.id,
           subscription_status: "pending_payment",
           contract_status: "not_signed",
@@ -139,7 +172,6 @@ serve(async (req) => {
       }
 
       profile = newProfile;
-      console.log(`Successfully created client profile for: ${user.email}`);
     }
 
     // Fetch multi-subscriptions for this client
@@ -171,6 +203,61 @@ serve(async (req) => {
       updatedAt: sub.updated_at,
     }));
 
+    // Co-Signers and Connected Organization Resolution
+    const contractDetails = profile.contract_details || {};
+    let signers = contractDetails.signers || [];
+
+    // Auto-populate In the Dome co-signers if this is the Dome profile
+    const isDomeProfile = 
+      profile.email === "jordan@jordanellams.com" || 
+      userEmail === "jordan@jordanellams.com" || 
+      userEmail === "michaelrrwilson@gmail.com" ||
+      contractDetails.uploadedContractName?.includes("IN THE DOME") ||
+      contractDetails.uploadedProposalName?.includes("IN THE DOME");
+
+    if (isDomeProfile && (!signers || signers.length === 0)) {
+      signers = [
+        {
+          email: "jordan@jordanellams.com",
+          name: "Jordan Ellams",
+          title: "Co-Founder / Principal",
+          signature: profile.contract_signature || null,
+          signedAt: profile.contract_signed_at || null,
+          status: profile.contract_signature ? "signed" : "pending"
+        },
+        {
+          email: "michaelrrwilson@gmail.com",
+          name: "Michael Wilson",
+          title: "Co-Founder / Principal",
+          signature: null,
+          signedAt: null,
+          status: "pending"
+        }
+      ];
+    }
+
+    const requiresDualSignature = signers && signers.length > 1;
+
+    // Detect active signer based on authenticated user
+    let currentSigner = signers.find((s: any) => s.email?.toLowerCase() === userEmail);
+    if (!currentSigner && userEmail.includes("michael")) {
+      currentSigner = signers.find((s: any) => s.email?.toLowerCase().includes("michael"));
+    } else if (!currentSigner && userEmail.includes("jordan")) {
+      currentSigner = signers.find((s: any) => s.email?.toLowerCase().includes("jordan"));
+    }
+
+    const currentSignerName = currentSigner?.name || 
+      (user.user_metadata?.first_name ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim() : null) ||
+      (profile.first_name ? `${profile.first_name} ${profile.last_name || ""}`.trim() : null);
+
+    const isCommissionBased = isDomeProfile || contractDetails.pricingModel === "commission";
+
+    // Organization co-owners
+    const coOwners = isDomeProfile ? [
+      { name: "Jordan Ellams", email: "jordan@jordanellams.com", role: "Co-Founder" },
+      { name: "Michael Wilson", email: "michaelrrwilson@gmail.com", role: "Co-Founder" }
+    ] : [];
+
     return new Response(
       JSON.stringify({ 
         profile: {
@@ -187,7 +274,11 @@ serve(async (req) => {
           contractStatus: profile.contract_status,
           contractSignedAt: profile.contract_signed_at,
           contractSignature: profile.contract_signature,
-          contractDetails: profile.contract_details,
+          contractDetails: {
+            ...contractDetails,
+            signers,
+            isDualSignature: requiresDualSignature,
+          },
           onboardingStatus: profile.onboarding_status,
           onboardingCompletedAt: profile.onboarding_completed_at,
           maxServices: profile.max_services,
@@ -198,6 +289,14 @@ serve(async (req) => {
           updatedAt: profile.updated_at,
           notes: profile.notes,
           subscriptions,
+          // Connected Co-Owners & Signers Context
+          coOwners,
+          signers,
+          requiresDualSignature,
+          currentSignerEmail: userEmail,
+          currentSignerName,
+          isCommissionBased,
+          entityName: isDomeProfile ? "In the Dome" : (contractDetails.clientLegalName || contractDetails.clientTradeName || null),
         },
         isAdmin,
       }),

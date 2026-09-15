@@ -214,16 +214,34 @@ const AdminClients = () => {
     return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
   };
 
-  const getPlanDisplay = (plan: string | null, customPrice: number | null, selectedServices: string[] = []) => {
+  const isCommissionClient = (client: Client) => {
+    const email = (client.email || "").toLowerCase();
+    const name = (client.clientName || "").toLowerCase();
+    const cd = client.contractDetails || {};
+    return (
+      email === "jordan@jordanellams.com" ||
+      email === "michaelrrwilson@gmail.com" ||
+      name.includes("jordan ellams") ||
+      name.includes("michael wilson") ||
+      cd.pricingModel === "commission" ||
+      cd.uploadedContractName?.includes("IN THE DOME") ||
+      cd.uploadedProposalName?.includes("IN THE DOME")
+    );
+  };
+
+  const getPlanDisplay = (plan: string | null, customPrice: number | null, selectedServices: string[] = [], client?: Client) => {
     if (plan === "prospect") {
       return "Prospect (Discovery)";
     }
+    if (client && isCommissionClient(client)) {
+      return "Custom (Commission-based)";
+    }
     if (plan === "custom" && customPrice !== null && customPrice !== undefined) {
-      if (customPrice === 0) return "Custom (Commission-based)";
+      if (customPrice === 0) return "Custom Plan";
       return `Custom ($${customPrice}/mo)`;
     }
     if (plan === "custom") {
-      return "Custom (Commission-based)";
+      return "Custom Plan";
     }
     
     // Check if it's Amazon Design (either by plan or selected service)
@@ -881,15 +899,24 @@ const AdminClients = () => {
                           <p className="font-medium">
                             {(client.subscriptions?.length ?? 0) > 0
                               ? `Custom (${client.subscriptions!.length} subs)`
-                              : getPlanDisplay(client.plan, client.customPrice, client.selectedServices)}
+                              : getPlanDisplay(client.plan, client.customPrice, client.selectedServices, client)}
                           </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          ${((client.subscriptions?.length ?? 0) > 0
+                        {(() => {
+                          const total = (client.subscriptions?.length ?? 0) > 0
                             ? client.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0)
-                            : getMonthlyPrice(client.plan, client.customPrice, client.selectedServices)
-                          ).toLocaleString()}/mo
-                        </p>
+                            : getMonthlyPrice(client.plan, client.customPrice, client.selectedServices);
+                          const isComm = isCommissionClient(client);
+                          return isComm ? (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] font-medium mt-0.5">
+                              Commission-Based
+                            </Badge>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              ${total.toLocaleString()}/mo
+                            </p>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1143,12 +1170,18 @@ const AdminClients = () => {
                           <p className="font-medium">
                             {hasSubs
                               ? `Custom (${selectedClient.subscriptions!.length} subscriptions)`
-                              : getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices)}
+                              : getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices, selectedClient)}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Monthly Price</p>
-                          <p className="font-medium">${combinedAmount.toLocaleString()}</p>
+                          <p className="font-medium">
+                            {isCommissionClient(selectedClient) ? (
+                              <span className="text-emerald-700 font-semibold">Commission-Based</span>
+                            ) : (
+                              `$${combinedAmount.toLocaleString()}`
+                            )}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Status</p>
@@ -1216,7 +1249,13 @@ const AdminClients = () => {
                             <p className="font-medium text-sm">{sub.label}</p>
                             {sub.isPrimary && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Primary</Badge>}
                           </div>
-                          <p className="font-semibold text-sm">${sub.monthlyAmount.toLocaleString()}/mo</p>
+                          {isCommissionClient(selectedClient) && sub.monthlyAmount === 0 ? (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold">
+                              Commission-Based
+                            </Badge>
+                          ) : (
+                            <p className="font-semibold text-sm">${sub.monthlyAmount.toLocaleString()}/mo</p>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                           {sub.billingDay && <span>Bills on the {sub.billingDay}{sub.billingDay === 1 ? "st" : sub.billingDay === 2 ? "nd" : sub.billingDay === 3 ? "rd" : "th"}</span>}
@@ -1227,6 +1266,9 @@ const AdminClients = () => {
                           <span>•</span>
                           <span>Contract: {sub.contractStatus === "signed" ? "✅ Signed" : "⏳ Not Signed"}</span>
                         </div>
+                        {sub.notes && (
+                          <p className="text-xs text-slate-500 italic bg-slate-50 p-1.5 rounded border border-slate-100">{sub.notes}</p>
+                        )}
                         {sub.selectedServices && sub.selectedServices.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {sub.selectedServices.map((svc, i) => (
@@ -1239,7 +1281,11 @@ const AdminClients = () => {
                     <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
                       <span className="text-sm font-medium">Combined Monthly Total</span>
                       <span className="font-bold">
-                        ${selectedClient.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString()}/mo
+                        {isCommissionClient(selectedClient) && selectedClient.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0) === 0 ? (
+                          <span className="text-emerald-700">Commission-Based</span>
+                        ) : (
+                          `$${selectedClient.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString()}/mo`
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1260,12 +1306,6 @@ const AdminClients = () => {
                   </div>
                 )}
 
-                {selectedClient.notes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Internal Notes</p>
-                    <p className="bg-muted p-3 rounded-lg text-sm">{selectedClient.notes}</p>
-                  </div>
-                )}
 
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between mb-3">
@@ -1525,100 +1565,106 @@ const AdminClients = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-sm flex items-center gap-2">
-                        <span>1-Click Client Access & Onboarding Link</span>
-                        <span className="text-[10px] font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
-                          Instant Setup
-                        </span>
-                      </h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Single setup URL: Sign Up ➔ Contract ➔ Payment ➔ Onboarding Access
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs h-8 px-3 rounded-lg shadow-sm hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] transition-all duration-200"
-                      onClick={() => handleGenerateOnboardingLink(selectedClient)}
-                      disabled={generatingOnboardingLink === selectedClient.id}
-                    >
-                      {generatingOnboardingLink === selectedClient.id ? (
-                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      ) : onboardingLinks[selectedClient.id] ? (
-                        <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-300" />
-                      ) : (
-                        <Link className="w-3.5 h-3.5 mr-1.5" />
-                      )}
-                      {onboardingLinks[selectedClient.id] ? "Regenerate Link" : "Generate 1-Click Link"}
-                    </Button>
-                  </div>
-
-                  {onboardingLinks[selectedClient.id] ? (
-                    <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/50 to-slate-50/70 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-slate-900/40 border border-indigo-200/90 dark:border-indigo-800/80 rounded-xl p-3.5 space-y-2.5 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
-                          <Link className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                          Active 1-Click URL
-                        </span>
-                        <span className="text-[10px] bg-indigo-200/70 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200 px-2 py-0.5 rounded-full font-mono">
-                          Sign Up ➔ Contract ➔ Payment ➔ Access
-                        </span>
+                <div className="border-t pt-5">
+                  <div className="bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+                          <span>1-Click Client Access & Onboarding Link</span>
+                          <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+                            Instant Setup
+                          </span>
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Single setup URL: Sign Up ➔ Contract ➔ Payment ➔ Onboarding Access
+                        </p>
                       </div>
-                      <div className="flex gap-2 items-center">
-                        <code className="flex-1 text-xs bg-white/90 dark:bg-background/90 p-2.5 rounded-lg border border-indigo-200/80 dark:border-indigo-800/80 text-indigo-950 dark:text-indigo-100 font-mono break-all max-h-20 overflow-y-auto">
-                          {onboardingLinks[selectedClient.id]}
-                        </code>
-                        <Button
-                          size="sm"
-                          onClick={() => copyToClipboard(onboardingLinks[selectedClient.id], "modal-onboarding-link")}
-                          className="h-9 px-3 bg-white hover:bg-indigo-50 dark:bg-card dark:hover:bg-muted border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-medium text-xs rounded-lg shadow-xs active:scale-[0.98] transition-all"
-                        >
-                          {copiedId === "modal-onboarding-link" ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                              <span>Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 mr-1 text-indigo-600" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="h-9 px-3 bg-white hover:bg-indigo-50 dark:bg-card dark:hover:bg-muted border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-medium text-xs rounded-lg shadow-xs active:scale-[0.98] transition-all"
-                          onClick={() => window.open(onboardingLinks[selectedClient.id], "_blank")}
-                          title="Open in new tab"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 mr-1 text-indigo-600" />
-                          <span>Open</span>
-                        </Button>
-                      </div>
-                      <p className="text-[11px] text-indigo-700/90 dark:text-indigo-300/90 font-medium">
-                        Send this single link directly to your client via Slack, SMS, or email.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-gradient-to-r from-indigo-50/50 via-purple-50/30 to-slate-50/50 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-slate-900/30 border border-indigo-100 dark:border-indigo-900/50 p-3.5 rounded-xl text-xs text-muted-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                      <span className="leading-relaxed">Generate a single 1-Click link for this client to easily send over Slack, SMS, or Email.</span>
                       <Button
                         size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs h-8 px-3.5 rounded-lg shadow-xs active:scale-[0.98] transition-all shrink-0"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-8 px-3.5 rounded-lg shadow-xs active:scale-[0.98] transition-all self-start sm:self-auto"
                         onClick={() => handleGenerateOnboardingLink(selectedClient)}
                         disabled={generatingOnboardingLink === selectedClient.id}
                       >
                         {generatingOnboardingLink === selectedClient.id ? (
                           <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        ) : onboardingLinks[selectedClient.id] ? (
+                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                         ) : (
                           <Link className="w-3.5 h-3.5 mr-1.5" />
                         )}
-                        Generate Now
+                        {onboardingLinks[selectedClient.id] ? "Regenerate Link" : "Generate 1-Click Link"}
                       </Button>
                     </div>
-                  )}
+
+                    {onboardingLinks[selectedClient.id] ? (
+                      <div className="bg-background border border-border rounded-lg p-3.5 space-y-2.5 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <Link className="w-3.5 h-3.5 text-primary" />
+                            Active 1-Click URL
+                          </span>
+                          <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-mono">
+                            Sign Up ➔ Contract ➔ Payment ➔ Access
+                          </span>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <code className="flex-1 text-xs bg-muted/50 p-2.5 rounded-md border border-border text-foreground font-mono break-all max-h-20 overflow-y-auto select-all">
+                            {onboardingLinks[selectedClient.id]}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(onboardingLinks[selectedClient.id], "modal-onboarding-link")}
+                            className="h-9 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-md shadow-2xs active:scale-[0.98] transition-all"
+                          >
+                            {copiedId === "modal-onboarding-link" ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-9 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-md shadow-2xs active:scale-[0.98] transition-all"
+                            onClick={() => window.open(onboardingLinks[selectedClient.id], "_blank")}
+                            title="Open in new tab"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                            <span>Open</span>
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Send this single link directly to your client via Slack, SMS, or email.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-background border border-border/80 p-3 rounded-lg text-xs text-muted-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                        <span className="leading-relaxed text-slate-600 dark:text-slate-300">
+                          Generate a single 1-Click link for this client to easily send over Slack, SMS, or Email.
+                        </span>
+                        <Button
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-8 px-3.5 rounded-md shadow-2xs active:scale-[0.98] transition-all shrink-0"
+                          onClick={() => handleGenerateOnboardingLink(selectedClient)}
+                          disabled={generatingOnboardingLink === selectedClient.id}
+                        >
+                          {generatingOnboardingLink === selectedClient.id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <Link className="w-3.5 h-3.5 mr-1.5" />
+                          )}
+                          Generate Now
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") && (
@@ -1678,7 +1724,7 @@ const AdminClients = () => {
                           onClick={() => handleGenerateCheckoutLink(selectedClient)}
                           variant="outline"
                           disabled={generatingLink === selectedClient.id}
-                          className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                          className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                         >
                           {generatingLink === selectedClient.id ? (
                             <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -1690,7 +1736,7 @@ const AdminClients = () => {
                         <Button
                           onClick={() => handleEmailCheckoutLink(selectedClient)}
                           disabled={emailingCheckoutLink === selectedClient.id}
-                          className="h-10 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs sm:text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                          className="h-10 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs rounded-lg shadow-xs hover:shadow active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                         >
                           {emailingCheckoutLink === selectedClient.id ? (
                             <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -1706,7 +1752,7 @@ const AdminClients = () => {
                         onClick={() => handleMigrateToStripe(selectedClient)}
                         variant="outline"
                         disabled={migratingToStripe === selectedClient.id}
-                        className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                        className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       >
                         {migratingToStripe === selectedClient.id ? (
                           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -1718,22 +1764,24 @@ const AdminClients = () => {
                     ) : selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") ? (
                       <Button
                         onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
-                        className="h-10 px-3 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white font-medium text-xs sm:text-sm shadow-sm hover:shadow active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                        variant="outline"
+                        className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       >
-                        <ExternalLink className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
+                        <ExternalLink className="w-4 h-4 text-primary shrink-0" />
                         <span className="truncate">View in Stripe</span>
                       </Button>
                     ) : null}
 
                     <Button
-                      className="h-10 px-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs sm:text-sm shadow-sm hover:shadow-md hover:shadow-indigo-500/20 active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                      variant="outline"
+                      className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       onClick={() => handleGenerateOnboardingLink(selectedClient)}
                       disabled={generatingOnboardingLink === selectedClient.id}
                     >
                       {generatingOnboardingLink === selectedClient.id ? (
                         <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                       ) : (
-                        <Link className="w-4 h-4 shrink-0" />
+                        <Link className="w-4 h-4 text-primary shrink-0" />
                       )}
                       <span className="truncate">{onboardingLinks[selectedClient.id] ? "Copy 1-Click Link" : "Generate 1-Click Link"}</span>
                     </Button>
@@ -1742,12 +1790,12 @@ const AdminClients = () => {
                       variant="outline"
                       onClick={() => handleSendLoginInvite(selectedClient)}
                       disabled={sendingEmail === selectedClient.id}
-                      className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                      className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                     >
                       {sendingEmail === selectedClient.id ? (
                         <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                       ) : (
-                        <Mail className="w-4 h-4 text-blue-500 shrink-0" />
+                        <Mail className="w-4 h-4 text-primary shrink-0" />
                       )}
                       <span className="truncate">Send Email Invite</span>
                     </Button>
@@ -1755,9 +1803,9 @@ const AdminClients = () => {
                     <Button
                       variant="outline"
                       onClick={() => setOnboardingViewClient(selectedClient)}
-                      className="h-10 px-3 border-border/80 hover:border-slate-400 dark:hover:border-slate-600 bg-card hover:bg-muted/60 text-foreground font-medium text-xs sm:text-sm shadow-xs hover:shadow-sm active:scale-[0.98] transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+                      className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                     >
-                      <ClipboardList className="w-4 h-4 text-amber-500 shrink-0" />
+                      <ClipboardList className="w-4 h-4 text-primary shrink-0" />
                       <span className="truncate">{selectedClient.onboardingCompleted ? "View Onboarding" : "Preview Forms"}</span>
                     </Button>
                   </div>

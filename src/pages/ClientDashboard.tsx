@@ -62,6 +62,7 @@ interface ClientProfile {
   contractStatus: string;
   contractSignedAt: string | null;
   contractSignature?: string | null;
+  contractDetails?: any;
   onboardingStatus: string;
   onboardingCompletedAt: string | null;
   maxServices: number;
@@ -71,6 +72,11 @@ interface ClientProfile {
   updatedAt: string;
   notes: string | null;
   subscriptions?: ClientSubscription[];
+  coOwners?: Array<{ name: string; email: string; role: string }>;
+  signers?: any[];
+  requiresDualSignature?: boolean;
+  isCommissionBased?: boolean;
+  entityName?: string | null;
 }
 
 const planDetails: Record<string, { name: string; price: number; services: number }> = {
@@ -506,16 +512,28 @@ const ClientDashboard = () => {
           className="max-w-4xl mx-auto space-y-6"
         >
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-full">
                 <User className="w-8 h-8 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">
-                  Welcome{profile.firstName ? `, ${profile.firstName}` : ""}!
-                </h1>
-                <p className="text-muted-foreground">{profile.email}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl font-bold">
+                    Welcome{profile.firstName ? `, ${profile.firstName}` : ""}!
+                  </h1>
+                  {profile.coOwners && profile.coOwners.length > 0 && (
+                    <Badge variant="outline" className="bg-indigo-50/80 border-indigo-200 text-indigo-800 text-xs font-semibold px-2.5 py-0.5">
+                      {profile.entityName || "In the Dome"} · Co-Founder
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground text-sm">{profile.email}</p>
+                {profile.coOwners && profile.coOwners.length > 0 && (
+                  <p className="text-xs text-indigo-600 mt-1 font-medium">
+                    Connected Team: {profile.coOwners.map(c => c.name).join(" & ")}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -531,8 +549,8 @@ const ClientDashboard = () => {
             </div>
           </div>
 
-          {/* Contract Signing Required Banner (Always Highest Priority for pending contracts) */}
-          {!isDiscovery && profile.plan !== "advertising" && profile.contractStatus === "not_signed" ? (
+          {/* Contract Signing Required Banner (Always Highest Priority for pending or partially signed contracts) */}
+          {!isDiscovery && profile.plan !== "advertising" && profile.contractStatus !== "signed" ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -548,16 +566,29 @@ const ClientDashboard = () => {
                       <FileSignature className="w-7 h-7" />
                     </div>
                     <div className="space-y-1 flex-1">
-                      <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-semibold tracking-wider">ACTION REQUIRED</Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-semibold tracking-wider">
+                          {profile.contractStatus === "partially_signed" ? "1 OF 2 SIGNATURES COMPLETED" : "ACTION REQUIRED"}
+                        </Badge>
+                        {profile.requiresDualSignature && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium">
+                            Co-Signatures Required
+                          </Badge>
+                        )}
+                      </div>
                       <h2 className="text-2xl font-bold text-slate-900">
-                        {profile.contractDetails?.uploadedContractName
-                          ? "New Service Agreement Ready for Signature"
-                          : "Service Agreement Awaiting Signature"}
+                        {profile.contractStatus === "partially_signed"
+                          ? "Service Agreement Partially Signed (Awaiting 2nd Signature)"
+                          : (profile.contractDetails?.uploadedContractName
+                              ? "New Service Agreement Ready for Review & Signature"
+                              : "Service Agreement Awaiting Signature")}
                       </h2>
                       <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
-                        {profile.contractDetails?.uploadedContractName
-                          ? `We have prepared the "${profile.contractDetails.uploadedContractName}" for your review and digital signature.`
-                          : "Please review and digitally sign your client service agreement to proceed with your onboarding and active services."}
+                        {profile.contractStatus === "partially_signed"
+                          ? "One of the co-founders has completed their signature. Please review and sign to complete full agreement execution."
+                          : (profile.contractDetails?.uploadedContractName
+                              ? `We have prepared the "${profile.contractDetails.uploadedContractName}" for In the Dome co-founders to review and digitally sign.`
+                              : "Please review and digitally sign your client service agreement to proceed with your active services.")}
                       </p>
                     </div>
                   </div>
@@ -836,84 +867,113 @@ const ClientDashboard = () => {
                     </CardTitle>
                     <CardDescription>
                       {profile.subscriptions.length} subscription{profile.subscriptions.length !== 1 ? "s" : ""} · Combined total:{" "}
-                      <span className="font-semibold text-foreground">
-                        ${profile.subscriptions.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
-                      </span>
+                      {profile.isCommissionBased ? (
+                        <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          Commission-Based (Performance Share)
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-foreground">
+                          ${profile.subscriptions.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
+                        </span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0 overflow-visible">
                     <div className="grid sm:grid-cols-2 gap-4 pb-1">
-                      {profile.subscriptions.map((sub) => (
-                        <div
-                          key={sub.id}
-                          className="relative flex flex-col rounded-xl border p-5 transition-shadow hover:shadow-md border-slate-200 bg-white shadow-sm"
-                        >
-                          {/* Header */}
-                          <div className="space-y-2 mb-4">
-                            <p className="font-semibold text-base leading-snug text-slate-800">{sub.label}</p>
-                            <div className="flex items-baseline gap-1.5">
-                              <span className="text-2xl font-bold text-slate-900">
-                                ${sub.monthlyAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                              </span>
-                              <span className="text-sm text-muted-foreground">/mo</span>
+                      {profile.subscriptions.map((sub) => {
+                        const isSubCommission = Boolean(profile.isCommissionBased && (sub.monthlyAmount === 0 || !sub.monthlyAmount));
+                        return (
+                          <div
+                            key={sub.id}
+                            className="relative flex flex-col rounded-xl border p-5 transition-shadow hover:shadow-md border-slate-200 bg-white shadow-sm"
+                          >
+                            {/* Header */}
+                            <div className="space-y-2 mb-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-semibold text-base leading-snug text-slate-800">{sub.label}</p>
+                                {isSubCommission && (
+                                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-medium shrink-0">
+                                    Commission
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-baseline gap-1.5">
+                                {isSubCommission ? (
+                                  <div className="space-y-0.5">
+                                    <span className="text-xl font-bold text-slate-900">
+                                      Commission-Based
+                                    </span>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {sub.notes || "Performance / Revenue Share Structure"}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="text-2xl font-bold text-slate-900">
+                                      ${sub.monthlyAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">/mo</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Details */}
-                          <div className="space-y-2.5 mb-4">
-                            {sub.billingDay && (
-                              <div className="flex items-center gap-2 text-sm text-slate-600">
-                                <Calendar className="w-4 h-4 text-slate-400" />
-                                <span>Billed on the <span className="font-semibold text-slate-800">{getOrdinalSuffix(sub.billingDay)}</span></span>
+                            {/* Details */}
+                            <div className="space-y-2.5 mb-4">
+                              {sub.billingDay && (
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                  <Calendar className="w-4 h-4 text-slate-400" />
+                                  <span>Billed on the <span className="font-semibold text-slate-800">{getOrdinalSuffix(sub.billingDay)}</span></span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                {sub.subscriptionStatus === "active" ? (
+                                  <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 text-xs font-medium">
+                                    ✓ Active
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50 text-xs font-medium">
+                                    Awaiting Payment
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Services — push to fill remaining space */}
+                            {sub.selectedServices && sub.selectedServices.length > 0 && (
+                              <div className="flex-1">
+                                <Separator className="mb-3" />
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Services</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {sub.selectedServices.map((service) => (
+                                    <Badge key={service} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50 border-slate-200 text-slate-600 font-normal">
+                                      {serviceLabels[service] || service}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            <div className="flex items-center gap-2">
-                              {sub.subscriptionStatus === "active" ? (
-                                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 text-xs font-medium">
-                                  ✓ Active
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-50 text-xs font-medium">
-                                  Awaiting Payment
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
 
-                          {/* Services — push to fill remaining space */}
-                          {sub.selectedServices && sub.selectedServices.length > 0 && (
-                            <div className="flex-1">
-                              <Separator className="mb-3" />
-                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Services</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {sub.selectedServices.map((service) => (
-                                  <Badge key={service} variant="outline" className="text-xs px-2 py-0.5 bg-slate-50 border-slate-200 text-slate-600 font-normal">
-                                    {serviceLabels[service] || service}
-                                  </Badge>
-                                ))}
+                            {/* Per-subscription checkout for pending_payment */}
+                            {sub.subscriptionStatus === "pending_payment" && !sub.stripeSubscriptionId && !isSubCommission && (
+                              <div className="mt-auto pt-4">
+                                <Button
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+                                  onClick={() => handleSubCheckout(sub)}
+                                  disabled={checkingOutSubId === sub.id}
+                                >
+                                  {checkingOutSubId === sub.id ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <CreditCard className="w-4 h-4 mr-2" />
+                                  )}
+                                  Complete Payment
+                                </Button>
                               </div>
-                            </div>
-                          )}
-
-                          {/* Per-subscription checkout for pending_payment */}
-                          {sub.subscriptionStatus === "pending_payment" && !sub.stripeSubscriptionId && (
-                            <div className="mt-auto pt-4">
-                              <Button
-                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
-                                onClick={() => handleSubCheckout(sub)}
-                                disabled={checkingOutSubId === sub.id}
-                              >
-                                {checkingOutSubId === sub.id ? (
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                  <CreditCard className="w-4 h-4 mr-2" />
-                                )}
-                                Complete Payment
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
@@ -1040,9 +1100,22 @@ const ClientDashboard = () => {
                 {/* Primary / Active Agreement */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs">
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={profile.contractStatus === "signed" ? "default" : "secondary"} className={profile.contractStatus === "signed" ? "bg-emerald-600 text-white text-[10px]" : "bg-amber-100 text-amber-800 text-[10px]"}>
-                        {profile.contractStatus === "signed" ? "✓ SIGNED" : "AWAITING SIGNATURE"}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge 
+                        variant={profile.contractStatus === "signed" ? "default" : "secondary"} 
+                        className={
+                          profile.contractStatus === "signed" 
+                            ? "bg-emerald-600 text-white text-[10px]" 
+                            : profile.contractStatus === "partially_signed"
+                            ? "bg-amber-500 text-white text-[10px]"
+                            : "bg-amber-100 text-amber-800 text-[10px]"
+                        }
+                      >
+                        {profile.contractStatus === "signed" 
+                          ? "✓ SIGNED" 
+                          : profile.contractStatus === "partially_signed"
+                          ? "1 OF 2 SIGNED"
+                          : "AWAITING SIGNATURE"}
                       </Badge>
                       <p className="font-semibold text-sm text-slate-900">
                         {profile.contractDetails?.uploadedContractName || "Service Agreement"}
@@ -1051,6 +1124,8 @@ const ClientDashboard = () => {
                     <p className="text-xs text-muted-foreground">
                       {profile.contractStatus === "signed"
                         ? `Signed on ${profile.contractSignedAt ? new Date(profile.contractSignedAt).toLocaleDateString() : "file"}`
+                        : profile.contractStatus === "partially_signed"
+                        ? "1 of 2 co-signatures completed. Awaiting full execution."
                         : "Legal services agreement requiring digital signature"}
                     </p>
                   </div>
@@ -1074,7 +1149,7 @@ const ClientDashboard = () => {
                         onClick={() => navigate(paramClientId ? `/contract?clientId=${paramClientId}` : "/contract")}
                       >
                         <FileSignature className="w-3.5 h-3.5 mr-1.5" />
-                        Review & Sign
+                        {profile.contractStatus === "partially_signed" ? "Sign / View Status" : "Review & Sign"}
                       </Button>
                     )}
                   </div>
@@ -1084,14 +1159,17 @@ const ClientDashboard = () => {
                 {profile.subscriptions && profile.subscriptions.length > 0 && (
                   <div className="space-y-2 pt-2 border-t">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subscription Scopes</p>
-                    {profile.subscriptions.map((sub) => (
-                      <div key={`sub-scope-${sub.id}`} className="flex items-center justify-between text-xs py-1.5 border-b last:border-0 text-slate-600">
-                        <span className="font-medium">{sub.label}</span>
-                        <Badge variant="outline" className="text-[10px] text-slate-500">
-                          ${sub.monthlyAmount}/mo · {sub.subscriptionStatus === "active" ? "Active" : sub.subscriptionStatus}
-                        </Badge>
-                      </div>
-                    ))}
+                    {profile.subscriptions.map((sub) => {
+                      const isSubCommission = Boolean(profile.isCommissionBased && (sub.monthlyAmount === 0 || !sub.monthlyAmount));
+                      return (
+                        <div key={`sub-scope-${sub.id}`} className="flex items-center justify-between text-xs py-1.5 border-b last:border-0 text-slate-600">
+                          <span className="font-medium">{sub.label}</span>
+                          <Badge variant="outline" className="text-[10px] text-slate-500">
+                            {isSubCommission ? "Commission-Based" : `$${sub.monthlyAmount}/mo`} · {sub.subscriptionStatus === "active" ? "Active" : sub.subscriptionStatus}
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

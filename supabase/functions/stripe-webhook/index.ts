@@ -864,6 +864,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     .from("subscriptions")
     .update({
       subscription_status: "past_due",
+      updated_at: new Date().toISOString(),
     })
     .eq("stripe_subscription_id", subscriptionId);
   
@@ -871,6 +872,19 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     console.error("Error updating subscription on payment failure:", error);
   } else {
     console.log("Subscription marked past_due:", subscriptionId);
+  }
+
+  // Update client_subscriptions if exists
+  const { error: clientSubErr } = await supabase
+    .from("client_subscriptions")
+    .update({
+      subscription_status: "past_due",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscriptionId);
+
+  if (clientSubErr) {
+    console.error("Error updating client_subscriptions on payment failure:", clientSubErr);
   }
   
   // Sync to client_profiles
@@ -880,34 +894,67 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   // Send admin notification for failed payment
   if (customerEmail) {
-    // Look up subscription details from DB for the notification
     let plan: string | undefined;
     let selectedServices: string[] = [];
-    let amount: number | undefined;
+    let amount: number | undefined = invoice.amount_due || invoice.total || undefined;
     let clientName: string | undefined;
 
+    // Look up subscription details from DB
     const { data: subRecord } = await supabase
       .from("subscriptions")
-      .select("plan, selected_services, amount, client_name")
+      .select("plan, selected_services, metadata")
       .eq("stripe_subscription_id", subscriptionId)
-      .single();
+      .maybeSingle();
 
     if (subRecord) {
       plan = subRecord.plan || undefined;
       selectedServices = subRecord.selected_services || [];
-      amount = subRecord.amount ? Math.round(subRecord.amount * 100) : undefined;
-      clientName = subRecord.client_name || undefined;
+      if (!amount && subRecord.metadata?.custom_price) {
+        amount = Math.round(Number(subRecord.metadata.custom_price) * 100);
+      }
+      if (subRecord.metadata?.client_name) {
+        clientName = subRecord.metadata.client_name;
+      }
     }
 
-    // Fallback: try client_profiles for the name
-    if (!clientName) {
+    // Check client_subscriptions
+    if (!plan || selectedServices.length === 0 || !amount) {
+      const { data: clientSub } = await supabase
+        .from("client_subscriptions")
+        .select("plan, selected_services, monthly_amount, label")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      if (clientSub) {
+        if (!plan) plan = clientSub.plan || undefined;
+        if (selectedServices.length === 0 && clientSub.selected_services) {
+          selectedServices = clientSub.selected_services;
+        }
+        if (!amount && clientSub.monthly_amount) {
+          amount = Math.round(Number(clientSub.monthly_amount) * 100);
+        }
+      }
+    }
+
+    // Fallback: try client_profiles for name and other details
+    if (!clientName || !plan || !amount) {
       const { data: profile } = await supabase
         .from("client_profiles")
-        .select("business_name, full_name")
-        .eq("email", customerEmail)
-        .single();
+        .select("first_name, last_name, plan, custom_price, contract_details, selected_services")
+        .eq("email", customerEmail.toLowerCase().trim())
+        .maybeSingle();
       if (profile) {
-        clientName = profile.business_name || profile.full_name || undefined;
+        if (!clientName) {
+          const names = [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+          const legalName = profile.contract_details?.clientLegalName || profile.contract_details?.clientTradeName;
+          clientName = names ? (legalName ? `${names} (${legalName})` : names) : (legalName || undefined);
+        }
+        if (!plan) plan = profile.plan || undefined;
+        if (!amount && profile.custom_price) {
+          amount = Math.round(Number(profile.custom_price) * 100);
+        }
+        if (selectedServices.length === 0 && profile.selected_services) {
+          selectedServices = profile.selected_services;
+        }
       }
     }
 

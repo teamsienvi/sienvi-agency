@@ -37,8 +37,15 @@ const planLabels: Record<string, string> = {
   advertising: "Advertising Package",
 };
 
-// Send contract signed email to client
-async function sendContractSignedClientEmail(email: string, name: string | null, signedAt: string) {
+// Send contract signed email to client or co-signers
+async function sendContractSignedClientEmail(
+  email: string,
+  name: string | null,
+  signedAt: string,
+  isFullySigned: boolean,
+  signers?: any[],
+  justSignedName?: string
+) {
   try {
     const displayName = name || email.split("@")[0];
     const signDate = new Date(signedAt).toLocaleDateString('en-US', { 
@@ -47,13 +54,18 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
       day: 'numeric' 
     });
     const dashboardUrl = "https://sienvi.com/dashboard";
+    const contractUrl = "https://sienvi.com/contract";
 
-    console.log("Sending contract signed email to client:", email);
+    const subject = isFullySigned 
+      ? "🎉 Agreement Fully Signed & Active" 
+      : `Signature Received - Agreement Awaiting Final Co-Signature`;
+
+    console.log(`Sending contract ${isFullySigned ? 'fully signed' : 'partially signed'} email to client:`, email);
 
     await sendEmail({
       from: "Sienvi <info@sienvi.com>",
       to: [email],
-      subject: "Agreement Signed",
+      subject: subject,
       html: `
 <!DOCTYPE html>
 <html>
@@ -67,22 +79,28 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0" style="max-width: 520px; width: 100%;">
           <tr>
-            <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); overflow: hidden; border-top: 3px solid #10b981;">
+            <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); overflow: hidden; border-top: 3px solid ${isFullySigned ? '#10b981' : '#3b82f6'};">
               <div style="padding: 32px 32px 24px 32px; text-align: center; border-bottom: 1px solid #f1f5f9;">
                 <table align="center" cellpadding="0" cellspacing="0" width="48" height="48" style="border-collapse: collapse; margin: 0 auto 16px auto;">
                   <tr>
-                    <td align="center" valign="middle" style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; color: #ffffff; font-size: 20px; line-height: 48px; text-align: center; vertical-align: middle;">
-                      ✓
+                    <td align="center" valign="middle" style="width: 48px; height: 48px; background: ${isFullySigned ? '#10b981' : '#3b82f6'}; border-radius: 50%; color: #ffffff; font-size: 20px; line-height: 48px; text-align: center; vertical-align: middle;">
+                      ${isFullySigned ? '✓' : '✍️'}
                     </td>
                   </tr>
                 </table>
-                <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #1f2937; letter-spacing: -0.3px;">Agreement Signed</h1>
-                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">Your service agreement is now active</p>
+                <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #1f2937; letter-spacing: -0.3px;">
+                  ${isFullySigned ? 'Agreement Fully Executed' : 'Signature Confirmed'}
+                </h1>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">
+                  ${isFullySigned ? 'Your service agreement is now active' : 'Awaiting final co-founder signature'}
+                </p>
               </div>
               <div style="padding: 28px 32px 32px 32px;">
                 <p style="margin: 0 0 16px 0; font-size: 15px; color: #1f2937;">Hi ${displayName},</p>
                 <p style="margin: 0 0 16px 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
-                  Thank you for signing the Sienvi service agreement. Your contract is now in effect and we're ready for the next step.
+                  ${isFullySigned 
+                    ? "Thank you for executing the Sienvi service agreement. All required signatures have been completed and your contract is now officially in effect."
+                    : `${justSignedName || 'A signature'} has been successfully recorded on the service agreement. The agreement will become fully active once all co-signers have signed.`}
                 </p>
                 <table width="100%" cellpadding="0" cellspacing="0" style="background: #f1f5f9; border-radius: 8px; margin: 20px 0; border-collapse: collapse;">
                   <tr>
@@ -92,13 +110,13 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
                           <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
                             Status
                           </td>
-                          <td align="right" style="font-size: 13px; font-weight: 500; color: #10b981; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
-                            Signed & Active
+                          <td align="right" style="font-size: 13px; font-weight: 600; color: ${isFullySigned ? '#10b981' : '#f59e0b'}; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">
+                            ${isFullySigned ? 'Signed & Active (All Co-Signers)' : 'Partially Signed (Awaiting Co-Signer)'}
                           </td>
                         </tr>
                         <tr>
                           <td align="left" style="font-size: 13px; color: #6b7280; padding: 8px 0;">
-                            Signed on
+                            Last Signed on
                           </td>
                           <td align="right" style="font-size: 13px; font-weight: 500; color: #1f2937; padding: 8px 0;">
                             ${signDate}
@@ -110,13 +128,15 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
                 </table>
                 <p style="margin: 24px 0 12px 0; font-size: 14px; font-weight: 600; color: #1f2937;">Your next step</p>
                 <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
-                  Complete your onboarding questionnaires so our team can start building your custom automations.
+                  ${isFullySigned 
+                    ? "Complete your onboarding questionnaires so our team can start building your custom automations."
+                    : "You can monitor the live signing status in your dashboard."}
                 </p>
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td align="center" style="padding: 16px 0 8px 0;">
-                      <a href="${dashboardUrl}" style="display: inline-block; background: #667eea; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 500; font-size: 14px;">
-                        Start Onboarding
+                      <a href="${isFullySigned ? dashboardUrl : contractUrl}" style="display: inline-block; background: #667eea; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 500; font-size: 14px;">
+                        ${isFullySigned ? 'Start Onboarding' : 'View Agreement Status'}
                       </a>
                     </td>
                   </tr>
@@ -146,42 +166,100 @@ async function sendContractSignedClientEmail(email: string, name: string | null,
   }
 }
 
-// Format agreement details into an HTML table for the admin email
-function formatContractDetails(details: any): string {
-  if (!details) return '';
-  
-  const labels: Record<string, string> = {
-    effectiveDate: "Effective Date",
-    clientLegalName: "Client Legal Name",
-    clientTradeName: "Client Trade Name / DBA",
-    clientJurisdiction: "Client Jurisdiction",
-    clientAddress: "Client Address",
-    clientContactName: "Client Contact Name",
-    clientEmail: "Client Email",
-    strategyDiscussionPeriod: "Strategy Discussion Date / Period",
-    confidentialitySurvivalPeriod: "Confidentiality Survival Period",
-  };
+// Send invitation to pending co-signer when their partner signs first
+async function sendPendingCoSignerEmail(pendingEmail: string, pendingName: string | null, signedByName: string, companyName: string) {
+  try {
+    const displayName = pendingName || pendingEmail.split("@")[0];
+    const contractUrl = "https://sienvi.com/contract";
 
-  const rows = Object.entries(details)
-    .filter(([key, val]) => val !== null && val !== undefined && val !== '')
-    .map(([key, val]) => {
-      const label = labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-      return `<tr><td style="padding:8px 12px;font-size:13px;color:#6b7280;width:38%;border-bottom:1px solid #f1f5f9;vertical-align:top">${label}</td><td style="padding:8px 12px;font-size:13px;color:#1f2937;border-bottom:1px solid #f1f5f9;vertical-align:top">${val}</td></tr>`;
+    console.log(`Sending pending co-signer invitation to ${pendingEmail}`);
+
+    await sendEmail({
+      from: "Sienvi <info@sienvi.com>",
+      to: [pendingEmail],
+      subject: `✍️ Action Required: ${signedByName} has signed the Sienvi Service Agreement for ${companyName}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; background-color: #f8fafc; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="max-width: 520px; width: 100%;">
+          <tr>
+            <td style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); overflow: hidden; border-top: 3px solid #3b82f6;">
+              <div style="padding: 32px 32px 24px 32px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                <table align="center" cellpadding="0" cellspacing="0" width="48" height="48" style="border-collapse: collapse; margin: 0 auto 16px auto;">
+                  <tr>
+                    <td align="center" valign="middle" style="width: 48px; height: 48px; background: #3b82f6; border-radius: 50%; color: #ffffff; font-size: 20px; line-height: 48px; text-align: center; vertical-align: middle;">
+                      ✍️
+                    </td>
+                  </tr>
+                </table>
+                <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #1f2937; letter-spacing: -0.3px;">
+                  Co-Signature Requested
+                </h1>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">
+                  Service Agreement for ${companyName}
+                </p>
+              </div>
+              <div style="padding: 28px 32px 32px 32px;">
+                <p style="margin: 0 0 16px 0; font-size: 15px; color: #1f2937;">Hi ${displayName},</p>
+                <p style="margin: 0 0 16px 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
+                  <strong>${signedByName}</strong> has reviewed and signed the Sienvi Service Agreement on behalf of <strong>${companyName}</strong>.
+                </p>
+                <p style="margin: 0 0 20px 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
+                  Please review the agreement and add your digital signature to finalize execution and unlock your team's workspace and onboarding questionnaires.
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" style="padding: 16px 0 8px 0;">
+                      <a href="${contractUrl}" style="display: inline-block; background: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                        Review & Sign Agreement
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 0 0 0; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-size: 13px; color: #9ca3af;">
+                Questions? Contact <a href="mailto:teamsienvi@gmail.com" style="color: #667eea; text-decoration: none;">teamsienvi@gmail.com</a>
+              </p>
+              <p style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">© 2015 Sienvi. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
     });
-
-  if (rows.length === 0) return '';
-  return `
-    <div style="margin-bottom: 24px;">
-      <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #ffffff; background: #3b82f6; padding: 10px 14px; border-radius: 6px 6px 0 0;">Agreement Details</h3>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 6px 6px; overflow: hidden;">
-        ${rows.join('')}
-      </table>
-    </div>
-  `;
+    console.log("Pending co-signer email sent successfully");
+  } catch (error) {
+    console.error("Failed to send pending co-signer email:", error);
+  }
 }
 
-// Send contract signed admin notification
-async function sendContractSignedAdminEmail(clientEmail: string, clientName: string | null, plan: string | null, signedAt: string, signature?: string, contractDetails?: any) {
+// Send contract signed admin notification (supports 1 of 2 partial signature and full execution)
+async function sendContractSignedAdminEmail(
+  clientEmail: string,
+  clientName: string | null,
+  plan: string | null,
+  signedAt: string,
+  signature?: string,
+  contractDetails?: any,
+  isFullySigned: boolean = true,
+  signers?: any[]
+) {
   try {
     const displayName = clientName || clientEmail.split("@")[0];
     const planLabel = plan ? (planLabels[plan] || plan) : "N/A";
@@ -194,6 +272,14 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
       minute: "2-digit",
       timeZoneName: "short",
     });
+
+    const hasDualSigners = signers && signers.length > 1;
+    const signedCount = signers ? signers.filter((s: any) => s.status === "signed").length : 1;
+    const totalCount = signers ? signers.length : 1;
+
+    const subject = isFullySigned
+      ? `🎉 Contract Fully Executed (${totalCount}/${totalCount}) - ${displayName}`
+      : `📝 Contract Partially Signed (${signedCount}/${totalCount}) - ${displayName}`;
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -208,38 +294,70 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
           <tr>
-            <td style="background: #3b82f6; border-radius: 12px 12px 0 0; padding: 24px; text-align: center;">
-              <span style="font-size: 32px;">📝</span>
-              <h1 style="margin: 12px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Contract Signed</h1>
+            <td style="background: ${isFullySigned ? '#10b981' : '#3b82f6'}; border-radius: 12px 12px 0 0; padding: 24px; text-align: center;">
+              <span style="font-size: 32px;">${isFullySigned ? '🎉' : '📝'}</span>
+              <h1 style="margin: 12px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">
+                ${isFullySigned ? 'Contract Fully Executed' : `Contract Partially Signed (${signedCount}/${totalCount})`}
+              </h1>
             </td>
           </tr>
           <tr>
             <td style="background: #ffffff; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
               <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280;">${timestamp}</p>
-              <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 10px; padding: 20px; margin-bottom: 24px; border-left: 4px solid #3b82f6;">
-                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #1f2937;">Client Information</h3>
+              
+              <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 10px; padding: 20px; margin-bottom: 24px; border-left: 4px solid ${isFullySigned ? '#10b981' : '#f59e0b'};">
+                <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #1f2937;">Co-Signer Execution Status</h3>
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="padding: 8px 0;"><strong style="color: #6b7280;">Name:</strong></td>
-                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937;">${displayName}</span></td>
+                    <td style="padding: 8px 0;"><strong style="color: #6b7280;">Account / Client:</strong></td>
+                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937; font-weight: 600;">${displayName}</span></td>
                   </tr>
-                  ${signature ? `
+                  <tr>
+                    <td style="padding: 8px 0;"><strong style="color: #6b7280;">Status:</strong></td>
+                    <td style="padding: 8px 0; text-align: right;">
+                      <span style="color: ${isFullySigned ? '#10b981' : '#f59e0b'}; font-weight: 700;">
+                        ${isFullySigned ? '✅ Fully Signed & Active' : `⏳ Partially Signed (${signedCount}/${totalCount} Signatures)`}
+                      </span>
+                    </td>
+                  </tr>
+                  ${hasDualSigners ? `
+                  <tr>
+                    <td colspan="2" style="padding-top: 12px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #e2e8f0;">
+                        ${signers.map((s: any) => `
+                          <tr>
+                            <td style="padding: 8px 0; font-size: 13px;">
+                              <strong>${s.name || s.email}</strong> (${s.title || 'Co-Founder'})
+                            </td>
+                            <td style="padding: 8px 0; text-align: right; font-size: 13px;">
+                              ${s.status === 'signed' 
+                                ? `<span style="color: #10b981; font-weight: 600;">✓ Signed: <em style="font-family: 'Courier New', monospace;">"${s.signature}"</em></span>`
+                                : `<span style="color: #f59e0b; font-weight: 600;">⏳ Awaiting Signature</span>`}
+                            </td>
+                          </tr>
+                        `).join('')}
+                      </table>
+                    </td>
+                  </tr>
+                  ` : signature ? `
                   <tr>
                     <td style="padding: 8px 0;"><strong style="color: #6b7280;">Digital Signature:</strong></td>
                     <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937; font-family: 'Courier New', Courier, monospace; font-weight: bold; font-style: italic;">${signature}</span></td>
                   </tr>
-                  ` : ""}
+                  ` : ''}
                   <tr>
                     <td style="padding: 8px 0;"><strong style="color: #6b7280;">Email:</strong></td>
                     <td style="padding: 8px 0; text-align: right;"><a href="mailto:${clientEmail}" style="color: #667eea; text-decoration: none;">${clientEmail}</a></td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0;"><strong style="color: #6b7280;">Plan:</strong></td>
-                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937; font-weight: 600;">${planLabel}</span></td>
+                    <td style="padding: 8px 0;"><strong style="color: #6b7280;">Plan / Model:</strong></td>
+                    <td style="padding: 8px 0; text-align: right;"><span style="color: #1f2937; font-weight: 600;">${contractDetails?.pricingModel === 'commission' ? 'Commission-Based (Performance Share)' : planLabel}</span></td>
                   </tr>
                 </table>
               </div>
+
               ${formatContractDetails(contractDetails)}
+              
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 24px 0;">
@@ -262,6 +380,25 @@ async function sendContractSignedAdminEmail(clientEmail: string, clientName: str
 </body>
 </html>
     `;
+
+    console.log(`Sending contract ${isFullySigned ? 'fully signed' : 'partially signed'} notification to admins`);
+
+    const { data, error } = await sendEmail({
+      from: "Sienvi Admin <info@sienvi.com>",
+      to: ADMIN_EMAILS,
+      subject: subject,
+      html: emailHtml,
+    });
+
+    if (error) {
+      console.error("Failed to send contract signed admin notification:", error);
+    } else {
+      console.log("Contract signed admin notifications sent:", data);
+    }
+  } catch (error) {
+    console.error("Failed to send contract signed admin notification:", error);
+  }
+}
 
     console.log("Sending contract signed notification to admins");
 
@@ -651,14 +788,14 @@ serve(async (req) => {
       );
     }
 
-    const { action, clientId, signature, contractDetails } = await req.json();
+    const { action, clientId, signature, contractDetails, signerEmail, signerName, signerTitle } = await req.json();
+    const userEmail = user.email?.toLowerCase() || "";
 
     // Get the client profile
-    let profileQuery = supabaseAdmin.from("client_profiles").select("*");
+    let profile: any = null;
     
-    // If clientId is provided (admin action), use that; otherwise use current user
+    // If clientId is provided (admin action or authorized co-signer), check access
     if (clientId) {
-      // Check if user is admin
       const { data: roleData } = await supabaseAdmin
         .from("user_roles")
         .select("role")
@@ -666,21 +803,53 @@ serve(async (req) => {
         .eq("role", "admin")
         .single();
       
-      if (!roleData) {
-        return new Response(
-          JSON.stringify({ error: "Admin access required to update other clients" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      const isAdmin = !!roleData;
+      if (isAdmin) {
+        const { data: p } = await supabaseAdmin.from("client_profiles").select("*").eq("id", clientId).maybeSingle();
+        profile = p;
+      } else {
+        const { data: p } = await supabaseAdmin.from("client_profiles").select("*").eq("id", clientId).maybeSingle();
+        if (p) {
+          const cd = p.contract_details || {};
+          const signers = cd.signers || [];
+          const linked = cd.linkedClientEmails || [];
+          const isAuthorized = signers.some((s: any) => s.email?.toLowerCase() === userEmail) ||
+                               linked.some((e: string) => e.toLowerCase() === userEmail) ||
+                               p.user_id === user.id ||
+                               p.email?.toLowerCase() === userEmail;
+          if (isAuthorized) {
+            profile = p;
+          }
+        }
       }
-      
-      profileQuery = profileQuery.eq("id", clientId);
-    } else {
-      profileQuery = profileQuery.eq("user_id", user.id);
     }
 
-    const { data: profile, error: profileError } = await profileQuery.single();
+    if (!profile) {
+      // Find by user_id
+      const { data: pByUid } = await supabaseAdmin.from("client_profiles").select("*").eq("user_id", user.id).maybeSingle();
+      if (pByUid) {
+        profile = pByUid;
+      } else {
+        // Find by email
+        const { data: pByEmail } = await supabaseAdmin.from("client_profiles").select("*").eq("email", userEmail).maybeSingle();
+        if (pByEmail) {
+          profile = pByEmail;
+        } else {
+          // Find by shared profile where user is a co-signer
+          const { data: allP } = await supabaseAdmin.from("client_profiles").select("*");
+          profile = (allP || []).find((p: any) => {
+            const cd = p.contract_details || {};
+            const signers = cd.signers || [];
+            const linked = cd.linkedClientEmails || [];
+            return signers.some((s: any) => s.email?.toLowerCase() === userEmail) ||
+                   linked.some((e: string) => e.toLowerCase() === userEmail) ||
+                   (p.notes || "").toLowerCase().includes(userEmail);
+          });
+        }
+      }
+    }
 
-    if (profileError || !profile) {
+    if (!profile) {
       return new Response(
         JSON.stringify({ error: "Client profile not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -689,16 +858,103 @@ serve(async (req) => {
 
     let updateData: Record<string, unknown> = {};
     const signedAt = new Date().toISOString();
+    let isFullyExecuted = false;
+    let isPartiallyExecuted = false;
+    let allSignerEmails: string[] = [profile.email];
 
     switch (action) {
-      case "sign_contract":
+      case "sign_contract": {
+        const existingDetails = profile.contract_details || {};
+        const incomingDetails = contractDetails || {};
+        const mergedDetails = { ...existingDetails, ...incomingDetails };
+
+        let signers = mergedDetails.signers || existingDetails.signers || [];
+        
+        // Auto-detect In the Dome co-signers if needed
+        const isDome = profile.email === "jordan@jordanellams.com" || 
+                       userEmail === "jordan@jordanellams.com" || 
+                       userEmail === "michaelrrwilson@gmail.com" ||
+                       mergedDetails.uploadedContractName?.includes("IN THE DOME") ||
+                       mergedDetails.uploadedProposalName?.includes("IN THE DOME");
+
+        if (isDome && (!signers || signers.length === 0)) {
+          signers = [
+            {
+              email: "jordan@jordanellams.com",
+              name: "Jordan Ellams",
+              title: "Co-Founder / Principal",
+              signature: profile.contract_signature || null,
+              signedAt: profile.contract_signed_at || null,
+              status: profile.contract_signature ? "signed" : "pending"
+            },
+            {
+              email: "michaelrrwilson@gmail.com",
+              name: "Michael Wilson",
+              title: "Co-Founder / Principal",
+              signature: null,
+              signedAt: null,
+              status: "pending"
+            }
+          ];
+        }
+
+        const effectiveSignerEmail = (signerEmail || userEmail).toLowerCase();
+        let activeSignerUpdated = false;
+
+        if (signers && signers.length > 0) {
+          signers = signers.map((s: any) => {
+            const matchesEmail = s.email?.toLowerCase() === effectiveSignerEmail ||
+              (effectiveSignerEmail.includes("jordan") && s.email?.toLowerCase().includes("jordan")) ||
+              (effectiveSignerEmail.includes("michael") && s.email?.toLowerCase().includes("michael"));
+
+            if (matchesEmail) {
+              activeSignerUpdated = true;
+              return {
+                ...s,
+                signature: signature ? signature.trim() : s.signature,
+                title: signerTitle || s.title || "Co-Founder / Principal",
+                signedAt: signedAt,
+                status: "signed"
+              };
+            }
+            return s;
+          });
+
+          if (!activeSignerUpdated && signature) {
+            signers.push({
+              email: effectiveSignerEmail,
+              name: signerName || effectiveSignerEmail.split("@")[0],
+              title: signerTitle || "Authorized Signatory",
+              signature: signature.trim(),
+              signedAt: signedAt,
+              status: "signed"
+            });
+          }
+        }
+
+        const allSigned = signers.length > 0 ? signers.every((s: any) => s.status === "signed") : true;
+        const anySigned = signers.length > 0 ? signers.some((s: any) => s.status === "signed") : true;
+        isFullyExecuted = allSigned;
+        isPartiallyExecuted = anySigned && !allSigned;
+
+        const combinedSignature = signers.length > 0 
+          ? signers.filter((s: any) => s.signature).map((s: any) => s.signature).join(" & ")
+          : (signature || "");
+
+        mergedDetails.signers = signers;
+        mergedDetails.isDualSignature = signers.length > 1;
+        if (signers.length > 0) {
+          allSignerEmails = signers.map((s: any) => s.email).filter(Boolean);
+        }
+
         updateData = {
-          contract_status: "signed",
-          contract_signed_at: signedAt,
-          contract_signature: signature || "",
-          contract_details: contractDetails || null,
+          contract_status: allSigned ? "signed" : (anySigned ? "partially_signed" : "not_signed"),
+          contract_signed_at: allSigned ? signedAt : profile.contract_signed_at,
+          contract_signature: combinedSignature,
+          contract_details: mergedDetails,
         };
         break;
+      }
 
       case "start_onboarding":
         const isDiscovery = profile.plan === "discovery" || profile.plan === "prospect" || profile.plan === "custom-lms" || (profile.selected_services || []).includes("custom-tool");
@@ -748,12 +1004,46 @@ serve(async (req) => {
       ? `${profile.first_name}${profile.last_name ? ' ' + profile.last_name : ''}`
       : null;
 
-    if (action === "sign_contract" && profile.email) {
-      // Send both client and admin emails for contract signing
-      await Promise.all([
-        sendContractSignedClientEmail(profile.email, clientName, signedAt),
-        sendContractSignedAdminEmail(profile.email, clientName, profile.plan, signedAt, signature, contractDetails),
-      ]);
+    if (action === "sign_contract") {
+      const mergedDetails = (updateData.contract_details as any) || contractDetails || {};
+      const currentSigners: any[] = mergedDetails.signers || [];
+      const companyName = profile.entity_name || (mergedDetails.uploadedContractName?.includes("IN THE DOME") ? "In the Dome" : "Sienvi Agency");
+      
+      const activeSignerObj = currentSigners.find((s: any) => s.email?.toLowerCase() === effectiveSignerEmail);
+      const activeSignerName = signerName || activeSignerObj?.name || (user.user_metadata?.first_name ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`.trim() : null) || effectiveSignerEmail.split("@")[0];
+
+      // 1. Send Admin Notification (clarifying 1/2 partial or 2/2 full execution)
+      await sendContractSignedAdminEmail(
+        profile.email,
+        profile.client_name || clientName,
+        profile.plan,
+        signedAt,
+        (updateData.contract_signature as string) || signature,
+        mergedDetails,
+        isFullyExecuted,
+        currentSigners
+      );
+
+      // 2. Client & Co-Signer Notifications
+      if (isFullyExecuted) {
+        // Send Full Execution Confirmation to all co-signers
+        for (const signer of currentSigners) {
+          if (signer.email) {
+            await sendContractSignedClientEmail(signer.email, signer.name, signedAt, true, currentSigners, activeSignerName);
+          }
+        }
+      } else if (isPartiallyExecuted) {
+        // Send confirmation to the signer who just signed
+        await sendContractSignedClientEmail(effectiveSignerEmail, activeSignerName, signedAt, false, currentSigners, activeSignerName);
+
+        // Send alert to the co-signer whose signature is still pending
+        const pendingSigners = currentSigners.filter((s: any) => s.status !== "signed" && s.email?.toLowerCase() !== effectiveSignerEmail);
+        for (const pending of pendingSigners) {
+          if (pending.email) {
+            await sendPendingCoSignerEmail(pending.email, pending.name, activeSignerName, companyName);
+          }
+        }
+      }
     }
 
     if (action === "complete_onboarding" && profile.email) {

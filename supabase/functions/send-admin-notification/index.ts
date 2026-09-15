@@ -13,6 +13,7 @@ const ADMIN_EMAILS = ["teamsienvi@gmail.com", "sienvifba@gmail.com", "info@sienv
 // Event types that trigger admin notifications
 type NotificationEvent = 
   | "payment_completed"
+  | "payment_failed"
   | "contract_signed"
   | "onboarding_completed"
   | "new_signup"
@@ -62,6 +63,12 @@ const eventConfig: Record<NotificationEvent, { subject: string; emoji: string; t
     emoji: "💰",
     title: "New Payment Received",
     color: "#10b981",
+  },
+  payment_failed: {
+    subject: "🚨 Payment Failed",
+    emoji: "🚨",
+    title: "Client Payment Failed",
+    color: "#dc2626",
   },
   contract_signed: {
     subject: "📝 Contract Signed",

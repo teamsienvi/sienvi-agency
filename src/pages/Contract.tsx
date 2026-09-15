@@ -57,9 +57,20 @@ const Contract = () => {
     setPdfNumPages(numPages);
   }, []);
 
+  const [currentSignerEmail, setCurrentSignerEmail] = useState("");
+  const [currentSignerName, setCurrentSignerName] = useState("");
+  const [hasMySignature, setHasMySignature] = useState(false);
+  const [coSigners, setCoSigners] = useState<any[]>([]);
+
   const isAmazonContract = profile?.plan === "amazon" || 
     (profile?.selectedServices || []).includes("channel-amazon") || 
     (profile?.selectedServices || []).includes("amazon-design");
+
+  const isCommissionBased = profile?.isCommissionBased || 
+    profile?.customPrice === 0 || 
+    profile?.custom_price === 0 || 
+    profile?.plan === "custom" || 
+    profile?.plan === "prospect";
 
   // Resolve the monthly price from profile or plan defaults
   const planDefaultPrices: Record<string, number> = {
@@ -67,13 +78,15 @@ const Contract = () => {
     amazon: 999, advertising: 999, custom: 0,
   };
   const monthlyPrice = profile?.customPrice ?? profile?.custom_price ?? planDefaultPrices[profile?.plan] ?? 0;
-  const formattedPrice = `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
+  const formattedPrice = isCommissionBased ? "Commission-Based (Performance / Revenue Share)" : `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
 
   // Contract terms — per-client values from contractDetails, with sensible defaults
   const cd = profile?.contractDetails || {};
   const initialTerm = cd.initialTerm || "6 months";
   const noticePeriod = cd.noticePeriod || "30 days";
-  const billingTerms = cd.billingTerms || "Initial payment due upon full execution; recurring invoices monthly from Effective Date";
+  const billingTerms = isCommissionBased 
+    ? (cd.billingTerms || "Commission-based; invoiced according to agreed performance milestones and revenue share terms")
+    : (cd.billingTerms || "Initial payment due upon full execution; recurring invoices monthly from Effective Date");
   const serviceDelivery = cd.serviceDelivery || "Remote unless otherwise agreed in writing";
 
   useEffect(() => {
@@ -103,25 +116,56 @@ const Contract = () => {
         return;
       }
 
-      const profile = response.data.profile;
-      setProfile(profile);
+      const fetchedProfile = response.data.profile;
+      setProfile(fetchedProfile);
       
-      // Check if already signed
-      if (profile.contractStatus === "signed" && !isViewMode) {
+      const userEmail = (session.user.email || fetchedProfile.currentSignerEmail || "").toLowerCase();
+      setCurrentSignerEmail(userEmail);
+
+      const signers = fetchedProfile.signers || fetchedProfile.contractDetails?.signers || [];
+      setCoSigners(signers);
+
+      const mySigner = signers.find((s: any) => 
+        s.email?.toLowerCase() === userEmail ||
+        (userEmail.includes("jordan") && s.email?.toLowerCase().includes("jordan")) ||
+        (userEmail.includes("michael") && s.email?.toLowerCase().includes("michael"))
+      );
+
+      const isMySignerSigned = mySigner?.status === "signed" || !!mySigner?.signature;
+      setHasMySignature(isMySignerSigned);
+
+      const allSigned = fetchedProfile.contractStatus === "signed" || (signers.length > 0 && signers.every((s: any) => s.status === "signed"));
+      
+      if (allSigned && !isViewMode) {
         setAlreadySigned(true);
       }
 
+      // Pre-populate signature name
+      if (mySigner?.signature) {
+        setSignatureName(mySigner.signature);
+      } else if (mySigner?.name) {
+        setSignatureName(mySigner.name);
+      } else if (fetchedProfile.currentSignerName) {
+        setSignatureName(fetchedProfile.currentSignerName);
+      } else if (fetchedProfile.firstName) {
+        setSignatureName(`${fetchedProfile.firstName} ${fetchedProfile.lastName || ""}`.trim());
+      } else if (userEmail.includes("michael")) {
+        setSignatureName("Michael Wilson");
+      } else if (userEmail.includes("jordan")) {
+        setSignatureName("Jordan Ellams");
+      }
+
       // Pre-populate Agreement Details fields
-      const details = profile.contractDetails || {};
+      const details = fetchedProfile.contractDetails || {};
       setEffectiveDate(details.effectiveDate || new Date().toISOString().substring(0, 10));
-      setClientLegalName(details.clientLegalName || "");
-      setClientTradeName(details.clientTradeName || "");
-      setClientJurisdiction(details.clientJurisdiction || "");
+      setClientLegalName(details.clientLegalName || "In the Dome");
+      setClientTradeName(details.clientTradeName || "In the Dome");
+      setClientJurisdiction(details.clientJurisdiction || "California, USA");
       setClientAddress(details.clientAddress || "");
-      setClientContactName(details.clientContactName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim());
-      setClientEmail(details.clientEmail || profile.email || "");
-      setSignerTitle(details.signerTitle || "Authorized Signatory");
-      setStrategyPeriod(details.strategyPeriod || "");
+      setClientContactName(details.clientContactName || (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson"));
+      setClientEmail(details.clientEmail || userEmail || fetchedProfile.email || "");
+      setSignerTitle(mySigner?.title || details.signerTitle || "Co-Founder / Principal");
+      setStrategyPeriod(details.strategyPeriod || "Initial 6-Month Strategy");
       setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
       setApprovedWebsites(details.approvedWebsites || "");
       setShopifySite(details.shopifySite || "");
@@ -135,21 +179,18 @@ const Contract = () => {
   };
 
   const getPlanPrice = () => {
+    if (isCommissionBased) {
+      return "Commission-Based";
+    }
     if (profile?.contractDetails?.monthlyFee) {
       return profile.contractDetails.monthlyFee;
     }
     const price = profile?.customPrice ?? profile?.custom_price;
     if (price !== null && price !== undefined) {
       if (price === 0) {
-        return "Commission-based";
+        return "Commission-Based";
       }
       return `$${price} USD/month`;
-    }
-    if (profile?.plan === "prospect") {
-      return "Commission-based";
-    }
-    if (profile?.plan === "custom") {
-      return "Commission-based";
     }
     switch (profile?.plan) {
       case "single":
@@ -163,16 +204,16 @@ const Contract = () => {
       case "advertising": {
         const channelsCount = (profile?.selectedServices || []).filter((s: string) => s.startsWith("channel-")).length;
         if (channelsCount === 1) return "$999 USD/month";
-        if (channelsCount === 2) return "$1,998 USD/month";
-        if (channelsCount === 3) return "$1,479 USD/month";
-        if (channelsCount === 4) return "$1,971 USD/month";
-        if (channelsCount === 5) return "$2,464 USD/month";
+        if (channelsCount === 2) return "$1,498 USD/month";
+        if (channelsCount === 3) return "$1,978 USD/month";
+        if (channelsCount === 4) return "$2,356 USD/month";
+        if (channelsCount === 5) return "$2,650 USD/month";
         if (channelsCount === 6) return "$2,957 USD/month";
         if (channelsCount === 7) return "$3,450 USD/month";
         return "$999 USD/month";
       }
       default:
-        return "$888 USD/month";
+        return isCommissionBased ? "Commission-Based" : "$888 USD/month";
     }
   };
 
@@ -232,6 +273,10 @@ const Contract = () => {
         body: { 
           action: "sign_contract",
           signature: signatureName.trim(),
+          signerName: signatureName.trim(),
+          signerTitle: signerTitle.trim(),
+          signerEmail: currentSignerEmail || session.user.email,
+          clientId: profile?.id,
           contractDetails
         },
         headers: {
@@ -242,18 +287,10 @@ const Contract = () => {
       if (response.error) throw new Error(response.error.message);
       if (response.data.error) throw new Error(response.data.error);
 
-      toast.success("Agreement signed successfully! Proceeding to payment...");
+      toast.success("Agreement signed successfully!");
 
-      // Smooth progression: Contract -> Payment -> Full Access
-      if (profile?.subscriptionStatus === "pending_payment") {
-        if (profile?.plan && profile.plan !== "custom") {
-          navigate(`/checkout-summary?plan=${profile.plan}`);
-        } else {
-          navigate("/dashboard");
-        }
-      } else {
-        navigate("/onboarding");
-      }
+      await checkAccess();
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Error signing contract:", error);
       toast.error(error.message || "Failed to sign contract");
@@ -985,47 +1022,146 @@ const Contract = () => {
             <CardFooter className="flex-col gap-4 print:p-0 print:pt-4">
               {(() => {
                 const clientEntityName = clientLegalName || clientTradeName || profile?.contractDetails?.clientLegalName || profile?.contractDetails?.clientTradeName || "In the Dome";
-                const displaySignerName = profile?.contractSignature || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || signatureName || "Jordan";
-                const displaySignerTitle = profile?.contractDetails?.signerTitle || signerTitle || "Authorized Signatory";
-                const displaySignDate = profile?.contractSignedAt 
-                  ? new Date(profile.contractSignedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-                  : (effectiveDate ? new Date(effectiveDate + 'T00:00:00').toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }));
+                const displaySignDate = effectiveDate ? new Date(effectiveDate + 'T00:00:00').toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+                const isDual = coSigners && coSigners.length > 1;
 
-                if (isViewMode) {
+                if (isViewMode || alreadySigned) {
                   return (
                     <div className="w-full space-y-6 pt-4 border-t">
                       <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Authorized Signature</h4>
-                        <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/60 space-y-3 max-w-lg">
-                          <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase">For and on behalf of:</p>
-                            <p className="font-bold text-base text-slate-900">{clientEntityName}</p>
-                          </div>
-                          <div className="pt-2 border-t border-slate-200">
-                            <p className="text-xs text-slate-500">Authorized Digital Signature:</p>
-                            <p className="font-serif italic font-bold text-2xl text-indigo-700 py-1">
-                              {displaySignerName}
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 pt-1 border-t border-slate-100">
-                            <div>
-                              <span className="text-slate-400 block">Title:</span>
-                              <span className="font-semibold text-slate-700">{displaySignerTitle}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block">Date Signed:</span>
-                              <span className="font-semibold text-slate-700">{displaySignDate}</span>
-                            </div>
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            {isDual ? "Authorized Co-Signatures (In the Dome)" : "Authorized Digital Signature"}
+                          </h4>
+                          <span className="text-xs text-slate-500 font-medium">Entity: <strong className="text-slate-800">{clientEntityName}</strong></span>
                         </div>
+
+                        {isDual ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            {coSigners.map((signer: any, idx: number) => {
+                              const isSignerCompleted = signer.status === "signed" || !!signer.signature;
+                              return (
+                                <div key={idx} className="p-5 border border-slate-200 rounded-xl bg-slate-50/70 space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Co-Signer {idx + 1}</span>
+                                    {isSignerCompleted ? (
+                                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">✓ Signed</Badge>
+                                    ) : (
+                                      <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Awaiting Signature</Badge>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-slate-500">Signer Legal Name:</p>
+                                    <p className="font-bold text-slate-900">{signer.name || signer.email}</p>
+                                  </div>
+                                  <div className="pt-2 border-t border-slate-200">
+                                    <p className="text-xs text-slate-500">Digital Signature:</p>
+                                    <p className="font-serif italic font-bold text-2xl text-indigo-700 py-1">
+                                      {signer.signature || "(Pending Execution)"}
+                                    </p>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                                    <div>
+                                      <span className="text-slate-400 block">Title:</span>
+                                      <span className="font-semibold text-slate-700">{signer.title || "Co-Founder / Principal"}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-400 block">Date Signed:</span>
+                                      <span className="font-semibold text-slate-700">
+                                        {signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "Pending"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/60 space-y-3 max-w-lg">
+                            <div>
+                              <p className="text-xs font-semibold text-slate-500 uppercase">For and on behalf of:</p>
+                              <p className="font-bold text-base text-slate-900">{clientEntityName}</p>
+                            </div>
+                            <div className="pt-2 border-t border-slate-200">
+                              <p className="text-xs text-slate-500">Authorized Digital Signature:</p>
+                              <p className="font-serif italic font-bold text-2xl text-indigo-700 py-1">
+                                {profile?.contractSignature || signatureName || "Jordan"}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                              <div>
+                                <span className="text-slate-400 block">Title:</span>
+                                <span className="font-semibold text-slate-700">{signerTitle || "Authorized Signatory"}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block">Date Signed:</span>
+                                <span className="font-semibold text-slate-700">
+                                  {profile?.contractSignedAt ? new Date(profile.contractSignedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : displaySignDate}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="flex justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg no-print print:hidden">
                         <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                           <Shield className="w-4 h-4 text-green-500" />
                           This document is digitally signed and securely archived.
                         </span>
-                        <Button size="sm" variant="default" onClick={() => window.print()}>
-                          Print / Save as PDF
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => navigate("/dashboard")}>
+                            Back to Dashboard
+                          </Button>
+                          <Button size="sm" variant="default" onClick={() => window.print()}>
+                            Print / Save as PDF
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (hasMySignature) {
+                  return (
+                    <div className="w-full space-y-6 pt-4 border-t">
+                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                          <span>You have submitted your signature as {signatureName || currentSignerName}</span>
+                        </div>
+                        <p className="text-xs text-emerald-700 leading-relaxed">
+                          This agreement requires co-signatures from both co-founders before full execution. We are awaiting the second signature.
+                        </p>
+                      </div>
+
+                      {isDual && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                          {coSigners.map((signer: any, idx: number) => {
+                            const isSignerCompleted = signer.status === "signed" || !!signer.signature;
+                            return (
+                              <div key={idx} className="p-4 border border-slate-200 rounded-xl bg-white space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-slate-500">{signer.name || signer.email}</span>
+                                  {isSignerCompleted ? (
+                                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">✓ Signed</Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Pending</Badge>
+                                  )}
+                                </div>
+                                <p className="font-serif italic text-lg text-indigo-700">{signer.signature || "Awaiting Signature"}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-emerald-500" />
+                          Signature recorded securely. You will be notified once fully executed.
+                        </span>
+                        <Button size="sm" variant="default" onClick={() => navigate("/dashboard")}>
+                          Continue to Dashboard
                         </Button>
                       </div>
                     </div>
@@ -1034,6 +1170,13 @@ const Contract = () => {
 
                 return (
                   <div className="w-full space-y-4">
+                    {isDual && (
+                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-800 flex items-center justify-between">
+                        <span>Co-Signers Review: <strong>Jordan Ellams & Michael Wilson (In the Dome)</strong></span>
+                        <Badge variant="outline" className="bg-white text-blue-700 border-blue-200 text-xs">2 Signatures Required</Badge>
+                      </div>
+                    )}
+
                     <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
                       <div className="border-b border-slate-200 pb-3">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Signing Entity</p>
@@ -1062,7 +1205,7 @@ const Contract = () => {
                           </Label>
                           <Input 
                             id="signerTitle"
-                            placeholder="e.g. Authorized Signatory / Host"
+                            placeholder="e.g. Co-Founder / Principal"
                             value={signerTitle}
                             onChange={(e) => setSignerTitle(e.target.value)}
                             className="font-medium bg-white"
