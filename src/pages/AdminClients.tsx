@@ -925,9 +925,7 @@ const AdminClients = () => {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="font-medium">
-                            {(client.subscriptions?.length ?? 0) > 0
-                              ? `Custom (${client.subscriptions!.length} subs)`
-                              : getPlanDisplay(client.plan, client.customPrice, client.selectedServices, client)}
+                            {getPlanDisplay(client.plan, client.customPrice, client.selectedServices, client)}
                           </p>
                         </div>
                         {(() => {
@@ -1204,9 +1202,7 @@ const AdminClients = () => {
                         <div>
                           <p className="text-sm text-muted-foreground">Plan</p>
                           <p className="font-medium">
-                            {hasSubs
-                              ? `Custom (${selectedClient.subscriptions!.length} subscriptions)`
-                              : getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices, selectedClient)}
+                            {getPlanDisplay(selectedClient.plan, selectedClient.customPrice, selectedClient.selectedServices, selectedClient)}
                           </p>
                         </div>
                         <div>
