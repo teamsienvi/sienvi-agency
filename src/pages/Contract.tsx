@@ -198,7 +198,7 @@ const Contract = () => {
       setClientLegalName(details.clientLegalName || fallbackLegal);
       setClientTradeName(details.clientTradeName || fallbackEntity);
       setClientJurisdiction(details.clientJurisdiction || (isPartnerAcc ? "United States" : "California, USA"));
-      setClientAddress(details.clientAddress || "");
+      setClientAddress(details.clientAddress || (isPartnerAcc ? "United States" : ""));
       setClientContactName(details.clientContactName || (isPartnerAcc ? "Corey Robert Rickett" : (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson")));
       setClientEmail(details.clientEmail || userEmail || fetchedProfile.email || "");
       setSignerTitle(mySigner?.title || details.signerTitle || (isPartnerAcc ? "Partner / Authorized Signatory" : "Co-Founder / Principal"));
@@ -261,24 +261,16 @@ const Contract = () => {
   };
 
   const handleSign = async () => {
+    const resolvedJurisdiction = clientJurisdiction.trim() || (isPartnership || isNda ? "United States" : "California, USA");
+    const resolvedAddress = clientAddress.trim() || "United States";
+    const resolvedContactName = clientContactName.trim() || clientLegalName.trim() || signatureName.trim();
+
     if (!effectiveDate) {
       toast.error("Please select an Effective Date");
       return;
     }
     if (!clientLegalName.trim()) {
       toast.error("Please enter your Client Legal Name");
-      return;
-    }
-    if (!clientJurisdiction.trim()) {
-      toast.error("Please enter your Client Jurisdiction");
-      return;
-    }
-    if (!clientAddress.trim()) {
-      toast.error("Please enter your Client Address");
-      return;
-    }
-    if (!clientContactName.trim()) {
-      toast.error("Please enter your Client Contact Name");
       return;
     }
     if (!agreed) {
@@ -301,11 +293,11 @@ const Contract = () => {
         effectiveDate,
         clientLegalName: clientLegalName.trim(),
         clientTradeName: clientTradeName.trim(),
-        clientJurisdiction: clientJurisdiction.trim(),
-        clientAddress: clientAddress.trim(),
-        clientContactName: clientContactName.trim(),
+        clientJurisdiction: resolvedJurisdiction,
+        clientAddress: resolvedAddress,
+        clientContactName: resolvedContactName,
         clientEmail: clientEmail.trim(),
-        signerTitle: signerTitle.trim(),
+        signerTitle: signerTitle.trim() || "Authorized Signatory",
         approvedWebsites: approvedWebsites.trim(),
         shopifySite: shopifySite.trim(),
         strategyPeriod: strategyPeriod.trim(),
