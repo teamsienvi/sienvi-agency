@@ -304,23 +304,37 @@ const Contract = () => {
         confidentialityPeriod: confidentialityPeriod.trim(),
       };
 
+      // Only include clientId if explicitly in admin view mode with a param clientId
+      const requestBody: Record<string, any> = {
+        action: "sign_contract",
+        signature: signatureName.trim(),
+        signerName: signatureName.trim(),
+        signerTitle: signerTitle.trim() || "Authorized Signatory",
+        signerEmail: currentSignerEmail || session.user.email,
+        contractDetails,
+      };
+      if (isViewMode && searchParams.get("clientId")) {
+        requestBody.clientId = searchParams.get("clientId");
+      }
+
       const response = await supabase.functions.invoke("update-client-status", {
-        body: { 
-          action: "sign_contract",
-          signature: signatureName.trim(),
-          signerName: signatureName.trim(),
-          signerTitle: signerTitle.trim(),
-          signerEmail: currentSignerEmail || session.user.email,
-          clientId: profile?.id,
-          contractDetails
-        },
+        body: requestBody,
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
-      if (response.data.error) throw new Error(response.data.error);
+      if (response.error) {
+        let errorMsg = response.error.message || "Failed to sign contract";
+        try {
+          if (response.error.context && typeof response.error.context.json === "function") {
+            const body = await response.error.context.json();
+            if (body?.error) errorMsg = body.error;
+          }
+        } catch (_) {}
+        throw new Error(errorMsg);
+      }
+      if (response.data?.error) throw new Error(response.data.error);
 
       toast.success("Agreement signed successfully!");
 
