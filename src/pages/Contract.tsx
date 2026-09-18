@@ -1262,6 +1262,96 @@ const Contract = () => {
                     </ul>
                   </div>
                 </div>
+              ) : isNda ? (
+                <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
+                  <h3 className="font-semibold print:hidden">Confidentiality, Non-Use, Non-Build & Feedback Agreement</h3>
+                  {renderAgreementDetailsTable()}
+
+                  <p>
+                    This Confidentiality, Non-Use, Non-Build & Feedback Agreement ("Agreement") is entered into 
+                    between SIENVI Agency ("Disclosing Party") and the undersigned strategic partner ("Receiving Party"), 
+                    collectively referred to as the "Parties."
+                  </p>
+
+                  <h4 className="font-semibold mt-4">1. Purpose</h4>
+                  <p>
+                    The Parties wish to explore a potential strategic collaboration. In connection with this exploration, 
+                    the Disclosing Party may share certain proprietary and confidential information with the Receiving Party. 
+                    This Agreement sets forth the terms under which such information will be disclosed and protected.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">2. Definition of Confidential Information</h4>
+                  <p>
+                    "Confidential Information" means any and all non-public, proprietary, or trade secret information 
+                    disclosed by the Disclosing Party to the Receiving Party, whether orally, in writing, electronically, 
+                    or by any other means, including but not limited to: business strategies, marketing plans, client lists, 
+                    AI systems, automation workflows, software tools, processes, pricing models, financial data, analytics, 
+                    product roadmaps, and any other information marked or reasonably understood to be confidential.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">3. Non-Use Obligation</h4>
+                  <p>
+                    The Receiving Party agrees not to use any Confidential Information for any purpose other than 
+                    evaluating and engaging in the proposed strategic collaboration with the Disclosing Party. 
+                    The Receiving Party shall not exploit, commercialize, or otherwise benefit from the Confidential 
+                    Information outside the scope of this Agreement.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">4. Non-Build Obligation</h4>
+                  <p>
+                    The Receiving Party agrees not to design, develop, build, replicate, reverse-engineer, or create 
+                    any product, service, tool, workflow, or system that is substantially similar to or derived from 
+                    the Confidential Information disclosed under this Agreement.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">5. Non-Disclosure Obligation</h4>
+                  <p>
+                    The Receiving Party agrees to hold all Confidential Information in strict confidence and not to 
+                    disclose it to any third party without the prior written consent of the Disclosing Party, except 
+                    to those employees, contractors, or advisors who have a need to know and are bound by obligations 
+                    of confidentiality no less restrictive than those set forth herein.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">6. Feedback</h4>
+                  <p>
+                    If the Receiving Party provides any feedback, suggestions, or recommendations ("Feedback") 
+                    regarding the Confidential Information or the Disclosing Party's products, services, or strategies, 
+                    the Disclosing Party shall be free to use, disclose, reproduce, and otherwise exploit such 
+                    Feedback without restriction or obligation of any kind.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">7. Term and Survival</h4>
+                  <p>
+                    This Agreement shall remain in effect for the duration of the strategic collaboration. 
+                    The confidentiality, non-use, and non-build obligations shall survive for the Confidentiality 
+                    Survival Period ({confidentialityPeriod}) following the termination or expiration of this Agreement. 
+                    Either party may terminate this Agreement with {noticePeriod} written notice.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">8. Return of Materials</h4>
+                  <p>
+                    Upon termination of this Agreement or upon request by the Disclosing Party, the Receiving Party 
+                    shall promptly return or destroy all Confidential Information and any copies thereof.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">9. Governing Law</h4>
+                  <p>
+                    This Agreement shall be governed by and construed in accordance with the laws of the 
+                    applicable jurisdiction agreed upon by both parties.
+                  </p>
+
+                  <h4 className="font-semibold mt-4">10. Entire Agreement</h4>
+                  <p>
+                    This Agreement constitutes the entire understanding between the Parties with respect to the 
+                    subject matter hereof and supersedes all prior negotiations, representations, or agreements 
+                    relating thereto. Any amendments must be in writing and signed by both Parties.
+                  </p>
+
+                  <p className="mt-6 italic text-muted-foreground">
+                    By signing below, you acknowledge that you have read, understood, and 
+                    agree to be bound by the terms of this Confidentiality, Non-Use, Non-Build & Feedback Agreement.
+                  </p>
+                </div>
               ) : (
                 <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
                   <h3 className="font-semibold print:hidden">Terms of Service</h3>
