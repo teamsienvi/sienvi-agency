@@ -70,7 +70,6 @@ const Contract = () => {
     profile?.isPartnership ||
     profile?.plan === "partnership" ||
     profile?.plan === "nda" ||
-    profile?.email === "info@fabcheer.com" ||
     profile?.contractDetails?.isNda ||
     profile?.contractDetails?.relationshipType === "partnership"
   );
@@ -153,8 +152,7 @@ const Contract = () => {
       const mySigner = signers.find((s: any) => 
         s.email?.toLowerCase() === userEmail ||
         (userEmail.includes("jordan") && s.email?.toLowerCase().includes("jordan")) ||
-        (userEmail.includes("michael") && s.email?.toLowerCase().includes("michael")) ||
-        (userEmail.includes("fabcheer") && s.email?.toLowerCase().includes("fabcheer"))
+        (userEmail.includes("michael") && s.email?.toLowerCase().includes("michael"))
       );
 
       const isMySignerSigned = mySigner?.status === "signed" || !!mySigner?.signature;
@@ -169,8 +167,8 @@ const Contract = () => {
       const isPartnerAcc = fetchedProfile.isPartnership || 
         fetchedProfile.plan === "partnership" || 
         fetchedProfile.plan === "nda" || 
-        userEmail === "info@fabcheer.com" || 
-        fetchedProfile.email === "info@fabcheer.com";
+        fetchedProfile.contractDetails?.isNda || 
+        fetchedProfile.contractDetails?.relationshipType === "partnership";
 
       // Pre-populate signature name
       if (mySigner?.signature) {
@@ -179,8 +177,8 @@ const Contract = () => {
         setSignatureName(mySigner.name);
       } else if (fetchedProfile.currentSignerName) {
         setSignatureName(fetchedProfile.currentSignerName);
-      } else if (isPartnerAcc || userEmail.includes("fabcheer")) {
-        setSignatureName("Corey Robert Rickett");
+      } else if (isPartnerAcc) {
+        setSignatureName(fetchedProfile.contractDetails?.clientContactName || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "");
       } else if (fetchedProfile.firstName) {
         setSignatureName(`${fetchedProfile.firstName} ${fetchedProfile.lastName || ""}`.trim());
       } else if (userEmail.includes("michael")) {
@@ -191,17 +189,17 @@ const Contract = () => {
 
       // Pre-populate Agreement Details fields
       const details = fetchedProfile.contractDetails || {};
-      const fallbackEntity = isPartnerAcc ? "FabCheer" : (fetchedProfile.entityName || "In the Dome");
-      const fallbackLegal = isPartnerAcc ? "Corey Robert Rickett" : (fetchedProfile.entityName || "In the Dome");
+      const fallbackEntity = isPartnerAcc ? (fetchedProfile.contractDetails?.clientTradeName || fetchedProfile.entityName || "") : (fetchedProfile.entityName || "In the Dome");
+      const fallbackLegal = isPartnerAcc ? (fetchedProfile.contractDetails?.clientLegalName || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "") : (fetchedProfile.entityName || "In the Dome");
 
       setEffectiveDate(details.effectiveDate || new Date().toISOString().substring(0, 10));
       setClientLegalName(details.clientLegalName || fallbackLegal);
       setClientTradeName(details.clientTradeName || fallbackEntity);
       setClientJurisdiction(details.clientJurisdiction || (isPartnerAcc ? "United States" : "California, USA"));
       setClientAddress(details.clientAddress || (isPartnerAcc ? "United States" : ""));
-      setClientContactName(details.clientContactName || (isPartnerAcc ? "Corey Robert Rickett" : (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson")));
+      setClientContactName(details.clientContactName || (isPartnerAcc ? (`${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "") : (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson")));
       setClientEmail(details.clientEmail || userEmail || fetchedProfile.email || "");
-      setSignerTitle(mySigner?.title || details.signerTitle || (isPartnerAcc ? "Partner / Authorized Signatory" : "Co-Founder / Principal"));
+      setSignerTitle(mySigner?.title || details.signerTitle || (isPartnerAcc ? "Authorized Representative" : "Co-Founder / Principal"));
       setStrategyPeriod(details.strategyPeriod || (isPartnerAcc ? "Strategic Collaboration" : "Initial 6-Month Strategy"));
       setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
       setApprovedWebsites(details.approvedWebsites || "");
@@ -483,7 +481,7 @@ const Contract = () => {
                 <td className="px-4 py-3 font-semibold text-slate-600">Partner Trade Name / Brand (if applicable)</td>
                 <td className="px-4 py-2">
                   <Input
-                    placeholder="e.g. FabCheer"
+                    placeholder="e.g. Company Name"
                     value={clientTradeName}
                     onChange={(e) => setClientTradeName(e.target.value)}
                     className="max-w-md h-9 text-sm"
@@ -1408,7 +1406,7 @@ const Contract = () => {
             </CardContent>
             <CardFooter className="flex-col gap-4 print:p-0 print:pt-4">
               {(() => {
-                const clientEntityName = clientLegalName || clientTradeName || profile?.contractDetails?.clientLegalName || profile?.contractDetails?.clientTradeName || profile?.entityName || (isPartnership ? "FabCheer" : "In the Dome");
+                const clientEntityName = clientLegalName || clientTradeName || profile?.contractDetails?.clientLegalName || profile?.contractDetails?.clientTradeName || profile?.entityName || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim() || "Partner";
                 const displaySignDate = effectiveDate ? new Date(effectiveDate + 'T00:00:00').toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
                 const isDual = coSigners && coSigners.length > 1;
 

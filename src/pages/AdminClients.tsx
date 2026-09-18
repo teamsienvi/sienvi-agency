@@ -202,12 +202,8 @@ const AdminClients = () => {
     return (
       client.plan === "partnership" ||
       client.plan === "nda" ||
-      email === "info@fabcheer.com" ||
-      name.includes("corey robert rickett") ||
-      name.includes("fabcheer") ||
       cd.relationshipType === "partnership" ||
       cd.isNda === true ||
-      cd.uploadedContractName?.includes("CHEERCPT") ||
       cd.uploadedContractName?.includes("CONFIDENTIALITY")
     );
   };

@@ -158,7 +158,6 @@ const ClientDashboard = () => {
     profile?.isPartnership ||
     profile?.plan === "partnership" ||
     profile?.plan === "nda" ||
-    profile?.email === "info@fabcheer.com" ||
     profile?.contractDetails?.isNda ||
     profile?.contractDetails?.relationshipType === "partnership"
   );
@@ -227,7 +226,7 @@ const ClientDashboard = () => {
       // Skip enforcement for admins so they don't get stuck when testing client links
       const isAdvertising = clientProfile.plan === "advertising";
       const isClientDiscovery = clientProfile.plan === "discovery" || clientProfile.plan === "prospect" || clientProfile.plan === "custom-lms";
-      const isClientPartnership = clientProfile.plan === "partnership" || clientProfile.plan === "nda" || clientProfile.email === "info@fabcheer.com" || clientProfile.isPartnership;
+      const isClientPartnership = clientProfile.plan === "partnership" || clientProfile.plan === "nda" || clientProfile.isPartnership || clientProfile.contractDetails?.isNda || clientProfile.contractDetails?.relationshipType === "partnership";
       
       if (!response.data.isAdmin && !isAdvertising && !isClientDiscovery && !isClientPartnership && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
         // Step 2: Enforce Contract Signing before Payment & Full Access
@@ -1122,8 +1121,8 @@ const ClientDashboard = () => {
                   <div className="grid sm:grid-cols-2 gap-3 text-sm">
                     <div className="p-3 rounded-lg bg-white/80 border border-purple-100/80">
                       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Partner Entity</p>
-                      <p className="font-semibold text-slate-900">{profile.entityName || "FabCheer"}</p>
-                      <p className="text-xs text-slate-500">Corey Robert Rickett</p>
+                      <p className="font-semibold text-slate-900">{profile.contractDetails?.clientTradeName || profile.entityName || profile.contractDetails?.clientLegalName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || "Strategic Partner"}</p>
+                      <p className="text-xs text-slate-500">{profile.contractDetails?.clientContactName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim() || ""}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-white/80 border border-purple-100/80">
                       <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Financial Obligation</p>
