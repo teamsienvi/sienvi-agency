@@ -28,8 +28,8 @@ serve(async (req) => {
       throw new Error("Server configuration error");
     }
 
-    // Get the email from the request body
-    const { email } = await req.json();
+    // Get the email and optional stripeCustomerId from the request body
+    const { email, stripeCustomerId } = await req.json();
 
     if (!email) {
       console.error("Missing email in request body");
@@ -44,58 +44,125 @@ serve(async (req) => {
 
     console.log(`Creating customer portal session for email: ${email}`);
 
-    // Initialize Supabase client with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Look up the subscription by email to get stripe_customer_id
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .select("stripe_customer_id, subscription_status")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (subscriptionError) {
-      console.error("Error fetching subscription:", subscriptionError);
-      throw new Error("Failed to fetch subscription data");
-    }
-
-    if (!subscription) {
-      console.error(`No subscription found for email: ${email}`);
-      return new Response(
-        JSON.stringify({ error: "No subscription found for this account" }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
-      );
-    }
-
-    if (!subscription.stripe_customer_id) {
-      console.error(`No Stripe customer ID for email: ${email}`);
-      return new Response(
-        JSON.stringify({ error: "No billing information found" }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
-      );
-    }
-
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2023-10-16",
     });
+
+    // Initialize Supabase client with service role
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let targetCustomerId: string | null = stripeCustomerId || null;
+
+    if (!targetCustomerId) {
+      // Collect all distinct Stripe customer IDs for this client
+      const allCustomerIds = new Set<string>();
+
+      // 1. Check client_subscriptions (multi-sub clients)
+      const { data: clientSubs } = await supabase
+        .from("client_subscriptions")
+        .select("stripe_customer_id")
+        .eq("subscription_status", "active")
+        .not("stripe_customer_id", "is", null);
+
+      // We need the client_profile_id first
+      const { data: clientProfile } = await supabase
+        .from("client_profiles")
+        .select("id, stripe_customer_id")
+        .eq("email", email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (clientProfile) {
+        // Get all client_subscriptions for this profile
+        const { data: profileSubs } = await supabase
+          .from("client_subscriptions")
+          .select("stripe_customer_id, subscription_status")
+          .eq("client_profile_id", clientProfile.id)
+          .not("stripe_customer_id", "is", null);
+
+        if (profileSubs) {
+          for (const sub of profileSubs) {
+            if (sub.stripe_customer_id && !sub.stripe_customer_id.startsWith("pending_")) {
+              allCustomerIds.add(sub.stripe_customer_id);
+            }
+          }
+        }
+
+        // Also check the profile-level stripe_customer_id
+        if (clientProfile.stripe_customer_id && !clientProfile.stripe_customer_id.startsWith("pending_")) {
+          allCustomerIds.add(clientProfile.stripe_customer_id);
+        }
+      }
+
+      // 2. Fall back to subscriptions table
+      const { data: subs } = await supabase
+        .from("subscriptions")
+        .select("stripe_customer_id")
+        .eq("email", email)
+        .not("stripe_customer_id", "is", null);
+
+      if (subs) {
+        for (const sub of subs) {
+          if (sub.stripe_customer_id && !sub.stripe_customer_id.startsWith("pending_")) {
+            allCustomerIds.add(sub.stripe_customer_id);
+          }
+        }
+      }
+
+      const customerIds = Array.from(allCustomerIds);
+      console.log(`Found ${customerIds.length} Stripe customer ID(s) for ${email}:`, customerIds);
+
+      if (customerIds.length === 0) {
+        console.error(`No Stripe customer ID found for email: ${email}`);
+        return new Response(
+          JSON.stringify({ error: "No billing information found" }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
+
+      if (customerIds.length === 1) {
+        targetCustomerId = customerIds[0];
+      } else {
+        // Multiple customer IDs — find the one with the most active subscriptions in Stripe
+        let bestCustomerId = customerIds[0];
+        let bestActiveCount = 0;
+
+        for (const custId of customerIds) {
+          try {
+            const stripeSubs = await stripe.subscriptions.list({
+              customer: custId,
+              status: "active",
+              limit: 100,
+            });
+            const activeCount = stripeSubs.data.length;
+            console.log(`Customer ${custId}: ${activeCount} active subscription(s)`);
+            if (activeCount > bestActiveCount) {
+              bestActiveCount = activeCount;
+              bestCustomerId = custId;
+            }
+          } catch (e) {
+            console.error(`Error checking subscriptions for ${custId}:`, e);
+          }
+        }
+
+        targetCustomerId = bestCustomerId;
+        console.log(`Selected primary customer: ${targetCustomerId} (${bestActiveCount} active subs)`);
+      }
+    }
 
     // Get the origin from the request or use a default
     const origin = req.headers.get("origin") || "https://sienvi.com";
 
     // Create customer portal session
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
-      return_url: `${origin}/onboarding/services`,
+      customer: targetCustomerId,
+      return_url: `${origin}/dashboard`,
     });
 
-    console.log(`Customer portal session created: ${portalSession.id}`);
+    console.log(`Customer portal session created: ${portalSession.id} for customer: ${targetCustomerId}`);
 
     return new Response(
       JSON.stringify({ url: portalSession.url }),

@@ -258,7 +258,12 @@ const ClientDashboard = () => {
       if (response.error) throw new Error(response.error.message);
       if (response.data.error) throw new Error(response.data.error);
 
-      window.location.href = response.data.url;
+      if (isAdmin) {
+        // Admins preview in a new tab so they don't lose the dashboard
+        window.open(response.data.url, "_blank");
+      } else {
+        window.location.href = response.data.url;
+      }
     } catch (error: any) {
       console.error("Error opening billing portal:", error);
       toast.error("Unable to open billing portal. Please contact support.");
@@ -1080,7 +1085,7 @@ const ClientDashboard = () => {
                       })}
                     </div>
 
-                    {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
+                    {(isAdmin || ["active", "past_due"].includes(profile.subscriptionStatus)) && (profile.stripeCustomerId || profile.subscriptions?.some(s => s.stripeCustomerId)) && (
                       <div className="mt-4">
                         <Button
                           variant="outline"
@@ -1195,7 +1200,7 @@ const ClientDashboard = () => {
                   </div>
                   )}
 
-                  {profile.subscriptionStatus === "active" && profile.stripeCustomerId && (
+                  {(isAdmin || ["active", "past_due"].includes(profile.subscriptionStatus)) && (profile.stripeCustomerId || profile.subscriptions?.some(s => s.stripeCustomerId)) && (
                     <>
                       <Separator />
                       <Button

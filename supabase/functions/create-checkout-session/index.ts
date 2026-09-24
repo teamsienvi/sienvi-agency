@@ -90,7 +90,7 @@ serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" });
-    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly, customPrice, customerEmail, subscriptionId, subscriptionLabel } = await req.json();
+    const { priceId, selectedServices, advertisingChannels, plan, isAdvertisingOnly, customPrice, customerEmail, subscriptionId, subscriptionLabel, isOneTime, setupFee, setupFeeLabel } = await req.json();
     const origin = req.headers.get("origin") || "https://sienvi.com";
 
     // ========================================
@@ -243,8 +243,9 @@ serve(async (req) => {
     // ========================================
     if (plan === "custom") {
       const price = customPrice || PRICING.SINGLE_SERVICE;
+      const isOneTimeMode = Boolean(isOneTime);
       
-      console.log(`Custom plan checkout: price=$${price}`);
+      console.log(`Custom plan checkout: price=$${price}, isOneTime=${isOneTimeMode}, setupFee=${setupFee}`);
 
       const customer = await stripe.customers.create({
         email: customerEmail || undefined,
@@ -279,21 +280,38 @@ serve(async (req) => {
         ? `Sienvi — ${subscriptionLabel}`
         : `Sienvi Custom Plan${serviceNames ? ` (${serviceNames})` : ""}`;
 
-      const dynamicPrice = await stripe.prices.create({
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+      // If there's an additional one-time setup fee accompanying the recurring subscription
+      if (!isOneTimeMode && setupFee && typeof setupFee === "number" && setupFee > 0) {
+        const setupPrice = await stripe.prices.create({
+          unit_amount: Math.round(setupFee * 100),
+          currency: "usd",
+          product_data: {
+            name: setupFeeLabel || `${productName} — One-Time Setup Fee`,
+          },
+        });
+        lineItems.push({ price: setupPrice.id, quantity: 1 });
+      }
+
+      // Main plan price
+      const priceConfig: any = {
         unit_amount: Math.round(price * 100),
         currency: "usd",
-        recurring: { interval: "month" },
         product_data: {
           name: productName,
         },
-      });
+      };
 
-      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-        { price: dynamicPrice.id, quantity: 1 },
-      ];
+      if (!isOneTimeMode) {
+        priceConfig.recurring = { interval: "month" };
+      }
+
+      const dynamicPrice = await stripe.prices.create(priceConfig);
+      lineItems.push({ price: dynamicPrice.id, quantity: 1 });
 
       // Add advertising if selected
-      if (advertisingChannels && advertisingChannels.length > 0) {
+      if (!isOneTimeMode && advertisingChannels && advertisingChannels.length > 0) {
         const channelCount = Math.min(advertisingChannels.length, 7);
         const { total, savings } = calculateAdvertisingCost(channelCount);
         const adPriceId = ADVERTISING_PRICE_IDS[channelCount];
@@ -313,7 +331,7 @@ serve(async (req) => {
       }
 
       const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
+        mode: isOneTimeMode ? "payment" : "subscription",
         payment_method_types: ["card"],
         customer: customer.id,
         line_items: lineItems,
@@ -323,6 +341,8 @@ serve(async (req) => {
           custom_price: price.toString(),
           selected_services: selectedServices ? JSON.stringify(selectedServices) : "",
           advertising_channels: advertisingChannels ? JSON.stringify(advertisingChannels) : "",
+          is_one_time: isOneTimeMode ? "true" : "false",
+          ...(setupFee ? { setup_fee: setupFee.toString() } : {}),
           ...(subscriptionId ? { subscription_id: subscriptionId } : {}),
           ...(subscriptionLabel ? { subscription_label: subscriptionLabel } : {}),
         },
@@ -330,7 +350,7 @@ serve(async (req) => {
         cancel_url: `${origin}/dashboard`,
       });
 
-      console.log(`Custom plan checkout session created: ${session.id}`);
+      console.log(`Custom plan checkout session created: ${session.id} (mode: ${isOneTimeMode ? 'payment' : 'subscription'})`);
       return new Response(
         JSON.stringify({ url: session.url }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

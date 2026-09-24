@@ -136,6 +136,7 @@ const AdminClients = () => {
   const [onboardingViewClient, setOnboardingViewClient] = useState<Client | null>(null);
   const [onboardingLinks, setOnboardingLinks] = useState<Record<string, string>>({});
   const [generatingOnboardingLink, setGeneratingOnboardingLink] = useState<string | null>(null);
+  const [previewingBilling, setPreviewingBilling] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndFetchClients();
@@ -409,6 +410,25 @@ const AdminClients = () => {
 
   const openStripeCustomer = (customerId: string) => {
     window.open(`https://dashboard.stripe.com/customers/${customerId}`, "_blank");
+  };
+
+  const handlePreviewBilling = async (client: Client) => {
+    if (previewingBilling) return;
+    setPreviewingBilling(client.id);
+    try {
+      const response = await supabase.functions.invoke("create-customer-portal-session", {
+        body: { email: client.email },
+      });
+      if (response.error) throw new Error(response.error.message);
+      if (response.data.error) throw new Error(response.data.error);
+      window.open(response.data.url, "_blank");
+      toast.success("Billing portal opened in new tab");
+    } catch (error: any) {
+      console.error("Error opening billing preview:", error);
+      toast.error(error.message || "Failed to open billing portal");
+    } finally {
+      setPreviewingBilling(null);
+    }
   };
 
   const handleGenerateCheckoutLink = async (client: Client) => {
@@ -1813,14 +1833,29 @@ const AdminClients = () => {
                         <span className="truncate">Migrate to Stripe</span>
                       </Button>
                     ) : selectedClient.stripeCustomerId && !selectedClient.stripeCustomerId.startsWith("pending_") ? (
-                      <Button
-                        onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
-                        variant="outline"
-                        className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4 text-primary shrink-0" />
-                        <span className="truncate">View in Stripe</span>
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => openStripeCustomer(selectedClient.stripeCustomerId)}
+                          variant="outline"
+                          className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                        >
+                          <ExternalLink className="w-4 h-4 text-primary shrink-0" />
+                          <span className="truncate">View in Stripe</span>
+                        </Button>
+                        <Button
+                          onClick={() => handlePreviewBilling(selectedClient)}
+                          variant="outline"
+                          disabled={previewingBilling === selectedClient.id}
+                          className="h-10 px-3 bg-background hover:bg-muted border border-border text-foreground font-medium text-xs rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                        >
+                          {previewingBilling === selectedClient.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                          ) : (
+                            <Eye className="w-4 h-4 text-primary shrink-0" />
+                          )}
+                          <span className="truncate">Preview Billing</span>
+                        </Button>
+                      </>
                     ) : null}
 
                     <Button
