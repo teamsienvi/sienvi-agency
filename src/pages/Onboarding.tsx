@@ -70,33 +70,60 @@ const Onboarding = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      let profile: any = null;
+
       if (!session) {
-        navigate("/login");
-        return;
+        if (paramClientId) {
+          const { data: prof, error: profErr } = await supabase
+            .from("client_profiles")
+            .select("*")
+            .eq("id", paramClientId)
+            .single();
+
+          if (!profErr && prof) {
+            profile = {
+              id: prof.id,
+              email: prof.email,
+              firstName: prof.first_name,
+              lastName: prof.last_name,
+              plan: prof.plan,
+              contractStatus: prof.contract_status,
+              onboardingStatus: prof.onboarding_status,
+              selectedServices: prof.selected_services || [],
+              discoveryFormType: prof.notes,
+            };
+          } else {
+            navigate("/login");
+            return;
+          }
+        } else {
+          navigate("/login");
+          return;
+        }
+      } else {
+        const response = await supabase.functions.invoke("get-client-profile", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: paramClientId ? { clientId: paramClientId } : undefined,
+        });
+
+        if (response.error || response.data.error) {
+          navigate("/dashboard");
+          return;
+        }
+
+        profile = response.data.profile;
       }
 
-      const response = await supabase.functions.invoke("get-client-profile", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: paramClientId ? { clientId: paramClientId } : undefined,
-      });
-
-      if (response.error || response.data.error) {
-        navigate("/dashboard");
-        return;
-      }
-
-      const profile = response.data.profile;
-      
       const services = profile.selectedServices || [];
       const isDiscovery = profile.plan === "discovery" || profile.plan === "prospect" || profile.plan === "custom-lms" || services.includes("custom-tool");
       
-      if (profile.contractStatus !== "signed" && !isDiscovery) {
+      if (!paramClientId && profile.contractStatus !== "signed" && !isDiscovery) {
         toast.error("Please sign the contract first");
         navigate("/dashboard");
         return;
       }
 
-      if (profile.onboardingStatus === "completed") {
+      if (!paramClientId && profile.onboardingStatus === "completed") {
         toast.info("Onboarding already completed!");
         navigate("/dashboard");
         return;
@@ -167,7 +194,7 @@ const Onboarding = () => {
 
       // Determine completed steps based on active services
       let completed: boolean[];
-      if (session.user.email === "sam@hairtamin.com") {
+      if (session?.user?.email === "sam@hairtamin.com" || profile?.email === "sam@hairtamin.com") {
         completed = [!!qData?.completed_at, !!qData?.businessOutcome];
       } else if (type === "prospect") {
         completed = [!!qData?.completed_at];
@@ -196,7 +223,7 @@ const Onboarding = () => {
       const firstIncomplete = completed.findIndex(c => !c);
       setCurrentStep(firstIncomplete === -1 ? 0 : firstIncomplete);
 
-      if (profile.onboardingStatus === "not_started") {
+      if (profile.onboardingStatus === "not_started" && session) {
         await supabase.functions.invoke("update-client-status", {
           body: { action: "start_onboarding" },
           headers: { Authorization: `Bearer ${session.access_token}` },
