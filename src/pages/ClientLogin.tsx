@@ -223,6 +223,20 @@ const ClientLogin = () => {
       }
 
       toast.success("Password set successfully! You can now log in with your email and password.");
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          const { data: prof } = await supabase
+            .from("client_profiles")
+            .select("contract_status, plan")
+            .eq("email", user.email)
+            .maybeSingle();
+          if (prof?.contract_status === "not_signed" && prof?.plan !== "prospect" && prof?.plan !== "advertising") {
+            navigate("/contract");
+            return;
+          }
+        }
+      } catch (_) {}
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Error setting password:", err);

@@ -23,6 +23,12 @@ import {
   FileText,
   ExternalLink,
   Download,
+  Copy,
+  Check,
+  Landmark,
+  CalendarDays,
+  Building2,
+  Package,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -42,6 +48,7 @@ const Contract = () => {
   const [effectiveDate, setEffectiveDate] = useState("");
   const [clientLegalName, setClientLegalName] = useState("");
   const [clientTradeName, setClientTradeName] = useState("");
+  const [clientEntityType, setClientEntityType] = useState("Corporation");
   const [clientJurisdiction, setClientJurisdiction] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientContactName, setClientContactName] = useState("");
@@ -52,6 +59,14 @@ const Contract = () => {
   const [shopifySite, setShopifySite] = useState("");
   const [signerTitle, setSignerTitle] = useState("Authorized Signatory");
   const [pdfNumPages, setPdfNumPages] = useState<number>(0);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const onPdfLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setPdfNumPages(numPages);
@@ -83,11 +98,12 @@ const Contract = () => {
     profile?.contractDetails?.uploadedContractName?.toLowerCase()?.includes("non-use")
   );
 
-  const isCommissionBased = (profile?.isCommissionBased || 
-    profile?.customPrice === 0 || 
-    profile?.custom_price === 0 || 
-    profile?.plan === "custom" || 
-    profile?.plan === "prospect") && !isPartnership && !isNda;
+  const isCommissionBased = Boolean(
+    (profile?.isCommissionBased || 
+      profile?.contractDetails?.pricingModel === "commission" ||
+      ((profile?.customPrice === 0 || profile?.custom_price === 0) && profile?.plan === "custom") || 
+      profile?.plan === "prospect") && !isPartnership && !isNda && !profile?.contractDetails?.monthlyFee
+  );
 
   // Resolve the monthly price from profile or plan defaults
   const planDefaultPrices: Record<string, number> = {
@@ -95,9 +111,13 @@ const Contract = () => {
     amazon: 999, advertising: 999, custom: 0,
     partnership: 0, nda: 0,
   };
-  const monthlyPrice = profile?.customPrice ?? profile?.custom_price ?? planDefaultPrices[profile?.plan] ?? 0;
+  const monthlyPrice = profile?.contractDetails?.monthlyFee 
+    ? profile.contractDetails.monthlyFee 
+    : profile?.customPrice ?? profile?.custom_price ?? planDefaultPrices[profile?.plan] ?? 0;
   const formattedPrice = isPartnership || isNda
     ? "Strategic Partnership (No Service / Subscription Fees)"
+    : profile?.contractDetails?.monthlyFee
+    ? profile.contractDetails.monthlyFee
     : isCommissionBased 
     ? "Commission-Based (Performance / Revenue Share)" 
     : `$${Number(monthlyPrice).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USD/month`;
@@ -120,30 +140,71 @@ const Contract = () => {
   const checkAccess = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/login");
-        return;
-      }
-
       const paramClientId = searchParams.get("clientId");
-      const response = await supabase.functions.invoke("get-client-profile", {
-        method: "POST",
-        body: { clientId: paramClientId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      
+      let fetchedProfile: any = null;
 
-      if (response.error || response.data.error) {
-        navigate("/dashboard");
-        return;
+      if (!session) {
+        if (paramClientId) {
+          const { data: prof, error: profErr } = await supabase
+            .from("client_profiles")
+            .select("*")
+            .eq("id", paramClientId)
+            .single();
+
+          if (!profErr && prof) {
+            fetchedProfile = {
+              id: prof.id,
+              email: prof.email,
+              firstName: prof.first_name,
+              lastName: prof.last_name,
+              role: prof.role || "client",
+              accountStatus: prof.account_status,
+              plan: prof.plan,
+              subscriptionStatus: prof.subscription_status,
+              stripeCustomerId: prof.stripe_customer_id,
+              stripeSubscriptionId: prof.stripe_subscription_id,
+              contractStatus: prof.contract_status,
+              contractSignedAt: prof.contract_signed_at,
+              contractSignature: prof.contract_signature,
+              contractDetails: prof.contract_details,
+              onboardingStatus: prof.onboarding_status,
+              onboardingCompletedAt: prof.onboarding_completed_at,
+              maxServices: prof.max_services || 0,
+              selectedServices: prof.selected_services || [],
+              customPrice: prof.custom_price,
+              createdAt: prof.created_at,
+              updatedAt: prof.updated_at,
+              notes: prof.notes,
+            };
+          } else {
+            navigate("/login");
+            return;
+          }
+        } else {
+          navigate("/login");
+          return;
+        }
+      } else {
+        const response = await supabase.functions.invoke("get-client-profile", {
+          method: "POST",
+          body: { clientId: paramClientId },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (response.error || response.data.error) {
+          navigate("/dashboard");
+          return;
+        }
+
+        fetchedProfile = response.data.profile;
       }
 
-      const fetchedProfile = response.data.profile;
       setProfile(fetchedProfile);
       
-      const userEmail = (session.user.email || fetchedProfile.currentSignerEmail || "").toLowerCase();
+      const userEmail = (session?.user?.email || fetchedProfile?.currentSignerEmail || fetchedProfile?.email || "").toLowerCase();
       setCurrentSignerEmail(userEmail);
 
       const signers = fetchedProfile.signers || fetchedProfile.contractDetails?.signers || [];
@@ -189,17 +250,26 @@ const Contract = () => {
 
       // Pre-populate Agreement Details fields
       const details = fetchedProfile.contractDetails || {};
-      const fallbackEntity = isPartnerAcc ? (fetchedProfile.contractDetails?.clientTradeName || fetchedProfile.entityName || "") : (fetchedProfile.entityName || "In the Dome");
-      const fallbackLegal = isPartnerAcc ? (fetchedProfile.contractDetails?.clientLegalName || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "") : (fetchedProfile.entityName || "In the Dome");
+      const clientFullName = `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim();
+      const fallbackEntity = isPartnerAcc 
+        ? (details.clientTradeName || fetchedProfile.entityName || "") 
+        : (details.clientTradeName || fetchedProfile.entityName || (clientFullName ? `${clientFullName} Business` : "ScopeShield"));
+      const fallbackLegal = isPartnerAcc 
+        ? (details.clientLegalName || clientFullName || "") 
+        : (details.clientLegalName || fetchedProfile.entityName || clientFullName || "ScopeShield Inc.");
+      const fallbackContact = isPartnerAcc 
+        ? clientFullName 
+        : (mySigner?.name || details.clientContactName || clientFullName || "Pamela Noel");
 
       setEffectiveDate(details.effectiveDate || new Date().toISOString().substring(0, 10));
       setClientLegalName(details.clientLegalName || fallbackLegal);
       setClientTradeName(details.clientTradeName || fallbackEntity);
-      setClientJurisdiction(details.clientJurisdiction || (isPartnerAcc ? "United States" : "California, USA"));
-      setClientAddress(details.clientAddress || (isPartnerAcc ? "United States" : ""));
-      setClientContactName(details.clientContactName || (isPartnerAcc ? (`${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "") : (mySigner?.name || `${fetchedProfile.firstName || ""} ${fetchedProfile.lastName || ""}`.trim() || "Jordan Ellams & Michael Wilson")));
+      setClientEntityType(details.clientEntityType || "Corporation");
+      setClientJurisdiction(details.clientJurisdiction || (isPartnerAcc ? "United States" : "United States"));
+      setClientAddress(details.clientAddress || "");
+      setClientContactName(details.clientContactName || fallbackContact);
       setClientEmail(details.clientEmail || userEmail || fetchedProfile.email || "");
-      setSignerTitle(mySigner?.title || details.signerTitle || (isPartnerAcc ? "Authorized Representative" : "Co-Founder / Principal"));
+      setSignerTitle(mySigner?.title || details.signerTitle || (isPartnerAcc ? "Authorized Representative" : "Authorized Representative"));
       setStrategyPeriod(details.strategyPeriod || (isPartnerAcc ? "Strategic Collaboration" : "Initial 6-Month Strategy"));
       setConfidentialityPeriod(details.confidentialityPeriod || "5 years");
       setApprovedWebsites(details.approvedWebsites || "");
@@ -217,11 +287,11 @@ const Contract = () => {
     if (isPartnership || isNda) {
       return "Strategic Partnership (No Service Fees)";
     }
-    if (isCommissionBased) {
-      return "Commission-Based";
-    }
     if (profile?.contractDetails?.monthlyFee) {
       return profile.contractDetails.monthlyFee;
+    }
+    if (isCommissionBased) {
+      return "Commission-Based";
     }
     const price = profile?.customPrice ?? profile?.custom_price;
     if (price !== null && price !== undefined) {
@@ -291,6 +361,7 @@ const Contract = () => {
         effectiveDate,
         clientLegalName: clientLegalName.trim(),
         clientTradeName: clientTradeName.trim(),
+        clientEntityType: clientEntityType.trim() || "Corporation",
         clientJurisdiction: resolvedJurisdiction,
         clientAddress: resolvedAddress,
         clientContactName: resolvedContactName,
@@ -344,6 +415,216 @@ const Contract = () => {
     } finally {
       setSigning(false);
     }
+  };
+
+  const renderServicePackages = () => {
+    const packages = profile?.contractDetails?.servicePackages;
+    if (!packages || !Array.isArray(packages) || packages.length === 0) return null;
+
+    return (
+      <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-indigo-600" />
+            <h4 className="font-semibold text-slate-800 text-xs uppercase tracking-wider">
+              Exhibit A — Scope of Services & Deliverable Packages
+            </h4>
+          </div>
+          <Badge variant="outline" className="bg-white text-indigo-700 border-indigo-200 text-xs font-medium">
+            4 Core Packages
+          </Badge>
+        </div>
+        <div className="divide-y divide-slate-100 p-4 space-y-4">
+          {packages.map((pkg: any, idx: number) => (
+            <div key={idx} className={idx > 0 ? "pt-4" : ""}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-900 text-sm">{pkg.package}</span>
+                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5">{pkg.type}</Badge>
+                </div>
+                <span className="font-bold text-xs text-indigo-600 sm:text-sm">{pkg.pricing}</span>
+              </div>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pl-2 text-xs text-slate-600">
+                {pkg.deliverables?.map((d: string, dIdx: number) => (
+                  <li key={dIdx} className="flex items-start gap-1.5">
+                    <span className="text-emerald-500 font-bold leading-none mt-0.5">✓</span>
+                    <span>{d}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPaymentSchedule = () => {
+    const schedule = profile?.contractDetails?.paymentSchedule;
+    if (!schedule || !Array.isArray(schedule) || schedule.length === 0) return null;
+
+    return (
+      <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-indigo-600" />
+            <h4 className="font-semibold text-slate-800 text-xs uppercase tracking-wider">
+              Six-Month Payment Schedule & Milestone Breakdown
+            </h4>
+          </div>
+          <Badge variant="outline" className="bg-white text-indigo-700 border-indigo-200 text-xs font-medium">
+            Total: {profile?.contractDetails?.totalContractValue || "$17,432 USD"}
+          </Badge>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs sm:text-sm">
+            <thead>
+              <tr className="bg-slate-50/60 border-b border-slate-200 text-xs text-slate-500 font-semibold uppercase">
+                <th className="px-4 py-2.5 text-left">Payment Period</th>
+                <th className="px-4 py-2.5 text-left">Amount (USD)</th>
+                <th className="px-4 py-2.5 text-left">Due Date / Terms</th>
+                <th className="px-4 py-2.5 text-left">Scope / Deliverable Description</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {schedule.map((item: any, idx: number) => (
+                <tr key={idx} className={idx === 0 ? "bg-amber-50/40 font-medium" : "hover:bg-slate-50/50"}>
+                  <td className="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2">
+                    {idx === 0 && <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />}
+                    {item.period}
+                  </td>
+                  <td className="px-4 py-3 font-bold text-indigo-600">{item.amount}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    <span className={idx === 0 ? "inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800" : ""}>
+                      {item.due}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{item.details}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderBankTransferDetails = () => {
+    const bank = profile?.contractDetails?.bankTransferDetails;
+    if (!bank) return null;
+
+    return (
+      <div className="mt-4 border border-emerald-200 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 p-5 shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-emerald-100">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-slate-900 text-sm">Domestic ACH / Wire Bank Transfer Instructions</h4>
+                <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2 font-medium">Approved Method</Badge>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Send invoice payments via domestic ACH or Fedwire using the details below
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-xs">
+          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
+            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Beneficiary Legal Name</span>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 text-sm">{bank.name}</span>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                onClick={() => copyToClipboard(bank.name, "bank-name")}
+              >
+                {copiedField === "bank-name" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
+            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Account Type</span>
+            <span className="font-semibold text-slate-800 text-sm block">{bank.accountType}</span>
+          </div>
+
+          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
+            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Routing Number (Wire & ACH)</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-mono font-bold text-slate-900 text-base">{bank.routingNumber}</span>
+                <span className="block text-[11px] text-slate-500 mt-0.5">{bank.routingBank}</span>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                onClick={() => copyToClipboard(bank.routingNumber, "bank-routing")}
+              >
+                {copiedField === "bank-routing" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
+            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Account Number</span>
+            <div className="flex items-center justify-between">
+              <span className="font-mono font-bold text-slate-900 text-base">{bank.accountNumber}</span>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                onClick={() => copyToClipboard(bank.accountNumber, "bank-account")}
+              >
+                {copiedField === "bank-account" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1 md:col-span-2">
+            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Beneficiary Institution Address</span>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-700">{bank.address}</span>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                onClick={() => copyToClipboard(bank.address, "bank-address")}
+              >
+                {copiedField === "bank-address" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
+          </div>
+
+          {bank.swiftBic && (
+            <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1 md:col-span-2">
+              <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Swift / BIC (For International Reference)</span>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-slate-800">{bank.swiftBic}</span>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                  onClick={() => copyToClipboard(bank.swiftBic, "bank-swift")}
+                >
+                  {copiedField === "bank-swift" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const renderAgreementDetailsTable = () => {
@@ -603,8 +884,14 @@ const Contract = () => {
               </tr>
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Legal Name</td>
-                <td className="px-4 py-3 text-slate-800">{clientLegalName}</td>
+                <td className="px-4 py-3 text-slate-800 font-semibold">{clientLegalName}</td>
               </tr>
+              {(clientEntityType || profile?.contractDetails?.clientEntityType) && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Entity Type</td>
+                  <td className="px-4 py-3 text-slate-800 font-medium">{clientEntityType || profile?.contractDetails?.clientEntityType}</td>
+                </tr>
+              )}
               {clientTradeName && (
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Trade Name / DBA, if applicable</td>
@@ -681,6 +968,18 @@ const Contract = () => {
                   <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{profile.contractDetails.setupFee}</td>
                 </tr>
               )}
+              {profile?.contractDetails?.initialPayment && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Initial Payment (Due Upon Signing)</td>
+                  <td className="px-4 py-3 text-slate-800 font-bold text-amber-600 print:text-slate-800">{profile.contractDetails.initialPayment}</td>
+                </tr>
+              )}
+              {profile?.contractDetails?.totalContractValue && (
+                <tr>
+                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Six-Month Base Contract Value</td>
+                  <td className="px-4 py-3 text-slate-800 font-bold text-emerald-700 print:text-slate-800">{profile.contractDetails.totalContractValue}</td>
+                </tr>
+              )}
               {profile?.contractDetails?.commissionTerms && (
                 <tr>
                   <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Lead Generation Commissions</td>
@@ -713,6 +1012,9 @@ const Contract = () => {
               </tr>
             </tbody>
           </table>
+          {renderServicePackages()}
+          {renderPaymentSchedule()}
+          {renderBankTransferDetails()}
         </div>
       );
     }
@@ -759,6 +1061,20 @@ const Contract = () => {
               </td>
             </tr>
             <tr>
+              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
+                Client Entity Type <span className="text-red-500">*</span>
+              </td>
+              <td className="px-4 py-2">
+                <Input
+                  placeholder="e.g., Corporation, LLC, Sole Proprietorship"
+                  value={clientEntityType}
+                  onChange={(e) => setClientEntityType(e.target.value)}
+                  className="max-w-md h-9 text-sm"
+                  required
+                />
+              </td>
+            </tr>
+            <tr>
               <td className="px-4 py-3 font-semibold text-slate-600">Client Trade Name / DBA, if applicable</td>
               <td className="px-4 py-2">
                 <Input
@@ -775,7 +1091,7 @@ const Contract = () => {
               </td>
               <td className="px-4 py-2">
                 <Input
-                  placeholder="e.g., Delaware, USA or Ontario, Canada"
+                  placeholder="e.g., Delaware, USA or United States"
                   value={clientJurisdiction}
                   onChange={(e) => setClientJurisdiction(e.target.value)}
                   className="max-w-md h-9 text-sm"
@@ -853,7 +1169,7 @@ const Contract = () => {
               <td className="px-4 py-3 font-semibold text-slate-600">Agency Legal Name</td>
               <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
             </tr>
-            <tr>
+            <tr className="bg-slate-50/30">
               <td className="px-4 py-3 font-semibold text-slate-600">Agency Description</td>
               <td className="px-4 py-3 text-slate-800">AI automation, search optimization, digital advertising, and business consulting</td>
             </tr>
@@ -889,6 +1205,18 @@ const Contract = () => {
               <tr>
                 <td className="px-4 py-3 font-semibold text-slate-600">One-Time Setup Fee</td>
                 <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{profile.contractDetails.setupFee}</td>
+              </tr>
+            )}
+            {profile?.contractDetails?.initialPayment && (
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Initial Payment (Due Upon Signing)</td>
+                <td className="px-4 py-3 text-slate-800 font-bold text-amber-600">{profile.contractDetails.initialPayment}</td>
+              </tr>
+            )}
+            {profile?.contractDetails?.totalContractValue && (
+              <tr>
+                <td className="px-4 py-3 font-semibold text-slate-600">Six-Month Base Contract Value</td>
+                <td className="px-4 py-3 text-slate-800 font-bold text-emerald-700">{profile.contractDetails.totalContractValue}</td>
               </tr>
             )}
             {profile?.contractDetails?.commissionTerms && (
@@ -935,6 +1263,9 @@ const Contract = () => {
             </tr>
           </tbody>
         </table>
+        {renderServicePackages()}
+        {renderPaymentSchedule()}
+        {renderBankTransferDetails()}
       </div>
     );
   };
@@ -1084,6 +1415,68 @@ const Contract = () => {
 
                     {isPdf ? (
                       <div className="w-full rounded-lg border overflow-hidden bg-white mb-6 print:border-none print:rounded-none print:overflow-visible print:mb-0">
+                        {/* Quick Jump & Document Toolbar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-100/90 border-b border-slate-200 text-xs print:hidden">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                              <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                              Quick Jump:
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs bg-white hover:bg-slate-50"
+                                onClick={() => {
+                                  document.getElementById("pdf-page-1")?.scrollIntoView({ behavior: "smooth" });
+                                }}
+                              >
+                                Page 1 (Overview)
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs bg-white hover:bg-slate-50"
+                                onClick={() => {
+                                  document.getElementById("pdf-page-28")?.scrollIntoView({ behavior: "smooth" });
+                                }}
+                              >
+                                Page 28 (Signatures)
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs bg-white hover:bg-slate-50"
+                                onClick={() => {
+                                  document.getElementById("pdf-page-33")?.scrollIntoView({ behavior: "smooth" });
+                                }}
+                              >
+                                Page 33 (Exhibit B)
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {pdfNumPages > 0 && (
+                              <Badge variant="secondary" className="text-[11px] font-normal">
+                                {pdfNumPages} Pages Total
+                              </Badge>
+                            )}
+                            <a
+                              href={contractUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={fileName}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition-colors shadow-2xs"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Download Original PDF
+                            </a>
+                          </div>
+                        </div>
+
                         <div className="max-h-[650px] overflow-y-auto print:max-h-none print:overflow-visible">
                           <Document
                             file={contractUrl}
@@ -1104,7 +1497,7 @@ const Contract = () => {
                             }
                           >
                             {Array.from(new Array(pdfNumPages), (_, i) => (
-                              <div key={`page_${i + 1}`} className="border-b border-slate-100 last:border-b-0 print:border-b-0 print:break-after-page">
+                              <div key={`page_${i + 1}`} id={`pdf-page-${i + 1}`} className="border-b border-slate-100 last:border-b-0 print:border-b-0 print:break-after-page">
                                 <Page
                                   pageNumber={i + 1}
                                   width={680}

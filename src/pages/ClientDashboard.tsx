@@ -25,11 +25,21 @@ import {
   Shield,
   ShieldCheck,
   Clock,
+  Landmark,
+  Copy,
+  Check,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface ClientSubscription {
   id: string;
@@ -121,6 +131,12 @@ const serviceLabels: Record<string, string> = {
   "channel-x": "X (Twitter) Ads",
   "channel-amazon": "Amazon Ads",
 
+  // Custom & Growth Package Services
+  "b2b-pipeline": "B2B Revenue Pipeline Development",
+  "linkedin-outreach": "LinkedIn Content & Professional Outreach",
+  "b2b-portal": "B2B Purchasing & Inquiry Portal",
+  "initial-strategy": "Commercial Strategy & Content Assets",
+
   // Legacy mappings for safety
   "social-media": "Social Media Management",
   "content-creation": "Content Creation",
@@ -153,6 +169,20 @@ const ClientDashboard = () => {
   const [managingBilling, setManagingBilling] = useState(false);
   const [checkingOutSubId, setCheckingOutSubId] = useState<string | null>(null);
   const [showResponses, setShowResponses] = useState(false);
+  const [showBankTransferModal, setShowBankTransferModal] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const isBankTransfer = Boolean(
+    profile?.contractDetails?.paymentMethod === "bank_transfer" || 
+    profile?.contractDetails?.bankTransferDetails
+  );
 
   const isPartnership = Boolean(
     profile?.isPartnership ||
@@ -192,6 +222,64 @@ const ClientDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        if (paramClientId) {
+          // Allow previewing client dashboard directly via paramClientId
+          const { data: prof } = await supabase
+            .from("client_profiles")
+            .select("*")
+            .eq("id", paramClientId)
+            .maybeSingle();
+
+          if (prof) {
+            const { data: subs } = await supabase
+              .from("client_subscriptions")
+              .select("*")
+              .eq("client_profile_id", paramClientId);
+
+            const mappedProfile: ClientProfile = {
+              id: prof.id,
+              email: prof.email,
+              firstName: prof.first_name,
+              lastName: prof.last_name,
+              role: prof.role || "client",
+              accountStatus: prof.account_status,
+              plan: prof.plan,
+              subscriptionStatus: prof.subscription_status,
+              stripeCustomerId: prof.stripe_customer_id,
+              stripeSubscriptionId: prof.stripe_subscription_id,
+              contractStatus: prof.contract_status,
+              contractSignedAt: prof.contract_signed_at,
+              contractSignature: prof.contract_signature,
+              contractDetails: prof.contract_details,
+              onboardingStatus: prof.onboarding_status,
+              onboardingCompletedAt: prof.onboarding_completed_at,
+              maxServices: prof.max_services || 0,
+              selectedServices: prof.selected_services || [],
+              customPrice: prof.custom_price,
+              createdAt: prof.created_at,
+              updatedAt: prof.updated_at,
+              notes: prof.notes,
+              subscriptions: (subs || []).map((s: any) => ({
+                id: s.id,
+                label: s.label,
+                plan: s.plan,
+                selectedServices: s.selected_services || [],
+                monthlyAmount: s.monthly_amount,
+                billingDay: s.billing_day,
+                nextBillingDate: s.next_billing_date,
+                subscriptionStatus: s.subscription_status,
+                stripeSubscriptionId: s.stripe_subscription_id,
+                stripeCustomerId: s.stripe_customer_id,
+                isPrimary: s.is_primary,
+                notes: s.notes,
+              })),
+            };
+            setProfile(mappedProfile);
+            setIsAdmin(true);
+            setLoading(false);
+            return;
+          }
+        }
         // User is not logged in - redirect to login
         navigate("/login");
         return;
@@ -223,12 +311,12 @@ const ClientDashboard = () => {
       setIsAdmin(response.data.isAdmin);
 
       // Route users based on onboarding sequence: Unique sign-up link -> Contract -> Payment -> Full Access
-      // Skip enforcement for admins so they don't get stuck when testing client links
+      // Skip enforcement for admins or when inspecting a specific clientId so they don't get redirected
       const isAdvertising = clientProfile.plan === "advertising";
       const isClientDiscovery = clientProfile.plan === "discovery" || clientProfile.plan === "prospect" || clientProfile.plan === "custom-lms";
       const isClientPartnership = clientProfile.plan === "partnership" || clientProfile.plan === "nda" || clientProfile.isPartnership || clientProfile.contractDetails?.isNda || clientProfile.contractDetails?.relationshipType === "partnership";
       
-      if (!response.data.isAdmin && !isAdvertising && !isClientDiscovery && !isClientPartnership && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
+      if (!response.data.isAdmin && !paramClientId && !isAdvertising && !isClientDiscovery && !isClientPartnership && clientProfile.contractStatus === "not_signed" && clientProfile.subscriptionStatus === "pending_payment") {
         // Step 2: Enforce Contract Signing before Payment & Full Access
         navigate("/contract");
         return;
@@ -274,6 +362,11 @@ const ClientDashboard = () => {
 
   const handleCompletePayment = async () => {
     if (!profile) return;
+
+    if (isBankTransfer) {
+      setShowBankTransferModal(true);
+      return;
+    }
     
     setManagingBilling(true);
     try {
@@ -337,6 +430,12 @@ const ClientDashboard = () => {
   // Per-subscription checkout for multi-sub clients
   const handleSubCheckout = async (sub: ClientSubscription) => {
     if (!profile) return;
+
+    if (isBankTransfer) {
+      setShowBankTransferModal(true);
+      return;
+    }
+
     setCheckingOutSubId(sub.id);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
@@ -462,6 +561,19 @@ const ClientDashboard = () => {
 
     // Step 3: Payment
     if (profile.subscriptionStatus === "pending_payment") {
+      if (isBankTransfer) {
+        return (
+          <div className="space-y-3">
+            <Button size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium" onClick={() => setShowBankTransferModal(true)}>
+              <Landmark className="w-5 h-5 mr-2" />
+              View Bank Transfer (Wire / ACH) Instructions
+            </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              Payment method: Domestic ACH / Wire Bank Transfer ({profile.contractDetails?.initialPayment || "$4,947 USD"} upon signing).
+            </p>
+          </div>
+        );
+      }
       return (
         <div className="space-y-3">
           <Button size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium" onClick={handleCompletePayment} disabled={managingBilling}>
@@ -1065,19 +1177,29 @@ const ClientDashboard = () => {
 
                             {/* Per-subscription checkout for pending_payment */}
                             {sub.subscriptionStatus === "pending_payment" && !sub.stripeSubscriptionId && !isSubCommission && (
-                              <div className="mt-auto pt-4">
-                                <Button
-                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
-                                  onClick={() => handleSubCheckout(sub)}
-                                  disabled={checkingOutSubId === sub.id}
-                                >
-                                  {checkingOutSubId === sub.id ? (
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <CreditCard className="w-4 h-4 mr-2" />
-                                  )}
-                                  Complete Payment
-                                </Button>
+                              <div className="mt-auto pt-4 space-y-2">
+                                {isBankTransfer ? (
+                                  <Button
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+                                    onClick={() => setShowBankTransferModal(true)}
+                                  >
+                                    <Landmark className="w-4 h-4 mr-2" />
+                                    Bank Transfer Details
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm"
+                                    onClick={() => handleSubCheckout(sub)}
+                                    disabled={checkingOutSubId === sub.id}
+                                  >
+                                    {checkingOutSubId === sub.id ? (
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <CreditCard className="w-4 h-4 mr-2" />
+                                    )}
+                                    Complete Payment
+                                  </Button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1415,6 +1537,157 @@ const ClientDashboard = () => {
             clientId={profile.id}
             clientName={profile.firstName || profile.email}
           />
+        )}
+
+        {/* Bank Transfer Details Dialog */}
+        {profile?.contractDetails?.bankTransferDetails && (
+          <Dialog open={showBankTransferModal} onOpenChange={setShowBankTransferModal}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+                    <Landmark className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl">Bank Transfer (Wire / ACH) Details</DialogTitle>
+                    <DialogDescription>
+                      Domestic wire and ACH payment instructions for {profile.contractDetails?.clientLegalName || "ScopeShield Inc."}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center justify-between">
+                  <span>Initial Payment Due Upon Signing: <strong>{profile.contractDetails?.initialPayment || "$4,947 USD"}</strong></span>
+                  <Badge variant="outline" className="bg-white text-amber-800 border-amber-300">Month 1</Badge>
+                </div>
+
+                {/* Bank Account Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                    <span className="text-slate-500 font-medium block uppercase tracking-wider text-[10px]">Beneficiary Name</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800 text-sm">{profile.contractDetails.bankTransferDetails.name}</span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                        onClick={() => copyToClipboard(profile.contractDetails.bankTransferDetails.name, "dash-bank-name")}
+                      >
+                        {copiedField === "dash-bank-name" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                    <span className="text-slate-500 font-medium block uppercase tracking-wider text-[10px]">Account Type</span>
+                    <span className="font-semibold text-slate-800 text-sm block">{profile.contractDetails.bankTransferDetails.accountType}</span>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                    <span className="text-slate-500 font-medium block uppercase tracking-wider text-[10px]">Routing Number (Wire & ACH)</span>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-mono font-bold text-slate-900 text-base">{profile.contractDetails.bankTransferDetails.routingNumber}</span>
+                        <span className="block text-[11px] text-slate-500 mt-0.5">{profile.contractDetails.bankTransferDetails.routingBank}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                        onClick={() => copyToClipboard(profile.contractDetails.bankTransferDetails.routingNumber, "dash-bank-routing")}
+                      >
+                        {copiedField === "dash-bank-routing" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
+                    <span className="text-slate-500 font-medium block uppercase tracking-wider text-[10px]">Account Number</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-slate-900 text-base">{profile.contractDetails.bankTransferDetails.accountNumber}</span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                        onClick={() => copyToClipboard(profile.contractDetails.bankTransferDetails.accountNumber, "dash-bank-account")}
+                      >
+                        {copiedField === "dash-bank-account" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1 md:col-span-2">
+                    <span className="text-slate-500 font-medium block uppercase tracking-wider text-[10px]">Beneficiary Institution Address</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-700">{profile.contractDetails.bankTransferDetails.address}</span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                        onClick={() => copyToClipboard(profile.contractDetails.bankTransferDetails.address, "dash-bank-address")}
+                      >
+                        {copiedField === "dash-bank-address" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {profile.contractDetails.bankTransferDetails.swiftBic && (
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1 md:col-span-2">
+                      <span className="text-slate-500 font-medium block uppercase tracking-wider text-[10px]">Swift / BIC (International)</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-slate-800">{profile.contractDetails.bankTransferDetails.swiftBic}</span>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                          onClick={() => copyToClipboard(profile.contractDetails.bankTransferDetails.swiftBic, "dash-bank-swift")}
+                        >
+                          {copiedField === "dash-bank-swift" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Schedule */}
+                {profile.contractDetails.paymentSchedule && (
+                  <div className="border border-slate-200 rounded-lg overflow-hidden mt-4">
+                    <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-700">Payment Schedule</span>
+                      <span className="text-xs text-slate-500">Billed monthly on the 19th</span>
+                    </div>
+                    <div className="divide-y divide-slate-100 text-xs">
+                      {profile.contractDetails.paymentSchedule.map((s: any, idx: number) => (
+                        <div key={idx} className="p-2.5 flex items-center justify-between">
+                          <div>
+                            <span className="font-semibold text-slate-800">{s.period}</span>
+                            <span className="text-slate-500 ml-2">({s.details})</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-bold text-indigo-600">{s.amount}</span>
+                            <span className="text-slate-400 text-[11px] block">{s.due}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <Button variant="outline" onClick={() => setShowBankTransferModal(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         )}
       </main>
       <Footer />

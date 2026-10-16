@@ -25,3 +25,6 @@ dist-ssr
 
 # Agent handoff scratch prompts
 KICKOFF_*.md
+
+# Supabase temp CLI
+supabase/.temp/
