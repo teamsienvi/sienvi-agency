@@ -1195,6 +1195,8 @@ const ClientDashboard = () => {
                           ? (profile.subscriptionStatus === "active" ? "Revenue share structure active" : "Awaiting activation")
                           : profile.subscriptionStatus === "active" 
                           ? "Subscription active"
+                          : profile.contractDetails?.initialPayment
+                          ? `Initial Payment: ${profile.contractDetails.initialPayment.split("(")[0].trim()}`
                           : "Awaiting payment"}
                       </p>
                     </div>
@@ -1233,15 +1235,20 @@ const ClientDashboard = () => {
                       <Package className="w-5 h-5" />
                       Your Subscriptions
                     </CardTitle>
-                    <CardDescription>
-                      {profile.subscriptions.length} subscription{profile.subscriptions.length !== 1 ? "s" : ""} · Combined total:{" "}
+                    <CardDescription className="flex flex-wrap items-center gap-1.5">
+                      <span>{profile.subscriptions.length} subscription{profile.subscriptions.length !== 1 ? "s" : ""} · Monthly recurring:</span>{" "}
                       {isCommissionBased ? (
                         <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                           Commission-Based (Performance Share)
                         </span>
                       ) : (
                         <span className="font-semibold text-foreground">
-                          ${profile.subscriptions.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
+                          ${profile.subscriptions.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo
+                        </span>
+                      )}
+                      {profile.contractDetails?.setupFee && (
+                        <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-xs">
+                          + Initial One-Time Package: {profile.contractDetails.setupFee.split("(")[0].trim()}
                         </span>
                       )}
                     </CardDescription>
@@ -1265,7 +1272,7 @@ const ClientDashboard = () => {
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-baseline gap-1.5">
+                              <div className="flex flex-col gap-2">
                                 {isSubCommission ? (
                                   <div className="space-y-0.5">
                                     <span className="text-xl font-bold text-slate-900">
@@ -1277,10 +1284,40 @@ const ClientDashboard = () => {
                                   </div>
                                 ) : (
                                   <>
-                                    <span className="text-2xl font-bold text-slate-900">
-                                      ${sub.monthlyAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">/mo</span>
+                                    <div className="flex items-baseline gap-2 flex-wrap">
+                                      <span className="text-2xl font-bold text-slate-900">
+                                        ${sub.monthlyAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                      </span>
+                                      <span className="text-sm text-muted-foreground">/mo recurring</span>
+                                      {profile.contractDetails?.setupFee && (
+                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold">
+                                          + {profile.contractDetails.setupFee.split("(")[0].trim()} Initial Setup
+                                        </Badge>
+                                      )}
+                                    </div>
+
+                                    {profile.contractDetails?.setupFee && (
+                                      <div className="mt-2 p-3 rounded-lg bg-emerald-50/50 border border-emerald-100 text-xs space-y-2">
+                                        <div className="flex items-center justify-between text-slate-700">
+                                          <span className="text-slate-600 font-medium">Initial Strategy & Content Package:</span>
+                                          <span className="font-bold text-emerald-800">{profile.contractDetails.setupFee.split("(")[0].trim()}</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 leading-tight">
+                                          One-time comprehensive brand, funnel & content asset setup
+                                        </p>
+                                        {profile.contractDetails?.initialPayment && (
+                                          <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between font-semibold text-slate-800">
+                                            <span>Initial Month 1 Payment Due:</span>
+                                            <span className="text-emerald-700 font-bold text-sm">
+                                              {profile.contractDetails.initialPayment.split("(")[0].trim()}
+                                            </span>
+                                          </div>
+                                        )}
+                                        <p className="text-[10px] text-slate-500">
+                                          Months 2–6: ${sub.monthlyAmount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD / mo recurring on the 19th
+                                        </p>
+                                      </div>
+                                    )}
                                   </>
                                 )}
                               </div>
@@ -1440,6 +1477,11 @@ const ClientDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-lg font-semibold">{getPlanName()}</p>
+                      {profile.contractDetails?.setupFee && (
+                        <p className="text-xs font-semibold text-emerald-700 mt-0.5">
+                          + Initial Setup Package: {profile.contractDetails.setupFee.split("(")[0].trim()}
+                        </p>
+                      )}
                     </div>
                     {!isProspect && (
                     <Badge variant={profile.subscriptionStatus === "active" ? "default" : "secondary"}>
