@@ -40,6 +40,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface ClientSubscription {
   id: string;
@@ -170,6 +172,12 @@ const ClientDashboard = () => {
   const [checkingOutSubId, setCheckingOutSubId] = useState<string | null>(null);
   const [showResponses, setShowResponses] = useState(false);
   const [showBankTransferModal, setShowBankTransferModal] = useState(false);
+  const [showConfirmTransferModal, setShowConfirmTransferModal] = useState(false);
+  const [submittingTransfer, setSubmittingTransfer] = useState(false);
+  const [transferRefNumber, setTransferRefNumber] = useState("");
+  const [transferSendingBank, setTransferSendingBank] = useState("");
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().substring(0, 10));
+  const [transferNotes, setTransferNotes] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, fieldId: string) => {
@@ -463,6 +471,85 @@ const ClientDashboard = () => {
     }
   };
 
+  const handleSubmitTransfer = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!profile) return;
+
+    setSubmittingTransfer(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const transferData = {
+        amount: profile.contractDetails?.initialPayment || "$4,947 USD",
+        referenceNumber: transferRefNumber.trim(),
+        sendingBank: transferSendingBank.trim(),
+        transferDate: transferDate,
+        notes: transferNotes.trim(),
+        submittedAt: new Date().toISOString(),
+        status: "submitted",
+      };
+
+      if (!session) {
+        if (paramClientId) {
+          const updatedDetails = {
+            ...(profile.contractDetails || {}),
+            bankTransferConfirmation: transferData,
+          };
+          const { error: upErr } = await supabase
+            .from("client_profiles")
+            .update({
+              subscription_status: "active",
+              account_status: "active",
+              contract_details: updatedDetails,
+            })
+            .eq("id", paramClientId);
+
+          if (upErr) throw upErr;
+
+          await supabase
+            .from("client_subscriptions")
+            .update({ subscription_status: "active" })
+            .eq("client_profile_id", paramClientId);
+
+          setProfile((prev: any) => ({
+            ...prev,
+            subscriptionStatus: "active",
+            accountStatus: "active",
+            contractDetails: updatedDetails,
+          }));
+
+          toast.success("Bank transfer confirmation submitted! Your subscription and services are now active.");
+          setShowConfirmTransferModal(false);
+          return;
+        }
+        throw new Error("Not authenticated");
+      }
+
+      const response = await supabase.functions.invoke("update-client-status", {
+        body: {
+          action: "confirm_bank_transfer",
+          clientId: paramClientId || profile.id,
+          ...transferData,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error || response.data?.error) {
+        throw new Error(response.error?.message || response.data?.error || "Failed to submit transfer confirmation");
+      }
+
+      toast.success("Bank transfer confirmation submitted! Your subscription and services are now active.");
+      setShowConfirmTransferModal(false);
+      await checkAuthAndFetchProfile();
+    } catch (err: any) {
+      console.error("Error submitting bank transfer confirmation:", err);
+      toast.error(err.message || "Failed to submit transfer confirmation");
+    } finally {
+      setSubmittingTransfer(false);
+    }
+  };
+
   const getStatusBadge = () => {
     if (!profile) return null;
 
@@ -564,10 +651,25 @@ const ClientDashboard = () => {
       if (isBankTransfer) {
         return (
           <div className="space-y-3">
-            <Button size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium" onClick={() => setShowBankTransferModal(true)}>
-              <Landmark className="w-5 h-5 mr-2" />
-              View Bank Transfer (Wire / ACH) Instructions
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                size="lg" 
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium" 
+                onClick={() => setShowBankTransferModal(true)}
+              >
+                <Landmark className="w-5 h-5 mr-2" />
+                View Bank Transfer Instructions
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="flex-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-semibold" 
+                onClick={() => setShowConfirmTransferModal(true)}
+              >
+                <CheckCircle2 className="w-5 h-5 mr-2 text-emerald-600" />
+                I've Sent the Bank Transfer
+              </Button>
+            </div>
             <p className="text-sm text-muted-foreground text-center">
               Payment method: Domestic ACH / Wire Bank Transfer ({profile.contractDetails?.initialPayment || "$4,947 USD"} upon signing).
             </p>
@@ -914,6 +1016,51 @@ const ClientDashboard = () => {
                 {getPrimaryCTA()}
               </CardContent>
             </Card>
+          )}
+
+          {/* Bank Transfer Confirmation Banner */}
+          {profile.contractDetails?.bankTransferConfirmation && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6"
+            >
+              <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700 mt-0.5 sm:mt-0 flex-shrink-0">
+                    <Landmark className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-800 text-sm">Domestic Wire / ACH Transfer Submitted</span>
+                      <Badge className="bg-emerald-600 text-white text-[10px] font-semibold tracking-wide">
+                        Reconciling with Column Bank
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Amount: <strong>{profile.contractDetails.bankTransferConfirmation.amount || "$4,947 USD"}</strong>
+                      {profile.contractDetails.bankTransferConfirmation.referenceNumber && (
+                        <span> · Ref: <strong className="font-mono">{profile.contractDetails.bankTransferConfirmation.referenceNumber}</strong></span>
+                      )}
+                      {profile.contractDetails.bankTransferConfirmation.sendingBank && (
+                        <span> · Bank: <strong>{profile.contractDetails.bankTransferConfirmation.sendingBank}</strong></span>
+                      )}
+                      {profile.contractDetails.bankTransferConfirmation.transferDate && (
+                        <span> · Date: {profile.contractDetails.bankTransferConfirmation.transferDate}</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="bg-white hover:bg-slate-50 text-xs border-emerald-200 text-emerald-800 flex-shrink-0"
+                  onClick={() => setShowBankTransferModal(true)}
+                >
+                  View Wire Details
+                </Button>
+              </div>
+            </motion.div>
           )}
 
           {/* Main Content Grid */}
@@ -1680,15 +1827,145 @@ const ClientDashboard = () => {
                   </div>
                 )}
 
-                <div className="flex justify-end pt-2">
-                  <Button variant="outline" onClick={() => setShowBankTransferModal(false)}>
-                    Close
-                  </Button>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200 mt-2">
+                  <p className="text-xs text-slate-500">
+                    Already sent your transfer? Let us know to fast-track reconciliation.
+                  </p>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={() => setShowBankTransferModal(false)}>
+                      Close
+                    </Button>
+                    <Button 
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5"
+                      onClick={() => {
+                        setShowBankTransferModal(false);
+                        setShowConfirmTransferModal(true);
+                      }}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      I've Sent the Bank Transfer
+                    </Button>
+                  </div>
                 </div>
               </div>
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Manual Transfer Confirmation Modal */}
+        <Dialog open={showConfirmTransferModal} onOpenChange={setShowConfirmTransferModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700">
+                  <Landmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl">Confirm Bank Transfer Sent</DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                    Submit your transfer reference so our finance team can verify and reconcile with Column Bank.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmitTransfer} className="space-y-4 pt-2">
+              <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-500 font-medium block">Initial Payment Due</span>
+                  <span className="text-base font-bold text-emerald-800">
+                    {profile?.contractDetails?.initialPayment || "$4,947 USD"}
+                  </span>
+                </div>
+                <Badge variant="outline" className="bg-white text-emerald-700 border-emerald-200 text-xs">
+                  Month 1 Initial Package
+                </Badge>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="transfer-ref" className="text-xs font-semibold text-slate-700">
+                  Wire Reference / ACH Confirmation Number (Optional)
+                </Label>
+                <Input
+                  id="transfer-ref"
+                  placeholder="e.g., Fedwire IMAD/OMAD, ACH Trace, or Transaction ID"
+                  value={transferRefNumber}
+                  onChange={(e) => setTransferRefNumber(e.target.value)}
+                  className="text-sm h-9 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="transfer-bank" className="text-xs font-semibold text-slate-700">
+                    Sending Bank (Optional)
+                  </Label>
+                  <Input
+                    id="transfer-bank"
+                    placeholder="e.g., Chase, BofA, Wells"
+                    value={transferSendingBank}
+                    onChange={(e) => setTransferSendingBank(e.target.value)}
+                    className="text-sm h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="transfer-date" className="text-xs font-semibold text-slate-700">
+                    Date Sent
+                  </Label>
+                  <Input
+                    id="transfer-date"
+                    type="date"
+                    value={transferDate}
+                    onChange={(e) => setTransferDate(e.target.value)}
+                    className="text-sm h-9"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="transfer-notes" className="text-xs font-semibold text-slate-700">
+                  Notes or Memo (Optional)
+                </Label>
+                <Input
+                  id="transfer-notes"
+                  placeholder="e.g., Sent from ScopeShield Inc. primary operating account"
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  className="text-sm h-9"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowConfirmTransferModal(false)}
+                  disabled={submittingTransfer}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  disabled={submittingTransfer}
+                >
+                  {submittingTransfer ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                      Submit Confirmation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>

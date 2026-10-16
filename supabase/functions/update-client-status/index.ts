@@ -400,22 +400,125 @@ async function sendContractSignedAdminEmail(
   }
 }
 
-    console.log("Sending contract signed notification to admins");
-
-    const { data, error } = await sendEmail({
-      from: "Sienvi Admin <info@sienvi.com>",
-      to: ADMIN_EMAILS,
-      subject: `📝 Contract Signed - ${displayName}`,
-      html: emailHtml,
+// Send bank transfer submitted notification to admins
+async function sendBankTransferSubmittedAdminEmail(
+  clientEmail: string,
+  clientName: string | null,
+  companyName: string | null,
+  amount: string,
+  transferDetails: {
+    referenceNumber?: string;
+    sendingBank?: string;
+    transferDate?: string;
+    notes?: string;
+  }
+) {
+  try {
+    const displayName = clientName || clientEmail.split("@")[0];
+    const timestamp = new Date().toLocaleString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
     });
 
-    if (error) {
-      console.error("Failed to send contract signed admin notification:", error);
-    } else {
-      console.log("Contract signed admin notifications sent:", data);
-    }
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; background-color: #f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="background: #059669; padding: 28px; text-align: center; color: #ffffff;">
+              <span style="font-size: 36px;">🏦</span>
+              <h1 style="margin: 12px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Bank Transfer Confirmation Submitted</h1>
+              <p style="margin: 6px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">${companyName || displayName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 36px;">
+              <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">
+                <strong>${displayName}</strong> from <strong>${companyName || "Client"}</strong> has submitted confirmation that their bank transfer has been initiated.
+              </p>
+              
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px;">Client Name:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${displayName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px;">Client Email:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-size: 14px;">${clientEmail}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px;">Transfer Amount:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #059669; font-weight: 700; font-size: 18px;">${amount}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px;">Reference / Conf #:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${transferDetails.referenceNumber || "Not provided"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px;">Sending Bank:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-size: 14px;">${transferDetails.sendingBank || "Not specified"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px;">Transfer Date:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-size: 14px;">${transferDetails.transferDate || "Today"}</td>
+                  </tr>
+                  ${transferDetails.notes ? `
+                  <tr>
+                    <td style="padding: 6px 0; color: #166534; font-size: 14px; vertical-align: top;">Notes / Memo:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #4b5563; font-size: 13px;">${transferDetails.notes}</td>
+                  </tr>` : ''}
+                </table>
+              </div>
+
+              <p style="margin: 0 0 24px 0; font-size: 14px; color: #4b5563;">
+                💡 Please check the Sienvi Wise / Column Bank account (Account: <code>700663363841311</code>) to reconcile the incoming funds.
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="https://sienvi.com/admin/clients" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 14px;">Open Admin Clients</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #f8fafc; padding: 16px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #9ca3af;">
+              Received on ${timestamp}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    await sendEmail({
+      from: "Sienvi Billing <info@sienvi.com>",
+      to: ADMIN_EMAILS,
+      subject: `🏦 Bank Transfer Submitted - ${displayName} (${companyName || "ScopeShield Inc."})`,
+      html: emailHtml,
+    });
+    console.log("Bank transfer admin notification sent successfully");
   } catch (error) {
-    console.error("Failed to send contract signed admin notification:", error);
+    console.error("Failed to send bank transfer admin notification:", error);
   }
 }
 
@@ -788,7 +891,8 @@ serve(async (req) => {
       );
     }
 
-    const { action, clientId, signature, contractDetails, signerEmail, signerName, signerTitle } = await req.json();
+    const body = await req.json();
+    const { action, clientId, signature, contractDetails, signerEmail, signerName, signerTitle } = body;
     const userEmail = user.email?.toLowerCase() || "";
 
     // Get the client profile
@@ -983,6 +1087,36 @@ serve(async (req) => {
         };
         break;
 
+      case "confirm_bank_transfer": {
+        const transferConfirmation = {
+          referenceNumber: body.referenceNumber || "",
+          sendingBank: body.sendingBank || "",
+          transferDate: body.transferDate || new Date().toISOString().substring(0, 10),
+          notes: body.notes || "",
+          amount: body.amount || profile.contract_details?.initialPayment || "$4,947 USD",
+          submittedAt: new Date().toISOString(),
+          status: "submitted",
+        };
+        const existingDetails = profile.contract_details || {};
+        const updatedDetails = {
+          ...existingDetails,
+          bankTransferConfirmation: transferConfirmation,
+        };
+
+        updateData = {
+          subscription_status: "active",
+          account_status: "active",
+          contract_details: updatedDetails,
+        };
+
+        await supabaseAdmin
+          .from("client_subscriptions")
+          .update({ subscription_status: "active" })
+          .eq("client_profile_id", profile.id);
+
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Invalid action" }),
@@ -1095,6 +1229,18 @@ serve(async (req) => {
         sendOnboardingCompleteClientEmail(profile.email, clientName, profile.selected_services || []),
         sendOnboardingCompleteAdminEmail(profile.email, clientName, profile.plan, profile.selected_services || [], onboardingData),
       ]);
+    }
+
+    if (action === "confirm_bank_transfer") {
+      const conf = (updateData.contract_details as any)?.bankTransferConfirmation || {};
+      const companyName = profile.entity_name || profile.contract_details?.clientLegalName || "ScopeShield Inc.";
+      await sendBankTransferSubmittedAdminEmail(
+        profile.email,
+        profile.client_name || clientName,
+        companyName,
+        conf.amount || "$4,947 USD",
+        conf
+      );
     }
 
     return new Response(
