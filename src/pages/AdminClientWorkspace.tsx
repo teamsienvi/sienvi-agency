@@ -405,12 +405,12 @@ export default function AdminClientWorkspace() {
 
   // Payment channel classification
   const paymentChannelText = isPartnership
-    ? "Strategic Partnership ($0/mo)"
+    ? "Strategic Partnership"
     : isCommission
     ? "Performance Commission"
     : client.stripeCustomerId && !client.stripeCustomerId.startsWith("pending_")
     ? "Stripe Auto-Debit"
-    : "Bank Wire / Domestic ACH";
+    : "Domestic ACH / Wire";
 
   return (
     <AdminShell
@@ -620,7 +620,7 @@ export default function AdminClientWorkspace() {
           <Card className="bg-card border-border/80 shadow-2xs">
             <CardContent className="p-3.5 space-y-1">
               <span className="text-[11px] font-medium text-muted-foreground block truncate">Payment Channel</span>
-              <p className="text-xs sm:text-sm font-semibold text-foreground truncate" title={paymentChannelText}>
+              <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight" title={paymentChannelText}>
                 {paymentChannelText}
               </p>
             </CardContent>
@@ -690,7 +690,7 @@ export default function AdminClientWorkspace() {
           <Card className="bg-card border-border/80 shadow-2xs">
             <CardContent className="p-3.5 space-y-1">
               <span className="text-[11px] font-medium text-muted-foreground block truncate">Billing Cycle</span>
-              <p className="text-xs sm:text-sm font-semibold text-foreground truncate" title={nextBillingText}>
+              <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight" title={nextBillingText}>
                 {nextBillingText}
               </p>
             </CardContent>
@@ -699,23 +699,23 @@ export default function AdminClientWorkspace() {
 
         {/* Workspace Navigation Tabs */}
         <Tabs defaultValue="overview" className="w-full space-y-4">
-          <TabsList className="bg-muted/60 p-1 border border-border/80 rounded-xl grid grid-cols-3 sm:grid-cols-6 h-auto gap-1">
-            <TabsTrigger value="overview" className="text-xs py-2 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+          <TabsList className="bg-muted/60 p-1 border border-border/80 rounded-xl flex sm:grid sm:grid-cols-6 overflow-x-auto no-scrollbar h-auto gap-1">
+            <TabsTrigger value="overview" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="services" className="text-xs py-2 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+            <TabsTrigger value="services" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Services ({totalServicesCount})
             </TabsTrigger>
-            <TabsTrigger value="billing" className="text-xs py-2 data-[state=active]:bg-background data-[state=active]:shadow-xs">
-              Billing & Subs
+            <TabsTrigger value="billing" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
+              Billing & Subscriptions
             </TabsTrigger>
-            <TabsTrigger value="agreements" className="text-xs py-2 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+            <TabsTrigger value="agreements" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Agreements
             </TabsTrigger>
-            <TabsTrigger value="onboarding" className="text-xs py-2 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+            <TabsTrigger value="onboarding" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Onboarding
             </TabsTrigger>
-            <TabsTrigger value="activity" className="text-xs py-2 data-[state=active]:bg-background data-[state=active]:shadow-xs">
+            <TabsTrigger value="activity" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Activity & Notes
             </TabsTrigger>
           </TabsList>

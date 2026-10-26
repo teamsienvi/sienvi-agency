@@ -133,10 +133,6 @@ export const getPlanDisplay = (
   if (client && isCommissionClient(client)) {
     return "Custom (Commission-based)";
   }
-  if (plan === "custom" && customPrice !== null && customPrice !== undefined) {
-    if (customPrice === 0) return "Custom Plan";
-    return `Custom ($${customPrice}/mo)`;
-  }
   if (plan === "custom") {
     return "Custom Plan";
   }
