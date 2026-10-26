@@ -72,7 +72,7 @@ async function main() {
 
     clientDirectoryTotal += clientSubsSum;
 
-    console.log(`\n[${idx + 1}] ${c.clientName || c.email}`);
+    console.log(`\n[${idx + 1}] ${c.clientName || c.email} (ID: ${c.id})`);
     console.log(`    Plan: ${c.plan} | Status: ${c.subscriptionStatus} | Active: ${c.isActive}`);
     console.log(`    Stripe Customer: ${c.stripeCustomerId || "none"} | SubId: ${c.stripeSubscriptionId || "none"}`);
     console.log(`    Custom Price: $${c.customPrice} | Legacy Dashboard Contribution: $${legacyContribution}`);

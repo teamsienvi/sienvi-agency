@@ -934,13 +934,16 @@ const AdminClients = () => {
               </TableHeader>
               <TableBody>
                 {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
+                  <TableRow key={client.id} className="hover:bg-muted/40 transition-colors">
+                    <TableCell
+                      className="cursor-pointer group py-3"
+                      onClick={() => navigate(`/admin/clients/${client.id}`)}
+                    >
                       <div>
-                        <p className="font-medium">
+                        <p className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                           {client.clientName || "-"}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {client.email || "No email"}
                         </p>
                       </div>
@@ -1014,8 +1017,18 @@ const AdminClients = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => navigate(`/admin/clients/${client.id}`)}
+                          title="Open Client Workspace"
+                          className="text-primary hover:text-primary hover:bg-primary/10 font-medium"
+                        >
+                          <LayoutDashboard className="w-4 h-4 mr-1 text-primary" />
+                          <span className="text-xs hidden xl:inline">Workspace</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setSelectedClient(client)}
-                          title="View Details"
+                          title="Quick Details (Modal Fallback)"
                           className="text-muted-foreground hover:text-foreground hover:bg-muted"
                         >
                           <Eye className="w-4 h-4" />
