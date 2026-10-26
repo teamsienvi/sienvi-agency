@@ -58,6 +58,7 @@ import { toast } from "sonner";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
 
 interface Client {
@@ -695,127 +696,113 @@ const AdminClients = () => {
     });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+    <AdminShell
+      title="Client Directory"
+      description="Manage subscriptions, contracts, onboarding, and Stripe mappings"
+      breadcrumbs={[{ label: "Admin", href: "/admin/dashboard" }, { label: "Clients" }]}
+      actions={
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs border-border text-foreground hover:bg-muted gap-1.5">
+                <Download className="w-3.5 h-3.5" />
+                <span>Templates</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 text-xs">
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/1_SMART_Goals_Sheet.pdf"
+                  download="1_SMART_Goals_Sheet.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>1. SMART Goals Sheet</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/2_Customer_Avatar_Profile.pdf"
+                  download="2_Customer_Avatar_Profile.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>2. Customer Avatar Profile</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/3_General_Onboarding_Questionnaire.pdf"
+                  download="3_General_Onboarding_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>3. General Onboarding</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/4_Amazon_Listing_Design_Questionnaire.pdf"
+                  download="4_Amazon_Listing_Design_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>4. Amazon Listing Design</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/5_Advertising_Campaign_Questionnaire.pdf"
+                  download="5_Advertising_Campaign_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>5. Advertising Campaign</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/6_Business_Admin_Onboarding_Questionnaire.pdf"
+                  download="6_Business_Admin_Onboarding_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>6. Business Onboarding</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/7_General_Discovery_Questionnaire.pdf"
+                  download="7_General_Discovery_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>7. General Discovery</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
-            variant="ghost"
-            onClick={() => navigate("/admin/dashboard")}
-            className="mb-4"
+            onClick={fetchClients}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            className="h-8 text-xs border-border text-foreground hover:bg-muted"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
           </Button>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <Users className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold">Client Overview</h1>
-                <p className="text-muted-foreground">
-                  Manage all client subscriptions (Stripe-only billing)
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Download className="w-4 h-4" />
-                    Templates
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/1_SMART_Goals_Sheet.pdf"
-                      download="1_SMART_Goals_Sheet.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>1. SMART Goals Sheet</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/2_Customer_Avatar_Profile.pdf"
-                      download="2_Customer_Avatar_Profile.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>2. Customer Avatar Profile</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/3_General_Onboarding_Questionnaire.pdf"
-                      download="3_General_Onboarding_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>3. General Onboarding</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/4_Amazon_Listing_Design_Questionnaire.pdf"
-                      download="4_Amazon_Listing_Design_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>4. Amazon Listing Design</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/5_Advertising_Campaign_Questionnaire.pdf"
-                      download="5_Advertising_Campaign_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>5. Advertising Campaign</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/6_Business_Admin_Onboarding_Questionnaire.pdf"
-                      download="6_Business_Admin_Onboarding_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>6. Business Onboarding</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/7_General_Discovery_Questionnaire.pdf"
-                      download="7_General_Discovery_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>7. General Discovery</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button onClick={() => navigate("/admin/create-client")}>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Client
-              </Button>
-              <Button onClick={fetchClients} variant="outline" disabled={loading}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+          <Button
+            onClick={() => navigate("/admin/create-client")}
+            size="sm"
+            className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+          >
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+            Add Client
+          </Button>
+        </div>
+      }
+    >
 
         {/* Stats Summary */}
         <motion.div
@@ -1924,8 +1911,7 @@ const AdminClients = () => {
           clientId={onboardingViewClient?.id || ""}
           clientName={onboardingViewClient?.clientName || onboardingViewClient?.email || "Client"}
         />
-      </div>
-    </div>
+    </AdminShell>
   );
 };
 

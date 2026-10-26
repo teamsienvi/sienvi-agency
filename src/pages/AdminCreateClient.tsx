@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2, UserPlus, Link, Mail, Copy, Check, ExternalLink, Plus, Trash2, CalendarDays } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
 
 const automationServices = [
@@ -390,13 +391,22 @@ const AdminCreateClient = () => {
   // Show success state after client creation
   if (createdClient) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <Button variant="ghost" onClick={() => navigate("/admin/clients")} className="mb-6">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clients
+      <AdminShell
+        title="Client Provisioned"
+        description="Client account created and ready for onboarding / checkout"
+        breadcrumbs={[{ label: "Admin", href: "/admin/dashboard" }, { label: "Clients", href: "/admin/clients" }, { label: "Client Provisioned" }]}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/admin/clients")}
+            className="h-8 text-xs border-border"
+          >
+            View Client Directory
           </Button>
-
+        }
+      >
+        <div className="max-w-2xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -533,36 +543,27 @@ const AdminCreateClient = () => {
             </Card>
           </motion.div>
         </div>
-      </div>
+      </AdminShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+    <AdminShell
+      title="Create Client"
+      description="Add a new client profile, package, multi-subscription lines, and contract"
+      breadcrumbs={[{ label: "Admin", href: "/admin/dashboard" }, { label: "Clients", href: "/admin/clients" }, { label: "Create Client" }]}
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/admin/clients")}
+          className="h-8 text-xs border-border text-foreground hover:bg-muted"
         >
-          <Button variant="ghost" onClick={() => navigate("/admin/clients")} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clients
-          </Button>
-
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <UserPlus className="w-8 h-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Create Client</h1>
-              <p className="text-muted-foreground">
-                Add a new or existing client to the system
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
+          Cancel & Return
+        </Button>
+      }
+    >
+      <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1106,7 +1107,7 @@ const AdminCreateClient = () => {
           </Card>
         </motion.div>
       </div>
-    </div>
+    </AdminShell>
   );
 };
 
