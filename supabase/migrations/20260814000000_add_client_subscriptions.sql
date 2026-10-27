@@ -31,6 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_client_subscriptions_profile
 ALTER TABLE public.client_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Clients can view their own subscriptions
+DROP POLICY IF EXISTS "Users view own subscriptions" ON public.client_subscriptions;
 CREATE POLICY "Users view own subscriptions" ON public.client_subscriptions
   FOR SELECT USING (
     client_profile_id IN (
@@ -39,10 +40,12 @@ CREATE POLICY "Users view own subscriptions" ON public.client_subscriptions
   );
 
 -- Service role can manage all (used by edge functions)
+DROP POLICY IF EXISTS "Service role manages client subscriptions" ON public.client_subscriptions;
 CREATE POLICY "Service role manages client subscriptions" ON public.client_subscriptions
   FOR ALL USING (true) WITH CHECK (true);
 
 -- ---------- updated_at trigger ----------
+DROP TRIGGER IF EXISTS trg_client_subscriptions_updated_at ON public.client_subscriptions;
 CREATE TRIGGER trg_client_subscriptions_updated_at
   BEFORE UPDATE ON public.client_subscriptions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

@@ -45,9 +45,6 @@ verify_jwt = false
 [functions.get-client-profile]
 verify_jwt = false
 
-[functions.setup-admin]
-verify_jwt = false
-
 # ============================================
 # EMAIL FUNCTIONS
 # ============================================
