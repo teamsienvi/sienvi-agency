@@ -51,27 +51,33 @@ CREATE TRIGGER trg_client_subscriptions_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ---------- Seed data for client 79099b9d-0281-4a95-8076-dcff0fd128a4 ----------
-INSERT INTO public.client_subscriptions (client_profile_id, label, plan, selected_services, monthly_amount, billing_day, next_billing_date, subscription_status, is_primary)
-VALUES
-  (
-    '79099b9d-0281-4a95-8076-dcff0fd128a4',
-    'PPC + Social Automation Package',
-    'custom',
-    '{"social-media-suite"}',
-    2395.00,
-    15,
-    '2026-09-15',
-    'active',
-    true
-  ),
-  (
-    '79099b9d-0281-4a95-8076-dcff0fd128a4',
-    'Website Maintenance + Advertising',
-    'custom',
-    '{"custom-website", "advertising-package"}',
-    1605.00,
-    28,
-    '2026-09-28',
-    'active',
-    false
-  );
+-- Guarded so fresh databases (e.g. Supabase Preview branches) without this client skip the seed.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.client_profiles WHERE id = '79099b9d-0281-4a95-8076-dcff0fd128a4') THEN
+    INSERT INTO public.client_subscriptions (client_profile_id, label, plan, selected_services, monthly_amount, billing_day, next_billing_date, subscription_status, is_primary)
+    VALUES
+      (
+        '79099b9d-0281-4a95-8076-dcff0fd128a4',
+        'PPC + Social Automation Package',
+        'custom',
+        '{"social-media-suite"}',
+        2395.00,
+        15,
+        '2026-09-15',
+        'active',
+        true
+      ),
+      (
+        '79099b9d-0281-4a95-8076-dcff0fd128a4',
+        'Website Maintenance + Advertising',
+        'custom',
+        '{"custom-website", "advertising-package"}',
+        1605.00,
+        28,
+        '2026-09-28',
+        'active',
+        false
+      );
+  END IF;
+END $$;
