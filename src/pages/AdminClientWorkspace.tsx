@@ -941,9 +941,20 @@ export default function AdminClientWorkspace() {
                     <Layers className="w-4 h-4 text-primary" />
                     <span>Selected Services & Deliverables</span>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {totalServicesCount} Services Assigned
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditClientModalOpen(true)}
+                      className="h-7 text-xs gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-primary" />
+                      <span>Manage Services</span>
+                    </Button>
+                    <Badge variant="outline" className="text-xs">
+                      {totalServicesCount} Services Assigned
+                    </Badge>
+                  </div>
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
                   Active agency automation tools, marketing channels, and consulting deliverables
@@ -973,8 +984,8 @@ export default function AdminClientWorkspace() {
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {sub.selectedServices && sub.selectedServices.length > 0 ? (
                             sub.selectedServices.map((svc, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs py-1 px-2.5">
-                                {svc}
+                              <Badge key={i} variant="outline" className="text-xs py-1 px-2.5 bg-background font-medium capitalize">
+                                {svc.replace(/^channel-/, "").replace(/-/g, " ")}
                               </Badge>
                             ))
                           ) : (
@@ -989,10 +1000,14 @@ export default function AdminClientWorkspace() {
                     {client.selectedServices.map((svc, idx) => (
                       <div
                         key={idx}
-                        className="p-3 rounded-lg border border-border/80 bg-card hover:bg-muted/30 transition-colors flex items-center gap-2.5"
+                        className="p-3 rounded-lg border border-border/80 bg-card hover:bg-muted/30 transition-colors flex items-center justify-between gap-2.5"
                       >
-                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                        <span className="text-xs font-medium text-foreground">{svc}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                          <span className="text-xs font-medium text-foreground capitalize truncate">
+                            {svc.replace(/^channel-/, "").replace(/-/g, " ")}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
