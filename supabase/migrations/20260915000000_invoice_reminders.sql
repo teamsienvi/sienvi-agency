@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.invoice_reminders (
 ALTER TABLE public.invoice_reminders ENABLE ROW LEVEL SECURITY;
 
 -- Policies for Admins and Service Role
+DROP POLICY IF EXISTS "Admins manage invoice reminders" ON public.invoice_reminders;
 CREATE POLICY "Admins manage invoice reminders"
   ON public.invoice_reminders
   FOR ALL
@@ -28,6 +29,7 @@ CREATE POLICY "Admins manage invoice reminders"
     )
   );
 
+DROP POLICY IF EXISTS "Service role manages invoice reminders" ON public.invoice_reminders;
 CREATE POLICY "Service role manages invoice reminders"
   ON public.invoice_reminders
   FOR ALL
