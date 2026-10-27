@@ -63,6 +63,7 @@ import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
+import { isPartnershipClient, isCommissionClient } from "@/types/client";
 
 interface Client {
   id: string;
@@ -861,11 +862,20 @@ const AdminClients = () => {
             </p>
           </div>
           <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
-            <p className="text-sm text-muted-foreground">Est. MRR</p>
+            <p className="text-sm text-muted-foreground">Operating MRR</p>
             <p className="text-2xl font-bold">
               ${clients
                 .filter((c) => c.isActive && c.subscriptionStatus === "active")
-                .reduce((sum, c) => sum + getMonthlyPrice(c.plan, c.customPrice, c.selectedServices), 0)
+                .reduce((sum, c) => {
+                  if (isPartnershipClient(c as any) || isCommissionClient(c as any)) return sum;
+                  if (c.subscriptions && c.subscriptions.length > 0) {
+                    const activeSubsSum = c.subscriptions
+                      .filter((s) => s.subscriptionStatus === "active")
+                      .reduce((subSum, s) => subSum + (s.monthlyAmount || 0), 0);
+                    return sum + activeSubsSum;
+                  }
+                  return sum + getMonthlyPrice(c.plan, c.customPrice, c.selectedServices);
+                }, 0)
                 .toLocaleString()}
             </p>
           </div>

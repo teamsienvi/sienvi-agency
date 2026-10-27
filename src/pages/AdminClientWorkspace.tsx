@@ -48,7 +48,10 @@ import {
   Globe,
   Briefcase,
   HelpCircle,
+  Save,
+  Plus,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
@@ -85,6 +88,11 @@ export default function AdminClientWorkspace() {
   const [migratingToStripe, setMigratingToStripe] = useState(false);
   const [previewingBilling, setPreviewingBilling] = useState(false);
   const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
+
+  // Administrative Notes state
+  const [notesText, setNotesText] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesDirty, setNotesDirty] = useState(false);
 
   useEffect(() => {
     fetchClient();
@@ -128,6 +136,8 @@ export default function AdminClientWorkspace() {
         setClient(null);
       } else {
         setClient(found);
+        setNotesText(found.notes || "");
+        setNotesDirty(false);
       }
     } catch (err: any) {
       console.error("Error fetching client:", err);
@@ -135,6 +145,28 @@ export default function AdminClientWorkspace() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!client) return;
+    setSavingNotes(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("update-client", {
+        body: { clientId: client.id, notes: notesText },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.error) throw new Error(res.error.message);
+      if (res.data?.error) throw new Error(res.data.error);
+      setClient((prev) => prev ? { ...prev, notes: notesText } : null);
+      setNotesDirty(false);
+      toast.success("Administrative notes saved successfully");
+    } catch (err: any) {
+      console.error("Error saving notes:", err);
+      toast.error(err.message || "Failed to save notes");
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -649,6 +681,10 @@ export default function AdminClientWorkspace() {
                   ) : anySigned ? (
                     <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" /> Partial Signed
+                    </span>
+                  ) : client.contractStatus === "signed" ? (
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {isPartnership ? "NDA Signed" : "Master Signed"}
                     </span>
                   ) : (
                     <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -1392,30 +1428,62 @@ export default function AdminClientWorkspace() {
           {/* TAB 6: ACTIVITY & NOTES */}
           <TabsContent value="activity" className="space-y-4">
             <Card className="bg-card border-border shadow-xs">
-              <CardHeader className="pb-3 border-b border-border/60">
-                <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
-                  Internal Administrative Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 text-xs space-y-3">
-                {client.notes ? (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border font-sans leading-relaxed text-foreground whitespace-pre-wrap">
-                    {client.notes}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground italic">No administrative notes recorded for this account.</p>
-                )}
-
-                <div className="pt-2">
+              <CardHeader className="pb-3 border-b border-border/60 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" />
+                    Internal Administrative Notes
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
+                    Team-only operational context, customer history, and account specifications.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  {notesDirty ? (
+                    <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
+                      Unsaved Changes
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground border-border">
+                      Saved to Database
+                    </Badge>
+                  )}
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => setEditClientModalOpen(true)}
-                    className="h-7 text-xs border-border"
+                    onClick={handleSaveNotes}
+                    disabled={!notesDirty || savingNotes}
+                    className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
                   >
-                    <Pencil className="w-3 h-3 mr-1.5" />
-                    Edit Notes
+                    {savingNotes ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <Save className="w-3 h-3 mr-1" />
+                    )}
+                    Save Notes
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 text-xs space-y-3">
+                <Textarea
+                  value={notesText}
+                  onChange={(e) => {
+                    setNotesText(e.target.value);
+                    setNotesDirty(true);
+                  }}
+                  placeholder="Enter internal administrative notes, account preferences, or operational handoff details..."
+                  className="min-h-[140px] text-xs font-sans leading-relaxed resize-y bg-background border-border"
+                />
+
+                <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                  <span>{notesText.length} characters</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditClientModalOpen(true)}
+                    className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="w-3 h-3 mr-1" />
+                    Edit Full Profile Modal...
                   </Button>
                 </div>
               </CardContent>
