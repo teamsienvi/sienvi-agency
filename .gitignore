@@ -28,3 +28,8 @@ KICKOFF_*.md
 
 # Supabase temp CLI
 supabase/.temp/
+
+# Environment files
+.env
+.env.*
+!.env.example
