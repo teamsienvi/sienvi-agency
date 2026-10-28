@@ -960,6 +960,24 @@ serve(async (req) => {
       );
     }
 
+    // Enforce server-side read-only restriction for Admin Preview:
+    // All client-facing mutations (signing, onboarding progression, transfer confirmation) are forbidden from admin preview.
+    const { data: adminRoleCheck } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (adminRoleCheck && clientId && profile.user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Admin Preview is strictly read-only. Client-facing mutations (legal signatures, onboarding status changes, transfer confirmations) cannot be submitted from administrative preview. Please manage account records in the Admin Workspace." 
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let updateData: Record<string, unknown> = {};
     const signedAt = new Date().toISOString();
     let isFullyExecuted = false;
