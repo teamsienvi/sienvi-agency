@@ -93,8 +93,8 @@ export function RevenueCompositionCard({
         </div>
 
         {/* Subscription Roster Table */}
-        <div className="border border-border/60 rounded-md overflow-hidden">
-          <Table>
+        <div className="border border-border/60 rounded-md overflow-x-auto max-w-full">
+          <Table className="min-w-[650px]">
             <TableHeader className="bg-muted/40">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-xs font-semibold h-9">Client</TableHead>

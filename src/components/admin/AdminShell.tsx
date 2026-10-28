@@ -38,7 +38,7 @@ export function AdminShell({
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-primary/20 selection:text-primary">
+    <div className="min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-primary/20 selection:text-primary w-full overflow-x-hidden">
       {/* Skip to Content for Accessibility / Screen Readers */}
       <a
         href="#main-admin-content"
@@ -67,7 +67,7 @@ export function AdminShell({
         </Sheet>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
           <AdminHeader
             title={title}
             description={description}

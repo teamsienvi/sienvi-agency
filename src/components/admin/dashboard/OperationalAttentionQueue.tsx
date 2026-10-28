@@ -114,22 +114,24 @@ export function OperationalAttentionQueue({ items }: OperationalAttentionQueuePr
             </CardDescription>
           </div>
 
-          <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-auto">
-            <TabsList className="h-8 p-0.5 bg-muted/60">
-              <TabsTrigger value="all" className="text-xs px-2.5 h-7">
-                All ({items.length})
-              </TabsTrigger>
-              <TabsTrigger value="billing" className="text-xs px-2.5 h-7">
-                Billing ({items.filter(i => i.type === "failed_payment" || i.type === "overdue_invoice" || i.type === "pending_installment").length})
-              </TabsTrigger>
-              <TabsTrigger value="agreements" className="text-xs px-2.5 h-7">
-                Agreements ({items.filter(i => i.type === "unsigned_agreement").length})
-              </TabsTrigger>
-              <TabsTrigger value="onboarding" className="text-xs px-2.5 h-7">
-                Onboarding ({items.filter(i => i.type === "overdue_onboarding").length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="overflow-x-auto max-w-full pb-1 sm:pb-0">
+            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="w-auto">
+              <TabsList className="h-8 p-0.5 bg-muted/60 whitespace-nowrap">
+                <TabsTrigger value="all" className="text-xs px-2.5 h-7">
+                  All ({items.length})
+                </TabsTrigger>
+                <TabsTrigger value="billing" className="text-xs px-2.5 h-7">
+                  Billing ({items.filter(i => i.type === "failed_payment" || i.type === "overdue_invoice" || i.type === "pending_installment").length})
+                </TabsTrigger>
+                <TabsTrigger value="agreements" className="text-xs px-2.5 h-7">
+                  Agreements ({items.filter(i => i.type === "unsigned_agreement").length})
+                </TabsTrigger>
+                <TabsTrigger value="onboarding" className="text-xs px-2.5 h-7">
+                  Onboarding ({items.filter(i => i.type === "overdue_onboarding").length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </CardHeader>
 
