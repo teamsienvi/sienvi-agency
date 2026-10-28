@@ -106,18 +106,19 @@ serve(async (req) => {
       clientsMap.set(c.id, c);
     }
 
-    // 3. Domain Financial Aggregation
-    let operatingMrr = 0;
-    let stripeMrr = 0;
-    let manualMrr = 0;
-    let pastDueMrr = 0;
-    let pendingMrr = 0;
-    let openInvoicesTotal = 0;
-    let pastDueInvoicesTotal = 0;
+    // 3. Domain Financial Aggregation using Integer Cents
+    let operatingMrrCents = 0;
+    let stripeMrrCents = 0;
+    let manualMrrCents = 0;
+    let pastDueMrrCents = 0;
+    let pendingMrrCents = 0;
+    let openInvoicesTotalCents = 0;
+    let pastDueInvoicesTotalCents = 0;
 
     const now = new Date();
     const activeSubsBreakdown: any[] = [];
     const attentionQueue: AttentionItem[] = [];
+    const seenAlertIds = new Set<string>();
 
     // Process Subscriptions
     for (const s of subsList) {
@@ -125,20 +126,21 @@ serve(async (req) => {
       const isPartnership = client?.plan === "partnership" || client?.plan === "nda" || client?.is_partnership;
       const isCommissionOnly = client?.pricing_model === "commission" || s.pricing_model === "commission";
 
-      if (isPartnership || (isCommissionOnly && s.monthly_amount === 0)) {
+      if (isPartnership || (isCommissionOnly && (Number(s.monthly_amount) || 0) === 0)) {
         continue;
       }
 
-      const amount = Number(s.monthly_amount) || 0;
+      const amountCents = Math.round((Number(s.monthly_amount) || 0) * 100);
+      const amountDollars = amountCents / 100;
       const hasStripeSub = Boolean(s.stripe_subscription_id && s.stripe_subscription_id.startsWith("sub_"));
       const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Client";
 
       if (s.subscription_status === "active") {
-        operatingMrr += amount;
+        operatingMrrCents += amountCents;
         if (hasStripeSub) {
-          stripeMrr += amount;
+          stripeMrrCents += amountCents;
         } else {
-          manualMrr += amount;
+          manualMrrCents += amountCents;
         }
 
         activeSubsBreakdown.push({
@@ -146,71 +148,84 @@ serve(async (req) => {
           clientId: s.client_profile_id,
           clientName,
           label: s.label,
-          amount,
+          amount: amountDollars,
           channel: hasStripeSub ? "stripe_automated" : "manual_retainer",
           billingDay: s.billing_day,
           nextBillingDate: s.next_billing_date,
         });
       } else if (s.subscription_status === "past_due") {
-        pastDueMrr += amount;
-        // Priority 1: Failed or past-due recurring payments
-        attentionQueue.push({
-          id: `past_due_sub_${s.id}`,
-          type: "failed_payment",
-          severity: "critical",
-          title: `Past-Due Subscription: $${amount.toLocaleString()}/mo`,
-          description: `Subscription "${s.label}" for ${clientName} failed renewal. Action required to recover retainer.`,
-          clientName,
-          clientId: s.client_profile_id,
-          amount,
-          evidenceTimestamp: s.updated_at || s.created_at,
-          actionLabel: "View Billing & Invoices",
-          actionLink: `/admin/clients/${s.client_profile_id}?tab=billing`,
-        });
+        pastDueMrrCents += amountCents;
+        const alertId = `past_due_sub_${s.id}`;
+        if (!seenAlertIds.has(alertId)) {
+          seenAlertIds.add(alertId);
+          // Priority 1: Failed or past-due recurring payments
+          attentionQueue.push({
+            id: alertId,
+            type: "failed_payment",
+            severity: "critical",
+            title: `Past-Due Subscription: $${amountDollars.toLocaleString()}/mo`,
+            description: `Subscription "${s.label}" for ${clientName} failed renewal. Action required to recover retainer.`,
+            clientName,
+            clientId: s.client_profile_id,
+            amount: amountDollars,
+            evidenceTimestamp: s.updated_at || s.created_at,
+            actionLabel: "View Billing & Invoices",
+            actionLink: `/admin/clients/${s.client_profile_id}?tab=billing`,
+          });
+        }
       } else if (s.subscription_status === "pending_payment") {
-        pendingMrr += amount;
-        // Priority 5: Pending installment or setup
-        attentionQueue.push({
-          id: `pending_sub_${s.id}`,
-          type: "pending_installment",
-          severity: "medium",
-          title: `Pending Installment: $${amount.toLocaleString()}/mo`,
-          description: `Installment "${s.label}" for ${clientName} is pending payment initiation (Billing Day: ${s.billing_day || 30}).`,
-          clientName,
-          clientId: s.client_profile_id,
-          amount,
-          evidenceTimestamp: s.created_at,
-          actionLabel: "Manage Retainer",
-          actionLink: `/admin/clients/${s.client_profile_id}?tab=billing`,
-        });
+        pendingMrrCents += amountCents;
+        const alertId = `pending_sub_${s.id}`;
+        if (!seenAlertIds.has(alertId)) {
+          seenAlertIds.add(alertId);
+          // Priority 5: Pending installment or setup
+          attentionQueue.push({
+            id: alertId,
+            type: "pending_installment",
+            severity: "medium",
+            title: `Pending Installment: $${amountDollars.toLocaleString()}/mo`,
+            description: `Installment "${s.label}" for ${clientName} is pending payment initiation (Billing Day: ${s.billing_day || 30}).`,
+            clientName,
+            clientId: s.client_profile_id,
+            amount: amountDollars,
+            evidenceTimestamp: s.created_at,
+            actionLabel: "Manage Retainer",
+            actionLink: `/admin/clients/${s.client_profile_id}?tab=billing`,
+          });
+        }
       }
     }
 
     // Process One-Time Invoices
     for (const otp of otpsList) {
       if (otp.status === "open") {
-        const amt = Number(otp.amount) || 0;
-        openInvoicesTotal += amt;
+        const amtCents = Math.round((Number(otp.amount) || 0) * 100);
+        const amtDollars = amtCents / 100;
+        openInvoicesTotalCents += amtCents;
         const client = clientsMap.get(otp.client_profile_id);
         const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Client";
         const isOverdue = otp.due_date ? new Date(otp.due_date) < now : false;
 
         if (isOverdue) {
-          pastDueInvoicesTotal += amt;
-          // Priority 2: Overdue open invoices
-          attentionQueue.push({
-            id: `overdue_otp_${otp.id}`,
-            type: "overdue_invoice",
-            severity: "high",
-            title: `Overdue Invoice: $${amt.toLocaleString()}`,
-            description: `Invoice "${otp.description || "One-Time Payment"}" for ${clientName} is past due (Due: ${new Date(otp.due_date).toLocaleDateString()}).`,
-            clientName,
-            clientId: otp.client_profile_id,
-            amount: amt,
-            evidenceTimestamp: otp.due_date,
-            actionLabel: "Open Invoice Workspace",
-            actionLink: `/admin/clients/${otp.client_profile_id}?tab=billing`,
-          });
+          pastDueInvoicesTotalCents += amtCents;
+          const alertId = `overdue_otp_${otp.id}`;
+          if (!seenAlertIds.has(alertId)) {
+            seenAlertIds.add(alertId);
+            // Priority 2: Overdue open invoices
+            attentionQueue.push({
+              id: alertId,
+              type: "overdue_invoice",
+              severity: "high",
+              title: `Overdue Invoice: $${amtDollars.toLocaleString()}`,
+              description: `Invoice "${otp.description || "One-Time Payment"}" for ${clientName} is past due (Due: ${new Date(otp.due_date).toLocaleDateString()}).`,
+              clientName,
+              clientId: otp.client_profile_id,
+              amount: amtDollars,
+              evidenceTimestamp: otp.due_date,
+              actionLabel: "Open Invoice Workspace",
+              actionLink: `/admin/clients/${otp.client_profile_id}?tab=billing`,
+            });
+          }
         }
       }
     }
@@ -228,18 +243,22 @@ serve(async (req) => {
 
       // Priority 3: Agreements requiring signature
       if (c.contract_status === "not_signed" || c.contract_status === "pending" || c.contract_status === "partially_signed") {
-        attentionQueue.push({
-          id: `unsigned_contract_${c.id}`,
-          type: "unsigned_agreement",
-          severity: c.contract_status === "partially_signed" ? "medium" : "high",
-          title: c.contract_status === "partially_signed" ? "Agreement Awaiting Co-Signature" : "Agreement Signature Required",
-          description: `${clientName} has an active engagement awaiting formal digital signature completion.`,
-          clientName,
-          clientId: c.id,
-          evidenceTimestamp: c.created_at,
-          actionLabel: "Review Agreement",
-          actionLink: `/admin/clients/${c.id}?tab=agreement`,
-        });
+        const alertId = `unsigned_contract_${c.id}`;
+        if (!seenAlertIds.has(alertId)) {
+          seenAlertIds.add(alertId);
+          attentionQueue.push({
+            id: alertId,
+            type: "unsigned_agreement",
+            severity: c.contract_status === "partially_signed" ? "medium" : "high",
+            title: c.contract_status === "partially_signed" ? "Agreement Awaiting Co-Signature" : "Agreement Signature Required",
+            description: `${clientName} has an active engagement awaiting formal digital signature completion.`,
+            clientName,
+            clientId: c.id,
+            evidenceTimestamp: c.created_at,
+            actionLabel: "Review Agreement",
+            actionLink: `/admin/clients/${c.id}?tab=agreements`,
+          });
+        }
       }
 
       // Priority 4: Genuinely overdue onboarding (> 7 days from creation without completion)
@@ -247,18 +266,22 @@ serve(async (req) => {
         const createdMs = new Date(c.created_at).getTime();
         const ageDays = (now.getTime() - createdMs) / (1000 * 60 * 60 * 24);
         if (ageDays > 7 && c.subscription_status === "active") {
-          attentionQueue.push({
-            id: `overdue_onboarding_${c.id}`,
-            type: "overdue_onboarding",
-            severity: "medium",
-            title: `Onboarding Delayed (${Math.floor(ageDays)} days)`,
-            description: `${clientName} has not completed onboarding questionnaires after subscription activation.`,
-            clientName,
-            clientId: c.id,
-            evidenceTimestamp: c.created_at,
-            actionLabel: "View Onboarding Responses",
-            actionLink: `/admin/clients/${c.id}?tab=onboarding`,
-          });
+          const alertId = `overdue_onboarding_${c.id}`;
+          if (!seenAlertIds.has(alertId)) {
+            seenAlertIds.add(alertId);
+            attentionQueue.push({
+              id: alertId,
+              type: "overdue_onboarding",
+              severity: "medium",
+              title: `Onboarding Delayed (${Math.floor(ageDays)} days)`,
+              description: `${clientName} has not completed onboarding questionnaires after subscription activation.`,
+              clientName,
+              clientId: c.id,
+              evidenceTimestamp: c.created_at,
+              actionLabel: "View Onboarding Responses",
+              actionLink: `/admin/clients/${c.id}?tab=onboarding`,
+            });
+          }
         }
       }
     }
@@ -313,7 +336,15 @@ serve(async (req) => {
       canceled: clientList.filter(c => c.subscription_status === "canceled").length,
     };
 
-    // 6. Response Assembly
+    // 6. Response Assembly (convert cents to dollar float at boundary)
+    const operatingMrr = operatingMrrCents / 100;
+    const stripeMrr = stripeMrrCents / 100;
+    const manualMrr = manualMrrCents / 100;
+    const pastDueMrr = pastDueMrrCents / 100;
+    const pendingMrr = pendingMrrCents / 100;
+    const openInvoicesTotal = openInvoicesTotalCents / 100;
+    const pastDueInvoicesTotal = pastDueInvoicesTotalCents / 100;
+
     const responsePayload = {
       asOf: now.toISOString(),
       dataFreshness: "realtime",
@@ -340,13 +371,13 @@ serve(async (req) => {
             name: "Stripe Recurring",
             count: activeSubsBreakdown.filter(s => s.channel === "stripe_automated").length,
             amount: stripeMrr,
-            percentage: operatingMrr > 0 ? Number(((stripeMrr / operatingMrr) * 100).toFixed(1)) : 0,
+            percentage: operatingMrrCents > 0 ? Number(((stripeMrrCents / operatingMrrCents) * 100).toFixed(1)) : 0,
           },
           {
             name: "Manual / ACH Retainers",
             count: activeSubsBreakdown.filter(s => s.channel === "manual_retainer").length,
             amount: manualMrr,
-            percentage: operatingMrr > 0 ? Number(((manualMrr / operatingMrr) * 100).toFixed(1)) : 0,
+            percentage: operatingMrrCents > 0 ? Number(((manualMrrCents / operatingMrrCents) * 100).toFixed(1)) : 0,
           },
         ],
         breakdown: activeSubsBreakdown,

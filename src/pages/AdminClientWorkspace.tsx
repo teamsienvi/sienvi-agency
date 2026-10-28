@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,22 @@ import {
 export default function AdminClientWorkspace() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Tab synchronization from URL query param
+  const rawTab = searchParams.get("tab") || "overview";
+  const validTabs = ["overview", "services", "billing", "agreements", "onboarding", "activity"];
+  // Support 'agreement' alias mapping to 'agreements'
+  const normalizedTab = rawTab === "agreement" ? "agreements" : rawTab;
+  const currentTab = validTabs.includes(normalizedTab) ? normalizedTab : "overview";
+
+  const handleTabChange = (newTab: string) => {
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      updated.set("tab", newTab);
+      return updated;
+    }, { replace: true });
+  };
 
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
@@ -734,7 +750,7 @@ export default function AdminClientWorkspace() {
         </div>
 
         {/* Workspace Navigation Tabs */}
-        <Tabs defaultValue="overview" className="w-full space-y-4">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full space-y-4">
           <TabsList className="bg-muted/60 p-1 border border-border/80 rounded-xl flex sm:grid sm:grid-cols-6 overflow-x-auto no-scrollbar h-auto gap-1">
             <TabsTrigger value="overview" className="text-xs py-2 px-3 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Overview

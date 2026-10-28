@@ -16,7 +16,7 @@ import { RefreshCw, UserPlus, AlertCircle, Loader2, Clock } from "lucide-react";
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [authChecking, setAuthChecking] = useState(true);
-  const { data, loading, refreshing, error, refresh } = useExecutiveMetrics();
+  const { data, loading, refreshing, isUnavailable, isStale, error, refresh } = useExecutiveMetrics();
 
   useEffect(() => {
     async function verifyAdminAuth() {
@@ -59,16 +59,25 @@ export default function AdminDashboard() {
     );
   }
 
-  if (error && !data) {
+  if ((error || isUnavailable) && !data) {
     return (
-      <AdminShell title="Executive Operations Command Center" description="Error loading operational metrics">
-        <div className="p-6 rounded-lg border border-destructive/30 bg-destructive/5 text-center max-w-lg mx-auto my-12">
-          <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-foreground">Operational Data Error</h3>
-          <p className="text-xs text-muted-foreground mt-2">{error}</p>
-          <Button onClick={() => refresh()} variant="outline" className="mt-4 text-xs gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5" /> Retry Aggregation
-          </Button>
+      <AdminShell title="Executive Operations Command Center" description="Realtime authoritative agency operations">
+        <div className="p-8 rounded-xl border border-destructive/30 bg-destructive/5 text-center max-w-lg mx-auto my-12 shadow-xs">
+          <AlertCircle className="w-10 h-10 text-destructive mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-foreground">
+            {isUnavailable ? "Executive Metrics Service Unavailable" : "Operational Data Error"}
+          </h3>
+          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+            {error || "Authoritative metrics service could not be contacted. Client-side fallback calculation is disabled to preserve financial integrity."}
+          </p>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <Button onClick={() => refresh()} variant="default" size="sm" className="text-xs gap-1.5 shadow-xs">
+              <RefreshCw className="w-3.5 h-3.5" /> Retry Request
+            </Button>
+            <Button asChild variant="outline" size="sm" className="text-xs">
+              <Link to="/admin/clients">View Client Directory</Link>
+            </Button>
+          </div>
         </div>
       </AdminShell>
     );
@@ -82,6 +91,13 @@ export default function AdminDashboard() {
 
   const headerActions = (
     <div className="flex items-center gap-2 flex-wrap">
+      {isStale && (
+        <Badge variant="outline" className="text-[11px] font-normal gap-1 bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400">
+          <AlertCircle className="w-3 h-3" />
+          <span>Stale Cache (Refresh Failed)</span>
+        </Badge>
+      )}
+
       <Badge variant="outline" className="text-[11px] font-normal gap-1 bg-background/80 border-border/80 text-muted-foreground hidden sm:inline-flex">
         <Clock className="w-3 h-3 text-primary" />
         <span>As of {formatUtcTime(data?.asOf)}</span>
