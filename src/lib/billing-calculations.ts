@@ -128,9 +128,9 @@ export function calculateRefundAdjustedCollections(
 }
 
 /**
- * Computes Outstanding Receivables (Open invoices not yet past due).
+ * Computes Current Receivables (Open or partially paid invoices not yet past due).
  */
-export function calculateOutstandingReceivables(
+export function calculateCurrentReceivables(
   invoices: BillingInvoice[],
   now: Date = new Date(),
   currency: string = "usd"
@@ -145,9 +145,9 @@ export function calculateOutstandingReceivables(
 }
 
 /**
- * Computes Past-Due Balances (Open invoices past their due date).
+ * Computes Past-Due Receivables (Open or partially paid invoices strictly past their due date).
  */
-export function calculatePastDueBalances(
+export function calculatePastDueReceivables(
   invoices: BillingInvoice[],
   now: Date = new Date(),
   currency: string = "usd"
@@ -160,6 +160,42 @@ export function calculatePastDueBalances(
       inv.currency.toLowerCase() === currency.toLowerCase()
   );
   return overdueInvoices.reduce((acc, inv) => acc + inv.amountDueCents, 0);
+}
+
+/**
+ * Computes Total Outstanding Receivables.
+ * Invariant: Total Outstanding = Current Receivables + Past-Due Receivables.
+ * Overdue balances MUST remain included in total outstanding.
+ */
+export function calculateTotalOutstandingReceivables(
+  invoices: BillingInvoice[],
+  now: Date = new Date(),
+  currency: string = "usd"
+): number {
+  return calculateCurrentReceivables(invoices, now, currency) + calculatePastDueReceivables(invoices, now, currency);
+}
+
+/**
+ * Backward compatibility alias for calculateCurrentReceivables.
+ * Note: For complete balance sheet receivables, calculateTotalOutstandingReceivables must be used.
+ */
+export function calculateOutstandingReceivables(
+  invoices: BillingInvoice[],
+  now: Date = new Date(),
+  currency: string = "usd"
+): number {
+  return calculateCurrentReceivables(invoices, now, currency);
+}
+
+/**
+ * Backward compatibility alias for calculatePastDueReceivables.
+ */
+export function calculatePastDueBalances(
+  invoices: BillingInvoice[],
+  now: Date = new Date(),
+  currency: string = "usd"
+): number {
+  return calculatePastDueReceivables(invoices, now, currency);
 }
 
 /**

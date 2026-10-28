@@ -225,8 +225,10 @@ export interface BillingReconciliationSnapshot {
   invoicedMtdCents: number;
   grossCollectedMtdCents: number;
   refundAdjustedCollectedMtdCents: number;
-  outstandingReceivablesCents: number;
-  pastDueCents: number;
+  currentReceivablesCents: number;
+  pastDueReceivablesCents: number;
+  totalOutstandingReceivablesCents: number;
+  pastDueMrrCents: number;
   unappliedCreditsCents: number;
   stripePayoutsMtdCents: number;
   discrepancyCents: number;
@@ -278,14 +280,16 @@ export interface RecordPaymentTransactionResult {
  * Authoritative financial definitions for calculations & aggregates.
  */
 export interface AuthoritativeFinancialMetrics {
-  operatingMrrCents: number; // Contracted recurring monthly commitment from active client_subscriptions
+  operatingMrrCents: number; // Contracted recurring monthly commitment from active client_subscriptions ($15,783.00 baseline)
   invoicedMtdCents: number; // Sum of invoices issued in current month
   grossCustomerCollectionsCents: number; // Sum of all settled customer payments (gross)
   refundAdjustedCollectionsCents: number; // Gross collections minus total refunds/disputes
-  outstandingReceivablesCents: number; // Open invoices not yet past due
-  pastDueBalancesCents: number; // Open invoices past due + past-due retainers
+  currentReceivablesCents: number; // Open invoices not yet past due
+  pastDueReceivablesCents: number; // Open invoices past due date
+  totalOutstandingReceivablesCents: number; // Current Receivables + Past-Due Receivables (all outstanding debt)
+  pastDueMrrCents: number; // Past-due recurring retainers (e.g. Susie Jung Hea Oh $2,450.00/mo)
   stripeFeesCents: number; // Sum of processing fees deducted
-  payoutsSettledCents: number; // Cash transferred to agency bank account via Stripe payouts
+  payoutsSettledCents: number; // Cash transferred to agency bank account via Stripe payouts (segregated)
   verifiedBankDepositsCents: number; // Direct ACH/wire payments confirmed in agency bank
   unappliedCustomerCreditsCents: number; // Gross payments received exceeding allocated invoice amounts
   reconciliationStatus: "reconciliation_pending" | "verified" | "discrepancy_flagged";

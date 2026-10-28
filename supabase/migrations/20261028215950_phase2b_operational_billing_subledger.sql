@@ -11,9 +11,18 @@
 --   7. Independent Stripe Ingestion Checkpoints (stripe_sync_checkpoints)
 --   8. Billing Discrepancy & Exception Queue (billing_exceptions)
 --   9. Periodic Financial Reconciliation Snapshots (billing_reconciliation_snapshots)
---  10. Atomic Payment Recording Transaction (public.record_payment_transaction)
---  11. Least-Privilege RLS (anon blocked, clients scoped via get_accessible_client_profile_ids)
+--  10. Non-Exposed Privileged Function Schema (billing_internal)
+--  11. Atomic Payment Recording Transaction (billing_internal.record_payment_transaction)
+--  12. Public Administrative Gateway with Strict RBAC (public.record_payment_transaction)
+--  13. Least-Privilege RLS (anon blocked, clients scoped via get_accessible_client_profile_ids)
 -- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- 0. NON-EXPOSED INTERNAL SCHEMA FOR PRIVILEGED FINANCIAL FUNCTIONS
+-- ---------------------------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS billing_internal;
+REVOKE ALL ON SCHEMA billing_internal FROM public, anon, authenticated;
+GRANT USAGE ON SCHEMA billing_internal TO service_role;
 
 -- ---------------------------------------------------------------------
 -- 1. BILLING INVOICES (Authoritative Receivables & Obligations)
@@ -251,20 +260,23 @@ CREATE TABLE IF NOT EXISTS public.billing_reconciliation_snapshots (
   invoiced_mtd_cents bigint NOT NULL,
   gross_collected_mtd_cents bigint NOT NULL,
   refund_adjusted_collected_mtd_cents bigint NOT NULL,
-  outstanding_receivables_cents bigint NOT NULL,
-  past_due_cents bigint NOT NULL,
+  current_receivables_cents bigint NOT NULL,
+  past_due_receivables_cents bigint NOT NULL,
+  total_outstanding_receivables_cents bigint NOT NULL,
+  past_due_mrr_cents bigint NOT NULL DEFAULT 0,
   unapplied_credits_cents bigint NOT NULL DEFAULT 0,
   stripe_payouts_mtd_cents bigint NOT NULL DEFAULT 0,
   discrepancy_cents bigint NOT NULL DEFAULT 0,
   reconciliation_status text NOT NULL DEFAULT 'balanced' CHECK (reconciliation_status IN ('balanced', 'flagged', 'reconciled')),
   metadata jsonb DEFAULT '{}'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT chk_reconciliation_receivables CHECK (current_receivables_cents + past_due_receivables_cents = total_outstanding_receivables_cents)
 );
 
 -- ---------------------------------------------------------------------
--- 10. ATOMIC PAYMENT RECORDING TRANSACTION FUNCTION
+-- 10. PRIVILEGED ATOMIC PAYMENT RECORDING TRANSACTION FUNCTION
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.record_payment_transaction(
+CREATE OR REPLACE FUNCTION billing_internal.record_payment_transaction(
   p_client_profile_id uuid,
   p_gross_amount_cents bigint,
   p_fee_amount_cents bigint,
@@ -279,17 +291,14 @@ CREATE OR REPLACE FUNCTION public.record_payment_transaction(
   p_notes text,
   p_allocations jsonb, -- Array of { invoice_id: uuid, amount_cents: bigint }
   p_manual_submission_id uuid DEFAULT NULL,
-  p_admin_user_id uuid DEFAULT auth.uid()
+  p_admin_user_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = billing_internal, public, pg_temp
 AS $$
 DECLARE
-  v_caller uuid := auth.uid();
-  v_is_admin boolean := false;
-  v_is_service boolean := false;
   v_payment_id uuid;
   v_total_allocated bigint := 0;
   v_alloc_elem jsonb;
@@ -301,19 +310,7 @@ DECLARE
   v_new_status text;
   v_updated_invoices jsonb := '[]'::jsonb;
 BEGIN
-  -- 1. Authorization: Only administrators or service_role can execute payment transactions
-  v_is_service := COALESCE(current_setting('request.jwt.claim.role', true), '') = 'service_role';
-  IF NOT v_is_service THEN
-    IF v_caller IS NULL THEN
-      RAISE EXCEPTION 'Unauthorized: authentication required to record payments';
-    END IF;
-    SELECT public.has_role(v_caller, 'admin'::public.app_role) INTO v_is_admin;
-    IF NOT v_is_admin THEN
-      RAISE EXCEPTION 'Forbidden: only administrators can record financial transactions';
-    END IF;
-  END IF;
-
-  -- 2. Input Validation
+  -- 1. Input Validation
   IF p_gross_amount_cents <= 0 THEN
     RAISE EXCEPTION 'Invalid gross amount: must be positive integer cents';
   END IF;
@@ -321,7 +318,7 @@ BEGIN
     RAISE EXCEPTION 'Invalid fee amount: must be non-negative and less than gross amount';
   END IF;
 
-  -- 3. Idempotency Check (Stripe charge ID or Bank Reference)
+  -- 2. Idempotency Check (Stripe charge ID or Bank Reference)
   IF p_stripe_charge_id IS NOT NULL THEN
     SELECT id INTO v_payment_id FROM public.billing_payments WHERE stripe_charge_id = p_stripe_charge_id;
     IF v_payment_id IS NOT NULL THEN
@@ -346,7 +343,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- 4. Calculate Total Allocation & Validate Currency Across Allocations
+  -- 3. Calculate Total Allocation & Validate Currency Across Allocations
   IF p_allocations IS NOT NULL AND jsonb_array_length(p_allocations) > 0 THEN
     FOR v_alloc_elem IN SELECT * FROM jsonb_array_elements(p_allocations)
     LOOP
@@ -363,7 +360,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- 5. Insert billing_payments record
+  -- 4. Insert billing_payments record
   INSERT INTO public.billing_payments (
     client_profile_id,
     payment_channel,
@@ -400,11 +397,11 @@ BEGIN
     COALESCE(p_settled_at, now()),
     true,
     now(),
-    COALESCE(p_admin_user_id, v_caller),
+    p_admin_user_id,
     p_notes
   ) RETURNING id INTO v_payment_id;
 
-  -- 6. Apply Allocations to Invoices Atomically (with row locks)
+  -- 5. Apply Allocations to Invoices Atomically (with row locks)
   IF p_allocations IS NOT NULL AND jsonb_array_length(p_allocations) > 0 THEN
     FOR v_alloc_elem IN SELECT * FROM jsonb_array_elements(p_allocations)
     LOOP
@@ -457,7 +454,7 @@ BEGIN
         v_alloc_cents,
         lower(p_currency),
         now(),
-        COALESCE(p_admin_user_id, v_caller)
+        p_admin_user_id
       );
 
       v_updated_invoices := v_updated_invoices || jsonb_build_object(
@@ -469,19 +466,19 @@ BEGIN
     END LOOP;
   END IF;
 
-  -- 7. If linked to manual_payment_submissions, mark submission verified
+  -- 6. If linked to manual_payment_submissions, mark submission verified
   IF p_manual_submission_id IS NOT NULL THEN
     UPDATE public.manual_payment_submissions
     SET
       status = 'verified',
-      verified_by = COALESCE(p_admin_user_id, v_caller),
+      verified_by = p_admin_user_id,
       verified_at = now(),
       payment_id = v_payment_id,
       updated_at = now()
     WHERE id = p_manual_submission_id;
   END IF;
 
-  -- 8. If unallocated amount exists, create audit note for client credit
+  -- 7. If unallocated amount exists, create audit note for client credit
   IF (p_gross_amount_cents - v_total_allocated) > 0 THEN
     INSERT INTO public.billing_exceptions (
       client_profile_id,
@@ -504,7 +501,7 @@ BEGIN
     );
   END IF;
 
-  -- 9. Insert structured audit log
+  -- 8. Insert structured audit log
   INSERT INTO public.admin_audit_logs (
     admin_user_id,
     admin_email,
@@ -512,7 +509,7 @@ BEGIN
     target_client_id,
     details
   ) VALUES (
-    COALESCE(p_admin_user_id, v_caller, '00000000-0000-0000-0000-000000000000'::uuid),
+    COALESCE(p_admin_user_id, '00000000-0000-0000-0000-000000000000'::uuid),
     COALESCE(current_setting('request.jwt.claim.email', true), 'admin@sienvi.com'),
     'admin_record_payment_transaction',
     p_client_profile_id,
@@ -537,8 +534,78 @@ BEGIN
 END;
 $$;
 
+-- Revoke execute from public roles; grant solely to service_role
+REVOKE ALL ON FUNCTION billing_internal.record_payment_transaction FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION billing_internal.record_payment_transaction TO service_role;
+
 -- ---------------------------------------------------------------------
--- 11. ROW LEVEL SECURITY (RLS) POLICIES & PERMISSIONS
+-- 11. PUBLIC ADMINISTRATIVE GATEWAY WITH STRICT RBAC VERIFICATION
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.record_payment_transaction(
+  p_client_profile_id uuid,
+  p_gross_amount_cents bigint,
+  p_fee_amount_cents bigint,
+  p_currency text,
+  p_payment_channel text,
+  p_bank_ref text,
+  p_stripe_charge_id text,
+  p_stripe_payment_intent_id text,
+  p_stripe_account_id text,
+  p_settled_at timestamptz,
+  p_payment_method_summary jsonb,
+  p_notes text,
+  p_allocations jsonb,
+  p_manual_submission_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, billing_internal, pg_temp
+AS $$
+DECLARE
+  v_caller uuid := auth.uid();
+  v_is_admin boolean := false;
+  v_is_service boolean := false;
+BEGIN
+  -- Strict caller authorization: Must be administrator or service_role
+  v_is_service := COALESCE(current_setting('request.jwt.claim.role', true), '') = 'service_role';
+  IF NOT v_is_service THEN
+    IF v_caller IS NULL THEN
+      RAISE EXCEPTION 'Unauthorized: authentication required to record payments';
+    END IF;
+    SELECT public.has_role(v_caller, 'admin'::public.app_role) INTO v_is_admin;
+    IF NOT v_is_admin THEN
+      RAISE EXCEPTION 'Forbidden: only administrators can record financial transactions';
+    END IF;
+  END IF;
+
+  -- Delegate to internal protected execution function
+  RETURN billing_internal.record_payment_transaction(
+    p_client_profile_id,
+    p_gross_amount_cents,
+    p_fee_amount_cents,
+    p_currency,
+    p_payment_channel,
+    p_bank_ref,
+    p_stripe_charge_id,
+    p_stripe_payment_intent_id,
+    p_stripe_account_id,
+    p_settled_at,
+    p_payment_method_summary,
+    p_notes,
+    p_allocations,
+    p_manual_submission_id,
+    v_caller
+  );
+END;
+$$;
+
+-- Revoke execute from anon
+REVOKE ALL ON FUNCTION public.record_payment_transaction FROM anon;
+GRANT EXECUTE ON FUNCTION public.record_payment_transaction TO authenticated, service_role;
+
+-- ---------------------------------------------------------------------
+-- 12. ROW LEVEL SECURITY (RLS) POLICIES & PERMISSIONS
 -- ---------------------------------------------------------------------
 ALTER TABLE public.billing_invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_payments ENABLE ROW LEVEL SECURITY;
@@ -562,15 +629,17 @@ REVOKE ALL ON public.billing_exceptions FROM anon;
 REVOKE ALL ON public.billing_reconciliation_snapshots FROM anon;
 
 -- Grant access to authenticated and service_role
-GRANT SELECT, INSERT, UPDATE ON public.billing_invoices TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.billing_payments TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.billing_invoice_allocations TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.billing_adjustments TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.billing_payouts TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.manual_payment_submissions TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.stripe_sync_checkpoints TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.billing_exceptions TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.billing_reconciliation_snapshots TO authenticated;
+-- Least privilege: authenticated role receives SELECT only on ledger tables.
+-- Direct ledger mutations must pass through privileged server-side functions.
+GRANT SELECT ON public.billing_invoices TO authenticated;
+GRANT SELECT ON public.billing_payments TO authenticated;
+GRANT SELECT ON public.billing_invoice_allocations TO authenticated;
+GRANT SELECT ON public.billing_adjustments TO authenticated;
+GRANT SELECT ON public.billing_payouts TO authenticated;
+GRANT SELECT, INSERT ON public.manual_payment_submissions TO authenticated;
+GRANT SELECT ON public.stripe_sync_checkpoints TO authenticated;
+GRANT SELECT ON public.billing_exceptions TO authenticated;
+GRANT SELECT ON public.billing_reconciliation_snapshots TO authenticated;
 
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 
