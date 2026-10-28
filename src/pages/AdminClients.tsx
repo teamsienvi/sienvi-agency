@@ -47,18 +47,23 @@ import {
   Download,
   FileSignature,
   LayoutDashboard,
+  MoreVertical,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { EditClientModal } from "@/components/admin/EditClientModal";
 import { DeleteClientDialog } from "@/components/admin/DeleteClientDialog";
 import { OnboardingResponsesModal } from "@/components/admin/OnboardingResponsesModal";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { copyToClipboard as safeCopyToClipboard } from "@/lib/utils";
+import { isPartnershipClient, isCommissionClient } from "@/types/client";
 
 interface Client {
   id: string;
@@ -227,27 +232,55 @@ const AdminClients = () => {
   const getStatusBadge = (client: Client) => {
     if (isPartnershipClient(client)) {
       if (client.contractStatus === "signed") {
-        return <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-medium">Partner (NDA Active)</Badge>;
+        return (
+          <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+            Partner (NDA Active)
+          </Badge>
+        );
       }
-      return <Badge className="bg-purple-500 hover:bg-purple-600 text-white font-medium">Awaiting NDA Sign</Badge>;
+      return (
+        <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+          Awaiting NDA
+        </Badge>
+      );
     }
     // Explicitly canceled subscription takes highest priority
     if (client.subscriptionStatus === "canceled") {
-      return <Badge variant="destructive">Canceled</Badge>;
+      return <Badge variant="destructive" className="whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">Canceled</Badge>;
     }
     if (client.subscriptionStatus === "past_due") {
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600">Past Due</Badge>;
+      return (
+        <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+          Past Due
+        </Badge>
+      );
     }
     if (client.subscriptionStatus === "pending_payment") {
       if (client.contractStatus === "not_signed" && client.plan !== "advertising") {
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Contract</Badge>;
+        return (
+          <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+            Awaiting Contract
+          </Badge>
+        );
       }
-      return <Badge className="bg-orange-500 hover:bg-orange-600">Awaiting Payment</Badge>;
+      return (
+        <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+          Awaiting Payment
+        </Badge>
+      );
     }
     if (client.contractStatus === "not_signed" && client.plan !== "advertising") {
-      return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Contract</Badge>;
+      return (
+        <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+          Awaiting Contract
+        </Badge>
+      );
     }
-    return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 whitespace-nowrap text-xs font-semibold px-2.5 py-0.5">
+        Active
+      </Badge>
+    );
   };
 
   const getPlanDisplay = (plan: string | null, customPrice: number | null, selectedServices: string[] = [], client?: Client) => {
@@ -259,10 +292,6 @@ const AdminClients = () => {
     }
     if (client && isCommissionClient(client)) {
       return "Custom (Commission-based)";
-    }
-    if (plan === "custom" && customPrice !== null && customPrice !== undefined) {
-      if (customPrice === 0) return "Custom Plan";
-      return `Custom ($${customPrice}/mo)`;
     }
     if (plan === "custom") {
       return "Custom Plan";
@@ -695,127 +724,113 @@ const AdminClients = () => {
     });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background text-slate-800 dark:text-foreground">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+    <AdminShell
+      title="Client Directory"
+      description="Manage subscriptions, contracts, onboarding, and Stripe mappings"
+      breadcrumbs={[{ label: "Admin", href: "/admin/dashboard" }, { label: "Clients" }]}
+      actions={
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs border-border text-foreground hover:bg-muted gap-1.5">
+                <Download className="w-3.5 h-3.5" />
+                <span>Templates</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 text-xs">
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/1_SMART_Goals_Sheet.pdf"
+                  download="1_SMART_Goals_Sheet.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>1. SMART Goals Sheet</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/2_Customer_Avatar_Profile.pdf"
+                  download="2_Customer_Avatar_Profile.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>2. Customer Avatar Profile</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/3_General_Onboarding_Questionnaire.pdf"
+                  download="3_General_Onboarding_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>3. General Onboarding</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/4_Amazon_Listing_Design_Questionnaire.pdf"
+                  download="4_Amazon_Listing_Design_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>4. Amazon Listing Design</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/5_Advertising_Campaign_Questionnaire.pdf"
+                  download="5_Advertising_Campaign_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>5. Advertising Campaign</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/6_Business_Admin_Onboarding_Questionnaire.pdf"
+                  download="6_Business_Admin_Onboarding_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>6. Business Onboarding</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="/onboarding_forms_pdf/7_General_Discovery_Questionnaire.pdf"
+                  download="7_General_Discovery_Questionnaire.pdf"
+                  className="cursor-pointer w-full flex items-center justify-between"
+                >
+                  <span>7. General Discovery</span>
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
-            variant="ghost"
-            onClick={() => navigate("/admin/dashboard")}
-            className="mb-4"
+            onClick={fetchClients}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            className="h-8 text-xs border-border text-foreground hover:bg-muted"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
           </Button>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <Users className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold">Client Overview</h1>
-                <p className="text-muted-foreground">
-                  Manage all client subscriptions (Stripe-only billing)
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Download className="w-4 h-4" />
-                    Templates
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/1_SMART_Goals_Sheet.pdf"
-                      download="1_SMART_Goals_Sheet.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>1. SMART Goals Sheet</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/2_Customer_Avatar_Profile.pdf"
-                      download="2_Customer_Avatar_Profile.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>2. Customer Avatar Profile</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/3_General_Onboarding_Questionnaire.pdf"
-                      download="3_General_Onboarding_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>3. General Onboarding</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/4_Amazon_Listing_Design_Questionnaire.pdf"
-                      download="4_Amazon_Listing_Design_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>4. Amazon Listing Design</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/5_Advertising_Campaign_Questionnaire.pdf"
-                      download="5_Advertising_Campaign_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>5. Advertising Campaign</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/6_Business_Admin_Onboarding_Questionnaire.pdf"
-                      download="6_Business_Admin_Onboarding_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>6. Business Onboarding</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="/onboarding_forms_pdf/7_General_Discovery_Questionnaire.pdf"
-                      download="7_General_Discovery_Questionnaire.pdf"
-                      className="cursor-pointer w-full flex items-center justify-between"
-                    >
-                      <span>7. General Discovery</span>
-                      <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button onClick={() => navigate("/admin/create-client")}>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Client
-              </Button>
-              <Button onClick={fetchClients} variant="outline" disabled={loading}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+          <Button
+            onClick={() => navigate("/admin/create-client")}
+            size="sm"
+            className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+          >
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+            Add Client
+          </Button>
+        </div>
+      }
+    >
 
         {/* Stats Summary */}
         <motion.div
@@ -847,11 +862,20 @@ const AdminClients = () => {
             </p>
           </div>
           <div className="bg-white dark:bg-card p-4 rounded-xl border shadow-sm">
-            <p className="text-sm text-muted-foreground">Est. MRR</p>
+            <p className="text-sm text-muted-foreground">Operating MRR</p>
             <p className="text-2xl font-bold">
               ${clients
                 .filter((c) => c.isActive && c.subscriptionStatus === "active")
-                .reduce((sum, c) => sum + getMonthlyPrice(c.plan, c.customPrice, c.selectedServices), 0)
+                .reduce((sum, c) => {
+                  if (isPartnershipClient(c as any) || isCommissionClient(c as any)) return sum;
+                  if (c.subscriptions && c.subscriptions.length > 0) {
+                    const activeSubsSum = c.subscriptions
+                      .filter((s) => s.subscriptionStatus === "active")
+                      .reduce((subSum, s) => subSum + (s.monthlyAmount || 0), 0);
+                    return sum + activeSubsSum;
+                  }
+                  return sum + getMonthlyPrice(c.plan, c.customPrice, c.selectedServices);
+                }, 0)
                 .toLocaleString()}
             </p>
           </div>
@@ -937,259 +961,268 @@ const AdminClients = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Services</TableHead>
-                  <TableHead>Subscribed</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="min-w-[220px]">Client</TableHead>
+                  <TableHead className="min-w-[170px]">Plan & Pricing</TableHead>
+                  <TableHead className="min-w-[150px]">Status</TableHead>
+                  <TableHead className="min-w-[180px]">Services</TableHead>
+                  <TableHead className="min-w-[110px]">Subscribed</TableHead>
+                  <TableHead className="text-right min-w-[160px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {client.clientName || "-"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {client.email || "No email"}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium">
-                            {getPlanDisplay(client.plan, client.customPrice, client.selectedServices, client)}
+                {filteredClients.map((client) => {
+                  const isPartnership = isPartnershipClient(client);
+                  const isComm = isCommissionClient(client);
+                  const subsCount = client.subscriptions?.length ?? 0;
+                  const total = subsCount > 0
+                    ? client.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0)
+                    : getMonthlyPrice(client.plan, client.customPrice, client.selectedServices);
+
+                  return (
+                    <TableRow key={client.id} className="hover:bg-muted/40 transition-colors">
+                      {/* Client Identity */}
+                      <TableCell
+                        className="cursor-pointer group py-3"
+                        onClick={() => navigate(`/admin/clients/${client.id}`)}
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5 text-sm">
+                            {client.clientName || "-"}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[220px]">
+                            {client.email || "No email"}
                           </p>
                         </div>
-                        {(() => {
-                          const isPartnership = isPartnershipClient(client);
-                          if (isPartnership) {
-                            return (
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[11px] font-medium mt-0.5">
-                                Partnership (No Fees)
-                              </Badge>
-                            );
-                          }
-                          const total = (client.subscriptions?.length ?? 0) > 0
-                            ? client.subscriptions!.reduce((sum, s) => sum + (s.monthlyAmount || 0), 0)
-                            : getMonthlyPrice(client.plan, client.customPrice, client.selectedServices);
-                          const isComm = isCommissionClient(client);
-                          return isComm ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] font-medium mt-0.5">
-                              Commission-Based
+                      </TableCell>
+
+                      {/* Plan & Pricing */}
+                      <TableCell className="py-3">
+                        {isPartnership ? (
+                          <div className="space-y-1">
+                            <p className="font-medium text-foreground text-xs whitespace-nowrap">Strategic Partnership</p>
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20 text-[11px] font-medium whitespace-nowrap">
+                              Mutual NDA ($0/mo)
                             </Badge>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">
-                              ${total.toLocaleString()}/mo
+                          </div>
+                        ) : isComm ? (
+                          <div className="space-y-1">
+                            <p className="font-medium text-foreground text-xs whitespace-nowrap">Performance Agreement</p>
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 text-[11px] font-medium whitespace-nowrap">
+                              100% Commission
+                            </Badge>
+                          </div>
+                        ) : subsCount > 1 ? (
+                          <div className="space-y-1">
+                            <p className="font-semibold text-foreground text-xs whitespace-nowrap">${total.toLocaleString()}/mo</p>
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 text-[11px] font-medium whitespace-nowrap">
+                              {subsCount} Active Subscriptions
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <p className="font-semibold text-foreground text-xs whitespace-nowrap">${total.toLocaleString()}/mo</p>
+                            <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              {getPlanDisplay(client.plan, client.customPrice, client.selectedServices, client)}
                             </p>
-                          );
-                        })()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(client)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1 max-w-[150px]">
-                        {(() => {
-                          const allServices = (client.subscriptions?.length ?? 0) > 0
-                            ? client.subscriptions!.flatMap(s => s.selectedServices || [])
-                            : client.selectedServices;
-                          if (allServices.length > 0) {
-                            return (
-                              <>
-                                {allServices.slice(0, 2).map((service, i) => (
-                                  <Badge key={i} variant="secondary" className="text-xs">
-                                    {service}
-                                  </Badge>
-                                ))}
-                                {allServices.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{allServices.length - 2}
-                                  </Badge>
-                                )}
-                              </>
-                            );
-                          }
-                          return <span className="text-muted-foreground text-sm">None</span>;
-                        })()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(client.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedClient(client)}
-                          title="View Details"
-                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditClient(client)}
-                          title="Edit Client"
-                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteClient(client)}
-                          title="Delete Client"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        {client.contractStatus !== "signed" && (
+                          </div>
+                        )}
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell className="py-3">
+                        {getStatusBadge(client)}
+                      </TableCell>
+
+                      {/* Services */}
+                      <TableCell className="py-3">
+                        <div className="flex flex-wrap gap-1 max-w-[260px]">
+                          {(() => {
+                            const rawServices = (client.subscriptions?.length ?? 0) > 0
+                              ? client.subscriptions!.flatMap((s) => s.selectedServices || [])
+                              : (client.selectedServices || []);
+                            const allServices = Array.from(new Set(rawServices));
+                            if (allServices.length > 0) {
+                              return (
+                                <>
+                                  {allServices.slice(0, 2).map((service, i) => (
+                                    <Badge
+                                      key={i}
+                                      variant="outline"
+                                      className="text-[11px] px-2 py-0.5 whitespace-nowrap font-medium bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700/60 capitalize"
+                                    >
+                                      {service.replace(/^channel-/, "").replace(/-/g, " ")}
+                                    </Badge>
+                                  ))}
+                                  {allServices.length > 2 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] px-1.5 py-0.5 whitespace-nowrap font-medium text-muted-foreground border-border bg-muted/40"
+                                    >
+                                      +{allServices.length - 2}
+                                    </Badge>
+                                  )}
+                                </>
+                              );
+                            }
+                            return <span className="text-muted-foreground text-xs">None</span>;
+                          })()}
+                        </div>
+                      </TableCell>
+
+                      {/* Subscribed Date */}
+                      <TableCell className="py-3 text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(client.createdAt).toLocaleDateString()}
+                      </TableCell>
+
+                      {/* Streamlined Grouped Actions */}
+                      <TableCell className="text-right py-3 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Primary CTA: Dedicated Client Workspace */}
                           <Button
-                            variant="ghost"
                             size="sm"
-                            onClick={() => window.open(`/contract?clientId=${client.id}`, "_blank")}
-                            title={isPartnershipClient(client) ? "Open / Review NDA Signing Page" : "Open / Review Contract Signing Page"}
-                            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                            onClick={() => navigate(`/admin/clients/${client.id}`)}
+                            title="Open Dedicated Client Workspace"
+                            className="h-8 px-2.5 text-xs font-medium gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
                           >
-                            <FileSignature className="w-4 h-4" />
+                            <LayoutDashboard className="w-3.5 h-3.5" />
+                            <span>Workspace</span>
                           </Button>
-                        )}
-                        {!isPartnershipClient(client) && client.subscriptionStatus === "pending_payment" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleGenerateCheckoutLink(client)}
-                              title="Copy Checkout Link"
-                              className="text-blue-600 hover:text-blue-700"
-                              disabled={generatingLink === client.id}
-                            >
-                              {generatingLink === client.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Link className="w-4 h-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEmailCheckoutLink(client)}
-                              title="Email Checkout Link"
-                              className="text-cyan-600 hover:text-cyan-700"
-                              disabled={emailingCheckoutLink === client.id}
-                            >
-                              {emailingCheckoutLink === client.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Send className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </>
-                        )}
-                        {/* Migrate to Stripe for active clients without proper Stripe subscription */}
-                        {client.subscriptionStatus === "active" && 
-                         (!client.stripeSubscriptionId || client.stripeCustomerId?.startsWith("pending_")) && (
+
+                          {/* Quick Details (Modal Fallback) */}
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => handleMigrateToStripe(client)}
-                            title="Migrate to Stripe"
-                            className="text-orange-600 hover:text-orange-700"
-                            disabled={migratingToStripe === client.id}
+                            onClick={() => setSelectedClient(client)}
+                            title="Quick Details (Modal Preview)"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground border-border"
                           >
-                            {migratingToStripe === client.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <CreditCard className="w-4 h-4" />
-                            )}
+                            <Eye className="w-3.5 h-3.5" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleGenerateOnboardingLink(client)}
-                          title="Generate & Copy 1-Click Client Link"
-                          className="text-indigo-600 hover:text-indigo-700"
-                          disabled={generatingOnboardingLink === client.id}
-                        >
-                          {generatingOnboardingLink === client.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Link className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSendLoginInvite(client)}
-                          title="Send Email Login Invite"
-                          className="text-green-600 hover:text-green-700"
-                          disabled={sendingEmail === client.id}
-                        >
-                          {sendingEmail === client.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Mail className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setOnboardingViewClient(client)}
-                          title={client.onboardingCompleted ? "View Onboarding Responses" : "Preview / View Onboarding"}
-                          className={client.onboardingCompleted ? "text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300" : "text-muted-foreground hover:text-foreground"}
-                        >
-                          <ClipboardList className="w-4 h-4" />
-                        </Button>
-                        {client.contractStatus === "signed" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(`/contract?view=true&clientId=${client.id}`, "_blank")}
-                            title="View Signed Contract"
-                            className="text-indigo-600 hover:text-indigo-700"
-                          >
-                            <FileSignature className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {client.stripeCustomerId && !client.stripeCustomerId.startsWith("pending_") && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(client.stripeCustomerId, client.id)}
-                              title="Copy Customer ID"
-                              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                            >
-                              {copiedId === client.id ? (
-                                <Check className="w-4 h-4 text-green-500" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
+
+                          {/* Grouped More Actions Menu */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                title="More client actions"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground border-border"
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 text-xs">
+                              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Client Access
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => handleGenerateOnboardingLink(client)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <Link className="w-3.5 h-3.5 text-indigo-500" />
+                                <span>{onboardingLinks[client.id] ? "Copy 1-Click Link" : "Generate 1-Click Link"}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleSendLoginInvite(client)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <Mail className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Send Email Invite</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Billing & Payments
+                              </DropdownMenuLabel>
+                              {client.subscriptionStatus === "pending_payment" && !isPartnership && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => handleGenerateCheckoutLink(client)}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <Link className="w-3.5 h-3.5 text-blue-500" />
+                                    <span>Copy Checkout Link</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleEmailCheckoutLink(client)}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <Send className="w-3.5 h-3.5 text-cyan-500" />
+                                    <span>Email Checkout Link</span>
+                                  </DropdownMenuItem>
+                                </>
                               )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openStripeCustomer(client.stripeCustomerId)}
-                              title="View in Stripe"
-                              className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                              {client.stripeCustomerId && !client.stripeCustomerId.startsWith("pending_") ? (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => openStripeCustomer(client.stripeCustomerId)}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <span>View in Stripe</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handlePreviewBilling(client)}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <span>Preview Billing Portal</span>
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => handleMigrateToStripe(client)}
+                                  className="gap-2 cursor-pointer"
+                                >
+                                  <CreditCard className="w-3.5 h-3.5 text-orange-500" />
+                                  <span>Migrate to Stripe</span>
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Agreements & Onboarding
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => window.open(`/contract?clientId=${client.id}`, "_blank")}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <FileSignature className="w-3.5 h-3.5 text-indigo-500" />
+                                <span>{client.contractStatus === "signed" ? "View Contract" : "Open Signing Page"}</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setOnboardingViewClient(client)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <ClipboardList className="w-3.5 h-3.5 text-purple-500" />
+                                <span>{client.onboardingCompleted ? "View Onboarding Responses" : "Preview Onboarding"}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Administration
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => setEditClient(client)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                                <span>Edit Profile...</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setDeleteClient(client)}
+                                className="gap-2 text-destructive focus:text-destructive cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                <span>Delete Client...</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -1924,8 +1957,7 @@ const AdminClients = () => {
           clientId={onboardingViewClient?.id || ""}
           clientName={onboardingViewClient?.clientName || onboardingViewClient?.email || "Client"}
         />
-      </div>
-    </div>
+    </AdminShell>
   );
 };
 

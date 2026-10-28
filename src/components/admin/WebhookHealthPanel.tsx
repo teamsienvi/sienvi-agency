@@ -91,51 +91,51 @@ export const WebhookHealthPanel = ({ className }: WebhookHealthPanelProps) => {
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className={className}>
       <CollapsibleTrigger asChild>
-        <div className="flex items-center justify-between p-3 bg-[#1a1f2e] border border-[#2a3142] rounded-lg cursor-pointer hover:bg-[#1f2536] transition-colors">
+        <div className="flex items-center justify-between p-3 bg-card border border-border/80 rounded-lg cursor-pointer hover:bg-muted/40 transition-colors shadow-2xs">
           <div className="flex items-center gap-3">
             {health.status === "healthy" ? (
-              <Wifi className="w-4 h-4 text-green-400" />
+              <Wifi className="w-4 h-4 text-emerald-500" />
             ) : health.status === "warning" ? (
-              <AlertCircle className="w-4 h-4 text-yellow-400" />
+              <AlertCircle className="w-4 h-4 text-amber-500" />
             ) : (
-              <WifiOff className="w-4 h-4 text-gray-400" />
+              <WifiOff className="w-4 h-4 text-muted-foreground" />
             )}
-            <span className="text-sm text-gray-300">Stripe Webhooks</span>
-            <Badge className={`${health.color} text-white text-xs`}>
+            <span className="text-xs sm:text-sm font-medium text-foreground">Stripe Webhooks</span>
+            <Badge className={`${health.color} text-white text-[11px]`}>
               {health.label}
             </Badge>
             {lastWebhook && (
-              <span className="text-xs text-gray-500 hidden sm:inline">
+              <span className="text-xs text-muted-foreground hidden sm:inline">
                 Last: {formatDistanceToNow(new Date(lastWebhook.processed_at), { addSuffix: true })}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-xs">
-              <span className="text-green-400">{successCount}✓</span>
-              {errorCount > 0 && <span className="text-red-400">{errorCount}✗</span>}
+            <div className="flex items-center gap-1.5 text-xs font-mono">
+              <span className="text-emerald-500 font-medium">{successCount}✓</span>
+              {errorCount > 0 && <span className="text-rose-500 font-medium">{errorCount}✗</span>}
             </div>
             <Button
               size="sm"
               variant="ghost"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
             >
               <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
             {isOpen ? (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="mt-2 p-4 bg-[#1a1f2e] border border-[#2a3142] rounded-lg space-y-3">
+        <div className="mt-2 p-4 bg-card border border-border/80 rounded-lg space-y-3 shadow-xs">
           {/* Recent Events */}
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Recent Events</div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-medium">Recent Events</div>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {logs.slice(0, 5).map((log) => (
               <div

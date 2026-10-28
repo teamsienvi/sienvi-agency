@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2, X, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ClientCreatedActions } from "./ClientCreatedActions";
 
 const automationServices = [
@@ -102,6 +103,74 @@ export const AddManualClientModal = ({
     } else {
       setContractFile(null);
     }
+  };
+
+  const [customServices, setCustomServices] = useState<{ id: string; label: string }[]>([]);
+  const [customServiceName, setCustomServiceName] = useState("");
+  const [showAddCustom, setShowAddCustom] = useState(false);
+
+  const handleAddCustomService = () => {
+    const trimmed = customServiceName.trim();
+    if (!trimmed) return;
+
+    const slug = trimmed
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    if (!slug) {
+      toast.error("Please enter a valid service name");
+      return;
+    }
+
+    const allKnownIds = [
+      ...automationServices.map((s) => s.id),
+      ...advertisingChannels.map((c) => c.id),
+      ...customServices.map((s) => s.id),
+    ];
+
+    if (allKnownIds.includes(slug)) {
+      toast.error("A service with this name or slug already exists");
+      return;
+    }
+
+    const newService = { id: slug, label: trimmed };
+    setCustomServices((prev) => [...prev, newService]);
+
+    let canSelect = false;
+    if (formData.plan === "custom") {
+      const max = parseInt(formData.maxServices as any) || 0;
+      const currentGeneralCount = formData.selectedServices.filter((s) => !s.startsWith("channel-")).length;
+      canSelect = currentGeneralCount < max;
+    } else {
+      const max = planConfigs[formData.plan]?.maxServices || 1;
+      const currentCount = formData.plan === "advertising"
+        ? formData.selectedServices.filter((s) => s.startsWith("channel-")).length
+        : formData.selectedServices.length;
+      canSelect = currentCount < max;
+    }
+
+    if (canSelect) {
+      setFormData((prev) => ({
+        ...prev,
+        selectedServices: [...prev.selectedServices, slug],
+      }));
+      toast.success(`Custom service "${trimmed}" added and selected!`);
+    } else {
+      toast.success(`Custom service "${trimmed}" added to available services!`);
+    }
+
+    setCustomServiceName("");
+    setShowAddCustom(false);
+  };
+
+  const handleRemoveCustomService = (serviceId: string) => {
+    setCustomServices((prev) => prev.filter((s) => s.id !== serviceId));
+    setFormData((prev) => ({
+      ...prev,
+      selectedServices: prev.selectedServices.filter((id) => id !== serviceId),
+    }));
+    toast.info("Custom service removed");
   };
 
   const handlePlanChange = (plan: string) => {
@@ -598,6 +667,123 @@ export const AddManualClientModal = ({
                       <span className="text-sm font-medium">{service.label}</span>
                     </div>
                   ))
+                )}
+              </div>
+            )}
+
+            {/* Custom Services Section */}
+            {formData.plan !== "amazon" && (
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <span>Custom Services {customServices.length > 0 ? `(${customServices.length})` : ""}</span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Add bespoke agency deliverables, integrations, or consulting retainers.
+                    </p>
+                  </div>
+                  {!showAddCustom && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddCustom(true)}
+                      className="h-7 text-xs gap-1.5 border-dashed border-primary/50 text-primary hover:bg-primary/5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Custom Service</span>
+                    </Button>
+                  )}
+                </div>
+
+                {/* Add Custom Service Input */}
+                {showAddCustom && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
+                    <Input
+                      value={customServiceName}
+                      onChange={(e) => setCustomServiceName(e.target.value)}
+                      placeholder="e.g. B2B Wholesale Portal, Cold Outreach Pipeline..."
+                      className="h-8 text-xs bg-background"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddCustomService();
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddCustomService}
+                      disabled={!customServiceName.trim()}
+                      className="h-8 text-xs px-3 bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCustomServiceName("");
+                        setShowAddCustom(false);
+                      }}
+                      className="h-8 text-xs px-2 text-muted-foreground"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+
+                {/* Custom Services Grid */}
+                {customServices.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {customServices.map((service) => {
+                      const isSelected = formData.selectedServices.includes(service.id);
+                      return (
+                        <div
+                          key={service.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div
+                            className="flex items-center space-x-3 cursor-pointer flex-1 min-w-0 mr-2"
+                            onClick={() => handleServiceToggle(service.id)}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleServiceToggle(service.id)}
+                            />
+                            <span className="text-sm font-medium truncate" title={service.label}>
+                              {service.label}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-primary border-primary/30 bg-primary/10 font-medium shrink-0">
+                              Custom
+                            </Badge>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveCustomService(service.id);
+                            }}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                            title="Remove custom service"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
