@@ -230,65 +230,6 @@ const ClientDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        if (paramClientId) {
-          // Allow previewing client dashboard directly via paramClientId
-          const { data: prof } = await supabase
-            .from("client_profiles")
-            .select("*")
-            .eq("id", paramClientId)
-            .maybeSingle();
-
-          if (prof) {
-            const { data: subs } = await supabase
-              .from("client_subscriptions")
-              .select("*")
-              .eq("client_profile_id", paramClientId);
-
-            const mappedProfile: ClientProfile = {
-              id: prof.id,
-              email: prof.email,
-              firstName: prof.first_name,
-              lastName: prof.last_name,
-              role: prof.role || "client",
-              accountStatus: prof.account_status,
-              plan: prof.plan,
-              subscriptionStatus: prof.subscription_status,
-              stripeCustomerId: prof.stripe_customer_id,
-              stripeSubscriptionId: prof.stripe_subscription_id,
-              contractStatus: prof.contract_status,
-              contractSignedAt: prof.contract_signed_at,
-              contractSignature: prof.contract_signature,
-              contractDetails: prof.contract_details,
-              onboardingStatus: prof.onboarding_status,
-              onboardingCompletedAt: prof.onboarding_completed_at,
-              maxServices: prof.max_services || 0,
-              selectedServices: prof.selected_services || [],
-              customPrice: prof.custom_price,
-              createdAt: prof.created_at,
-              updatedAt: prof.updated_at,
-              notes: prof.notes,
-              subscriptions: (subs || []).map((s: any) => ({
-                id: s.id,
-                label: s.label,
-                plan: s.plan,
-                selectedServices: s.selected_services || [],
-                monthlyAmount: s.monthly_amount,
-                billingDay: s.billing_day,
-                nextBillingDate: s.next_billing_date,
-                subscriptionStatus: s.subscription_status,
-                stripeSubscriptionId: s.stripe_subscription_id,
-                stripeCustomerId: s.stripe_customer_id,
-                isPrimary: s.is_primary,
-                notes: s.notes,
-              })),
-            };
-            setProfile(mappedProfile);
-            setIsAdmin(true);
-            setLoading(false);
-            return;
-          }
-        }
-        // User is not logged in - redirect to login
         navigate("/login");
         return;
       }
@@ -489,39 +430,12 @@ const ClientDashboard = () => {
       };
 
       if (!session) {
-        if (paramClientId) {
-          const updatedDetails = {
-            ...(profile.contractDetails || {}),
-            bankTransferConfirmation: transferData,
-          };
-          const { error: upErr } = await supabase
-            .from("client_profiles")
-            .update({
-              subscription_status: "active",
-              account_status: "active",
-              contract_details: updatedDetails,
-            })
-            .eq("id", paramClientId);
-
-          if (upErr) throw upErr;
-
-          await supabase
-            .from("client_subscriptions")
-            .update({ subscription_status: "active" })
-            .eq("client_profile_id", paramClientId);
-
-          setProfile((prev: any) => ({
-            ...prev,
-            subscriptionStatus: "active",
-            accountStatus: "active",
-            contractDetails: updatedDetails,
-          }));
-
-          toast.success("Bank transfer confirmation submitted! Your subscription and services are now active.");
-          setShowConfirmTransferModal(false);
-          return;
-        }
         throw new Error("Not authenticated");
+      }
+
+      if (isAdmin && paramClientId) {
+        toast.error("Admin Preview is strictly read-only. Bank transfer confirmation cannot be submitted in preview mode.");
+        return;
       }
 
       const response = await supabase.functions.invoke("update-client-status", {
@@ -772,10 +686,24 @@ const ClientDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      {paramClientId && (
-        <div className="bg-amber-100 border-b border-amber-200 text-amber-800 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
-          <Settings className="w-4 h-4" />
-          Previewing Client Dashboard
+      {paramClientId && isAdmin && (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-900 dark:text-amber-200 px-4 py-2.5 text-xs font-medium flex items-center justify-between gap-2 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-600 text-white uppercase tracking-wider">
+              Admin Preview
+            </span>
+            <span>
+              Viewing <strong>{profile.firstName} {profile.lastName}</strong> ({profile.email}) in read-only client perspective.
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate("/admin/clients")}
+            className="h-6 text-[11px] bg-background hover:bg-muted border-amber-500/40 text-foreground"
+          >
+            Exit Preview & Return to Admin
+          </Button>
         </div>
       )}
       <SEOHead title="Client Dashboard | Sienvi" description="Client Workspace Dashboard" noindex={true} />

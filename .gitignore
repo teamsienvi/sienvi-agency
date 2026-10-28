@@ -33,3 +33,8 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+
+# Backups (strictly outside Git)
+backups/
+*.dump
+*.sql.bak
