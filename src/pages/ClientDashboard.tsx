@@ -453,7 +453,9 @@ const ClientDashboard = () => {
         throw new Error(response.error?.message || response.data?.error || "Failed to submit transfer confirmation");
       }
 
-      toast.success("Bank transfer confirmation submitted! Your subscription and services are now active.");
+      toast.success(
+        "Your bank transfer details have been submitted for verification. Your payment and service activation status will update after our finance team confirms receipt."
+      );
       setShowConfirmTransferModal(false);
       await checkAuthAndFetchProfile();
     } catch (err: any) {

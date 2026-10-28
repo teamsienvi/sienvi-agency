@@ -1107,14 +1107,45 @@ serve(async (req) => {
         break;
 
       case "confirm_bank_transfer": {
+        // 1. Strict Input Validation (length, amount, currency, reference format)
+        const rawRef = body.referenceNumber;
+        const rawBank = body.sendingBank;
+        const rawDate = body.transferDate;
+        const rawAmount = body.amount;
+        const rawNotes = body.notes;
+
+        if (!rawRef || typeof rawRef !== "string" || rawRef.trim().length < 3 || rawRef.trim().length > 100) {
+          return new Response(
+            JSON.stringify({ error: "Invalid reference number: must be between 3 and 100 characters." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (!rawBank || typeof rawBank !== "string" || rawBank.trim().length < 2 || rawBank.trim().length > 100) {
+          return new Response(
+            JSON.stringify({ error: "Invalid sending bank: must be between 2 and 100 characters." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Validate transfer date format YYYY-MM-DD and sanity check
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        const dateStr = typeof rawDate === "string" ? rawDate.trim().substring(0, 10) : "";
+        if (!dateRegex.test(dateStr) || isNaN(Date.parse(dateStr))) {
+          return new Response(
+            JSON.stringify({ error: "Invalid transfer date: format must be YYYY-MM-DD." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const transferConfirmation = {
-          referenceNumber: body.referenceNumber || "",
-          sendingBank: body.sendingBank || "",
-          transferDate: body.transferDate || new Date().toISOString().substring(0, 10),
-          notes: body.notes || "",
-          amount: body.amount || profile.contract_details?.initialPayment || "$4,947 USD",
+          referenceNumber: rawRef.trim(),
+          sendingBank: rawBank.trim(),
+          transferDate: dateStr,
+          notes: typeof rawNotes === "string" ? rawNotes.trim().slice(0, 1000) : "",
+          amount: typeof rawAmount === "string" && rawAmount.trim() ? rawAmount.trim().slice(0, 50) : (profile.contract_details?.initialPayment || "$4,947 USD"),
           submittedAt: new Date().toISOString(),
-          status: "submitted",
+          status: "pending_verification",
         };
         const existingDetails = profile.contract_details || {};
         const updatedDetails = {
@@ -1122,16 +1153,13 @@ serve(async (req) => {
           bankTransferConfirmation: transferConfirmation,
         };
 
+        // CRITICAL SECURITY ENFORCEMENT:
+        // Submission records a pending notice ONLY.
+        // It NEVER modifies subscription_status, account_status, or client_subscriptions.
+        // Existing account and subscription statuses are strictly preserved.
         updateData = {
-          subscription_status: "active",
-          account_status: "active",
           contract_details: updatedDetails,
         };
-
-        await supabaseAdmin
-          .from("client_subscriptions")
-          .update({ subscription_status: "active" })
-          .eq("client_profile_id", profile.id);
 
         break;
       }
