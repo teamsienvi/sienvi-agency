@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { sendEmail } from "../_shared/ses-client.ts";
+import { logAdminAudit } from "../_shared/audit-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1149,6 +1150,29 @@ serve(async (req) => {
 
     if (updateError) {
       throw updateError;
+    }
+
+    // Record server-side trusted admin audit log ONLY for verified administrative mutations
+    // Client-originated actions (e.g. client signing, onboarding completion) are not attributed to admin_audit_logs
+    const isVerifiedAdmin = Boolean(adminRoleCheck && adminRoleCheck.role === "admin");
+    if (isVerifiedAdmin) {
+      await logAdminAudit(supabaseAdmin, {
+        adminUserId: user.id,
+        action: `admin_client_status_${action}`,
+        targetClientId: profile.id,
+        metadata: {
+          action,
+          actorRole: "admin",
+          clientEmail: profile.email,
+          updatedFields: Object.keys(updateData),
+        },
+        ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+        userAgent: req.headers.get("user-agent"),
+      });
+    } else {
+      console.log(
+        `[Audit] Action '${action}' performed by client ${user.email} on profile ${profile.id} — omitted from admin_audit_logs to prevent misleading administrator attribution.`
+      );
     }
 
     // Send email notifications based on action

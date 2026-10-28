@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminClients from "./pages/AdminClients";
+import AdminClientWorkspace from "./pages/AdminClientWorkspace";
 import AdminCreateClient from "./pages/AdminCreateClient";
 import Success from "./pages/Success";
 import SelectServices from "./pages/SelectServices";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/clients" element={<AdminClients />} />
+            <Route path="/admin/clients/:id" element={<AdminClientWorkspace />} />
             <Route path="/admin/create-client" element={<AdminCreateClient />} />
             <Route path="/ugc-ai-influencer" element={<UgcAiInfluencer />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
