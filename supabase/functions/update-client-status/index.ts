@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { sendEmail } from "../_shared/ses-client.ts";
+import { logAdminAudit } from "../_shared/audit-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1150,6 +1151,20 @@ serve(async (req) => {
     if (updateError) {
       throw updateError;
     }
+
+    // Record server-side trusted admin audit log
+    await logAdminAudit(supabaseAdmin, {
+      adminUserId: user.id,
+      action: `client_status_${action}`,
+      targetClientId: profile.id,
+      metadata: {
+        action,
+        clientEmail: profile.email,
+        updatedFields: Object.keys(updateData),
+      },
+      ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+      userAgent: req.headers.get("user-agent"),
+    });
 
     // Send email notifications based on action
     const clientName = profile.first_name 

@@ -39,6 +39,9 @@ verify_jwt = false
 [functions.get-admin-clients]
 verify_jwt = false
 
+[functions.get-admin-executive-metrics]
+verify_jwt = true
+
 [functions.update-client-status]
 verify_jwt = false
 
