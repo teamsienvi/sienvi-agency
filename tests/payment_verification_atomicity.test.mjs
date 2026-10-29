@@ -45,6 +45,9 @@ async function runAtomicitySuite() {
     // Clean prior test fixtures
     await client.query(`
       DELETE FROM public.billing_adjustments WHERE reason LIKE '%AtomicityTest%';
+      DELETE FROM public.manual_payment_submissions WHERE client_profile_id IN (
+        SELECT id FROM public.client_profiles WHERE email = 'atomicity@test.sienvi.com'
+      );
       DELETE FROM public.billing_invoice_allocations WHERE invoice_id IN (
         SELECT id FROM public.billing_invoices WHERE invoice_number LIKE 'INV-ATOM-%'
       );
@@ -480,6 +483,26 @@ async function runAtomicitySuite() {
 
     assert(allPassed, "All atomicity tests must pass");
   } finally {
+    try {
+      await client.query(`
+        DELETE FROM public.billing_adjustments WHERE reason LIKE '%AtomicityTest%';
+        DELETE FROM public.manual_payment_submissions WHERE client_profile_id IN (
+          SELECT id FROM public.client_profiles WHERE email = 'atomicity@test.sienvi.com'
+        );
+        DELETE FROM public.billing_invoice_allocations WHERE invoice_id IN (
+          SELECT id FROM public.billing_invoices WHERE invoice_number LIKE 'INV-ATOM-%'
+        );
+        DELETE FROM public.billing_payments WHERE notes LIKE '%AtomicityTest%' OR bank_reference_number LIKE 'ATOM-%';
+        DELETE FROM public.billing_invoices WHERE invoice_number LIKE 'INV-ATOM-%';
+        DELETE FROM public.client_subscriptions WHERE client_profile_id IN (
+          SELECT id FROM public.client_profiles WHERE email = 'atomicity@test.sienvi.com'
+        );
+        DELETE FROM public.client_profiles WHERE email = 'atomicity@test.sienvi.com';
+        DELETE FROM public.admin_audit_logs WHERE action LIKE '%atomicity%';
+      `);
+    } catch (_e) {
+      // ignore teardown cleanup error
+    }
     await client.end();
     await ep.stop();
     console.log(">>> [PG-CLEANUP] Embedded PostgreSQL 18.4 engine cleanly shut down.");
