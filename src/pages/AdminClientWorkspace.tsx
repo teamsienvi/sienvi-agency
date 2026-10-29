@@ -93,6 +93,7 @@ export default function AdminClientWorkspace() {
 
   // Modals
   const [editClientModalOpen, setEditClientModalOpen] = useState(false);
+  const [editClientModalTab, setEditClientModalTab] = useState<"services" | "profile" | "billing">("profile");
   const [deleteClientModalOpen, setDeleteClientModalOpen] = useState(false);
   const [onboardingResponsesModalOpen, setOnboardingResponsesModalOpen] = useState(false);
 
@@ -511,7 +512,10 @@ export default function AdminClientWorkspace() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEditClientModalOpen(true)}
+            onClick={() => {
+              setEditClientModalTab("profile");
+              setEditClientModalOpen(true);
+            }}
             className="h-8 text-xs border-border text-foreground hover:bg-muted gap-1.5"
           >
             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1012,7 +1016,10 @@ export default function AdminClientWorkspace() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditClientModalOpen(true)}
+                      onClick={() => {
+                        setEditClientModalTab("services");
+                        setEditClientModalOpen(true);
+                      }}
                       className="h-7 text-xs gap-1.5"
                     >
                       <Plus className="w-3.5 h-3.5 text-primary" />
@@ -1652,6 +1659,7 @@ export default function AdminClientWorkspace() {
         onOpenChange={setEditClientModalOpen}
         client={client as any}
         onClientUpdated={fetchClient}
+        initialTab={editClientModalTab}
       />
 
       <DeleteClientDialog
