@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { logAdminAudit } from "../_shared/audit-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -216,6 +217,24 @@ serve(async (req) => {
     }
 
     console.log("Client created:", newClient.id);
+
+    // Record administrative audit log
+    await logAdminAudit(supabaseAdmin, {
+      adminUserId: user.id,
+      action: "admin_client_created",
+      category: "operational",
+      targetClientId: newClient.id,
+      metadata: {
+        email: newClient.email,
+        plan: newClient.plan,
+        subscriptionStatus: newClient.subscription_status,
+        customPrice: newClient.custom_price,
+        maxServices: newClient.max_services,
+        multiSubCount: Array.isArray(body.subscriptions) ? body.subscriptions.length : 0,
+      },
+      ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+      userAgent: req.headers.get("user-agent"),
+    });
 
     return new Response(
       JSON.stringify({ 

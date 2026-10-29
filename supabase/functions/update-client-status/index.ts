@@ -970,7 +970,7 @@ serve(async (req) => {
       .eq("role", "admin")
       .maybeSingle();
 
-    if (adminRoleCheck && clientId && profile.user_id !== user.id) {
+    if (adminRoleCheck && clientId && profile.user_id !== user.id && action !== "verify_bank_transfer") {
       return new Response(
         JSON.stringify({ 
           error: "Admin Preview is strictly read-only. Client-facing mutations (legal signatures, onboarding status changes, transfer confirmations) cannot be submitted from administrative preview. Please manage account records in the Admin Workspace." 
@@ -1163,6 +1163,116 @@ serve(async (req) => {
 
         break;
       }
+
+      case "verify_bank_transfer": {
+        // Enforce admin privileges
+        if (!adminRoleCheck || adminRoleCheck.role !== "admin") {
+          return new Response(
+            JSON.stringify({ error: "Access denied. Only administrators can verify payments." }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const rawAmountCents = Number(body.verifiedAmountCents);
+        if (!rawAmountCents || rawAmountCents <= 0 || !Number.isInteger(rawAmountCents)) {
+          return new Response(
+            JSON.stringify({ error: "Invalid verified amount: must be positive integer cents." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const bankRef = typeof body.clearedBankRef === "string" ? body.clearedBankRef.trim() : "";
+        if (!bankRef || bankRef.length < 3) {
+          return new Response(
+            JSON.stringify({ error: "Invalid bank reference: minimum 3 characters required." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const existingConf = profile.contract_details?.bankTransferConfirmation;
+        if (
+          existingConf &&
+          existingConf.status === "verified" &&
+          existingConf.clearedBankRef?.toLowerCase() === bankRef.toLowerCase()
+        ) {
+          return new Response(
+            JSON.stringify({ error: "Payment with this bank reference number has already been verified." }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const verificationTimestamp = new Date().toISOString();
+        const effectiveClearedDate = body.clearedDate || verificationTimestamp.substring(0, 10);
+
+        const verifiedConfirmation = {
+          ...(existingConf || {}),
+          status: "verified",
+          verifiedAt: verificationTimestamp,
+          verifiedBy: user.id,
+          verifiedAmountCents: rawAmountCents,
+          clearedBankRef: bankRef,
+          clearedDate: effectiveClearedDate,
+          notes: body.notes || existingConf?.notes || "",
+        };
+
+        updateData = {
+          contract_details: {
+            ...(profile.contract_details || {}),
+            bankTransferConfirmation: verifiedConfirmation,
+          },
+          subscription_status: "active",
+          account_status: "active",
+        };
+
+        // Activate ONLY the target subscription line
+        if (body.subscriptionId) {
+          await supabaseAdmin
+            .from("client_subscriptions")
+            .update({
+              subscription_status: "active",
+              updated_at: verificationTimestamp,
+            })
+            .eq("id", body.subscriptionId)
+            .eq("client_profile_id", profile.id);
+        } else {
+          // If no specific subscriptionId provided, activate only the first pending one
+          const { data: pendingSubs } = await supabaseAdmin
+            .from("client_subscriptions")
+            .select("id")
+            .eq("client_profile_id", profile.id)
+            .eq("subscription_status", "pending_payment")
+            .limit(1);
+
+          if (pendingSubs && pendingSubs.length > 0) {
+            await supabaseAdmin
+              .from("client_subscriptions")
+              .update({
+                subscription_status: "active",
+                updated_at: verificationTimestamp,
+              })
+              .eq("id", pendingSubs[0].id);
+          }
+        }
+
+        // Financial audit logging
+        await logAdminAudit(supabaseAdmin, {
+          adminUserId: user.id,
+          action: "manual_payment_verified",
+          category: "financial",
+          targetClientId: profile.id,
+          metadata: {
+            verifiedAmountCents: rawAmountCents,
+            clearedBankRef: bankRef,
+            clearedDate: effectiveClearedDate,
+            subscriptionId: body.subscriptionId || null,
+          },
+          ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+          userAgent: req.headers.get("user-agent"),
+        });
+
+        break;
+      }
+
 
       default:
         return new Response(

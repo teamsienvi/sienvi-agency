@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { logAdminAudit } from "../_shared/audit-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,6 +157,21 @@ serve(async (req) => {
     }
 
     console.log(`Successfully deleted client. id=${targetClientId || "n/a"}, email=${email || "n/a"}, userId=${userId || "n/a"}`);
+
+    // Record administrative audit log
+    await logAdminAudit(supabase, {
+      adminUserId: user.id,
+      action: "admin_client_deleted",
+      category: "operational",
+      targetClientId: targetClientId || undefined,
+      metadata: {
+        email,
+        authUserId: userId,
+        targetClientId,
+      },
+      ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+      userAgent: req.headers.get("user-agent"),
+    });
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

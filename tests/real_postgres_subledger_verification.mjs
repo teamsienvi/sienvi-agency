@@ -24,7 +24,7 @@ async function main() {
     await ep.start();
     console.log(">>> [PG-INIT] Embedded PostgreSQL 18.4 engine running on port 54329.");
   } catch (err) {
-    console.warn(">>> [PG-INIT] Startup notice:", err.message);
+    console.warn(">>> [PG-INIT] Startup notice:", err?.message || String(err));
   }
 
   const client = ep.getPgClient();

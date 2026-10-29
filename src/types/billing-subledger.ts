@@ -294,3 +294,175 @@ export interface AuthoritativeFinancialMetrics {
   unappliedCustomerCreditsCents: number; // Gross payments received exceeding allocated invoice amounts
   reconciliationStatus: "reconciliation_pending" | "verified" | "discrepancy_flagged";
 }
+
+// =========================================================================
+// SPRINT 4 FIVE-TAB MODULE API & UI INTEGRATION CONTRACTS
+// =========================================================================
+
+export type SourceValidationClass =
+  | "class_a_supabase"
+  | "class_b_stripe_verified"
+  | "class_c_proposed_email"
+  | "class_d_manual_agreement"
+  | "class_e_unmatched";
+
+export interface SourceValidationCounts {
+  classA_supabase: number;
+  classB_stripeVerified: number;
+  classC_proposedEmail: number;
+  classD_manualAgreement: number;
+  classE_unmatched: number;
+}
+
+export interface BillingOverviewKpis {
+  operatingMrrCents: number;
+  operatingMrrFormatted: string;
+  stripeMrrCents: number;
+  stripeMrrFormatted: string;
+  manualMrrCents: number;
+  manualMrrFormatted: string;
+  pastDueMrrCents: number;
+  pendingMrrCents: number;
+  activePayingRetainersCount: number;
+  totalSubscriptionLinesCount: number;
+  collectedRevenueMtdCents: number;
+  collectedRevenueStatus: "reconciliation_pending" | "reconciled" | "discrepancy_flagged";
+  openInvoicesTotalCents: number;
+  pastDueInvoicesTotalCents: number;
+  openExceptionsCount: number;
+  sourceValidationCounts: SourceValidationCounts;
+}
+
+export interface AdminSubscriptionItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  label: string;
+  plan: string;
+  monthlyAmountCents: number;
+  billingDay: number;
+  subscriptionStatus: string;
+  billingChannel: "stripe_automated" | "manual_retainer";
+  stripeSubscriptionId: string | null;
+  stripeCustomerId: string | null;
+  sourceValidationClass: SourceValidationClass;
+  nextBillingDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminInvoiceItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  invoiceNumber: string;
+  description: string;
+  totalAmountCents: number;
+  amountPaidCents: number;
+  amountDueCents: number;
+  currency: string;
+  status: "open" | "paid" | "past_due" | "partially_paid" | "void";
+  dueDate: string;
+  paidAt: string | null;
+  billingChannel: "stripe" | "manual_ach" | "manual_wire" | "other";
+  stripeInvoiceId: string | null;
+  createdAt: string;
+}
+
+export interface AdminPaymentItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  paymentChannel: "stripe" | "ach" | "wire" | "manual_check" | "other";
+  status: "pending" | "succeeded" | "failed" | "canceled";
+  grossAmountCents: number;
+  feeAmountCents: number;
+  netAmountCents: number;
+  currency: string;
+  bankReferenceNumber: string;
+  sendingBank?: string;
+  settledAt: string;
+  reconciled: boolean;
+  reconciledAt: string | null;
+  evidenceStatus?: "pending_verification" | "verified" | "rejected";
+  notes?: string;
+}
+
+export interface AdminExceptionItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  exceptionType: string;
+  severity: "low" | "medium" | "high" | "critical";
+  status: "open" | "investigating" | "resolved" | "dismissed";
+  title: string;
+  description: string;
+  suggestedAction?: string;
+  createdAt: string;
+}
+
+export interface AdminAuditItem {
+  id: string;
+  admin_user_id: string;
+  action: string;
+  category?: "financial" | "operational" | "security";
+  target_client_id?: string | null;
+  metadata?: Record<string, unknown>;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface AdminBillingOverviewResponse {
+  dataFreshness: {
+    asOf: string;
+    isLiveStripe: boolean;
+    subledgerActive: boolean;
+    cacheTtlSeconds: number;
+  };
+  overview: BillingOverviewKpis;
+  subscriptions: PaginatedResult<AdminSubscriptionItem>;
+  invoices: PaginatedResult<AdminInvoiceItem>;
+  payments: PaginatedResult<AdminPaymentItem>;
+  exceptions: PaginatedResult<AdminExceptionItem>;
+  auditLogs: PaginatedResult<AdminAuditItem>;
+}
+
+export interface VerifyManualPaymentRequest {
+  action: "verify_manual_payment";
+  clientId: string;
+  subscriptionId?: string;
+  verifiedAmountCents: number;
+  clearedBankRef: string;
+  clearedDate?: string;
+  matchedInvoiceIds?: Array<{ invoiceId: string; amountCents: number }>;
+  notes?: string;
+}
+
+export interface VerifyManualPaymentResponse {
+  success: boolean;
+  verifiedAmountCents: number;
+  bankReference: string;
+  clientProfileId: string;
+  subscriptionId: string | null;
+  subledgerPaymentId: string | null;
+  status: "verified";
+  message: string;
+}
+
+export interface ResolveBillingExceptionRequest {
+  action: "resolve_billing_exception";
+  exceptionId: string;
+  resolutionNotes: string;
+}
+
