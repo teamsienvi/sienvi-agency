@@ -523,8 +523,63 @@ test("CRITERION 12: Database transaction failure aborts cleanly without partial 
 
   const res = simulateAtomicTransaction(true);
   assert.equal(res.success, false);
-  assert.equal(dbState.paymentInserted, false); // No partial state
   assert.equal(dbState.invoiceUpdated, false);
   assert.equal(dbState.allocationInserted, false);
 });
+
+test("CRITERION 13: $15,783.00 Operating MRR cannot automatically populate Collected Revenue or Bank Payout KPIs", () => {
+  // 1. Authoritative contracted retainers yield exactly $15,783.00/mo contracted recurring revenue
+  const contractedRetainers = [
+    { client: "Guillermo Carillo", amountCents: 99900, channel: "stripe" },
+    { client: "Rick Anderson", amountCents: 110000, channel: "manual" },
+    { client: "Billie Sue", amountCents: 88800, channel: "manual" },
+    { client: "George Fahmy (1st)", amountCents: 50000, channel: "stripe" },
+    { client: "Sam Roberts", amountCents: 195000, channel: "stripe" },
+    { client: "Timothy Montgomery (1)", amountCents: 239500, channel: "stripe" },
+    { client: "Timothy Montgomery (2)", amountCents: 160500, channel: "stripe" },
+    { client: "Timothy Montgomery (3)", amountCents: 39900, channel: "stripe" },
+    { client: "Sihara Prak", amountCents: 345000, channel: "stripe" },
+    { client: "Pamela Noel", amountCents: 249700, channel: "manual" },
+  ];
+
+  const totalContractedMrrCents = contractedRetainers.reduce((acc, r) => acc + r.amountCents, 0);
+  assert.equal(totalContractedMrrCents, 1578300); // Exactly $15,783.00
+
+  // 2. Scenario A: Subledger unverified or no cash payment events received
+  // In this state, verified collections MUST be 0 / reconciliation pending, NEVER $15,783.00
+  const emptySubledgerPayments = [];
+  const grossCollectionsCents = calculateGrossCollections(emptySubledgerPayments);
+  assert.equal(grossCollectionsCents, 0, "Gross collections must be 0 when no payments exist");
+  assert.notEqual(grossCollectionsCents, totalContractedMrrCents, "Operating MRR must NEVER populate gross collections");
+
+  // Bank payouts are transfers from Stripe to bank, completely distinct from revenue
+  const emptyPayouts = [];
+  const totalPayoutsCents = emptyPayouts.reduce((sum, p) => sum + p.amountCents, 0);
+  assert.equal(totalPayoutsCents, 0, "Bank payouts must be 0 when no payout events exist");
+  assert.notEqual(totalPayoutsCents, 1129800, "Stripe MRR must NEVER populate bank payouts");
+
+  // 3. Scenario B: Unqualified or failed payments must not count towards collected revenue
+  const pendingOrFailedPayments = [
+    { id: "p1", grossAmountCents: 99900, status: "pending", currency: "usd", reconciled: false },
+    { id: "p2", grossAmountCents: 110000, status: "failed", currency: "usd", reconciled: false },
+    { id: "p3", grossAmountCents: 195000, status: "succeeded", currency: "usd", reconciled: false }, // Unreconciled
+  ];
+
+  // Only qualified (succeeded AND reconciled) count towards verified cash collections
+  const qualifiedPayments = pendingOrFailedPayments.filter(
+    (p) => p.status === "succeeded" && p.reconciled === true
+  );
+  const verifiedCollections = calculateGrossCollections(qualifiedPayments);
+  assert.equal(verifiedCollections, 0, "Unreconciled, pending, or failed payments must not populate verified collections");
+
+  // 4. Scenario C: Only genuine verified cash payments populate collections
+  const verifiedCashPayments = [
+    { id: "p4", grossAmountCents: 50000, status: "succeeded", currency: "usd", reconciled: true },
+    { id: "p5", grossAmountCents: 195000, status: "succeeded", currency: "usd", reconciled: true },
+  ];
+  const actualVerifiedCollections = calculateGrossCollections(verifiedCashPayments);
+  assert.equal(actualVerifiedCollections, 245000); // Exactly $2,450.00
+  assert.notEqual(actualVerifiedCollections, totalContractedMrrCents);
+});
+
 

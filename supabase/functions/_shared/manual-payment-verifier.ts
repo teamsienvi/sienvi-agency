@@ -63,6 +63,18 @@ export async function executeManualPaymentVerification(
     userAgent,
   } = params;
 
+  // 0. Canary Server-Side Release Gate (Gate F: Financial Mutation Lock)
+  // In the read-only canary release, financial mutations and manual payment verifications are locked server-side.
+  const isMutationGateOpen =
+    (typeof Deno !== "undefined" && Deno.env?.get?.("FEATURE_FINANCIAL_MUTATIONS_ENABLED") === "true") ||
+    (typeof process !== "undefined" && process.env?.FEATURE_FINANCIAL_MUTATIONS_ENABLED === "true");
+
+  if (!isMutationGateOpen) {
+    throw new Error(
+      "CANARY RELEASE GATE: Financial mutations and manual payment verifications are locked in read-only canary mode (Gate F). Set FEATURE_FINANCIAL_MUTATIONS_ENABLED=true to authorize write operations."
+    );
+  }
+
   // 1. Strict Administrator & Input Validation
   if (!adminUserId || typeof adminUserId !== "string") {
     throw new Error("Administrator identity required for financial verification");

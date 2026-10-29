@@ -311,22 +311,72 @@ export async function ingestEventIntoSubledger(
   supabaseAdmin: SupabaseClient,
   event: NormalizedBillingEvent
 ): Promise<{ status: "ingested" | "idempotent_duplicate" | "flagged_unmapped" | "stale_ignored" | "feature_disabled"; message?: string }> {
-  // Check if subledger feature toggle is enabled
-  const isSubledgerEnabled = Deno.env.get("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true";
+  // Check if subledger feature toggle is enabled (Gate E)
+  const isSubledgerEnabled =
+    (typeof Deno !== "undefined" && Deno.env?.get?.("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true") ||
+    (typeof process !== "undefined" && process.env?.FEATURE_BILLING_SUBLEDGER_ENABLED === "true");
   if (!isSubledgerEnabled) {
     return { status: "feature_disabled", message: "Billing subledger ingestion feature flag is not enabled." };
   }
 
   try {
-    // 1. Idempotency Check on billing_events
-    const { data: existingEvent } = await supabaseAdmin
-      .from("billing_events")
-      .select("id, processing_status")
-      .eq("idempotency_key", event.idempotencyKey)
-      .maybeSingle();
+    // 1. Authoritative Domain Entity Idempotency & Precedence Check
+    if (event.isPayout) {
+      const { data: existingPayout } = await supabaseAdmin
+        .from("billing_payouts")
+        .select("id, status")
+        .eq("stripe_payout_id", event.externalObjectId)
+        .maybeSingle();
 
-    if (existingEvent) {
-      return { status: "idempotent_duplicate", message: `Event ${event.idempotencyKey} already ingested.` };
+      if (existingPayout && existingPayout.status === event.sourceStatus) {
+        return { status: "idempotent_duplicate", message: `Payout ${event.externalObjectId} already recorded with status ${existingPayout.status}.` };
+      }
+    } else if (event.eventType.startsWith("invoice.")) {
+      const { data: existingInvoice } = await supabaseAdmin
+        .from("billing_invoices")
+        .select("id, status")
+        .eq("stripe_invoice_id", event.externalObjectId)
+        .maybeSingle();
+
+      if (existingInvoice) {
+        const existingPrecedence = INVOICE_STATE_PRECEDENCE[existingInvoice.status] || 1;
+        const incomingPrecedence = event.statePrecedence;
+        if (incomingPrecedence < existingPrecedence) {
+          return { status: "stale_ignored", message: `Stale invoice event rejected: current=${existingInvoice.status}, incoming=${event.sourceStatus}` };
+        }
+        if (existingInvoice.status === event.sourceStatus) {
+          return { status: "idempotent_duplicate", message: `Invoice ${event.externalObjectId} already processed in state ${existingInvoice.status}.` };
+        }
+      }
+    } else if (event.eventType.startsWith("charge.") || event.eventType.startsWith("payment_intent.")) {
+      const { data: existingPayment } = await supabaseAdmin
+        .from("billing_payments")
+        .select("id, status")
+        .eq("stripe_charge_id", event.externalObjectId)
+        .maybeSingle();
+
+      if (existingPayment) {
+        const existingPrecedence = CHARGE_STATE_PRECEDENCE[existingPayment.status] || 1;
+        const incomingPrecedence = event.statePrecedence;
+        if (incomingPrecedence < existingPrecedence) {
+          return { status: "stale_ignored", message: `Stale charge event rejected: current=${existingPayment.status}, incoming=${event.sourceStatus}` };
+        }
+        if (existingPayment.status === event.sourceStatus) {
+          return { status: "idempotent_duplicate", message: `Payment ${event.externalObjectId} already recorded in state ${existingPayment.status}.` };
+        }
+      }
+    } else if (event.eventType.startsWith("refund.") || event.eventType.startsWith("dispute.")) {
+      const isDispute = event.eventType.startsWith("dispute.");
+      const column = isDispute ? "stripe_dispute_id" : "stripe_refund_id";
+      const { data: existingAdj } = await supabaseAdmin
+        .from("billing_adjustments")
+        .select("id")
+        .eq(column, event.externalObjectId)
+        .maybeSingle();
+
+      if (existingAdj) {
+        return { status: "idempotent_duplicate", message: `Adjustment ${event.externalObjectId} already recorded.` };
+      }
     }
 
     // 2. Client Profile Resolution
@@ -341,29 +391,6 @@ export async function ingestEventIntoSubledger(
         clientProfileId = profile.id;
       }
     }
-
-    // 3. Insert Raw Event Record
-    await supabaseAdmin.from("billing_events").insert([{
-      source_system: event.sourceSystem,
-      stripe_account_id: event.stripeAccountId,
-      external_object_id: event.externalObjectId,
-      event_id: event.eventId,
-      event_type: event.eventType,
-      customer_reference: event.customerReference,
-      invoice_reference: event.invoiceReference,
-      payment_reference: event.paymentReference,
-      amount_cents: event.amountCents,
-      fee_amount_cents: event.feeAmountCents,
-      net_amount_cents: event.netAmountCents,
-      currency: event.currency,
-      source_status: event.sourceStatus,
-      source_created_at: event.sourceCreatedAt,
-      source_settled_at: event.sourceSettledAt,
-      processing_status: clientProfileId || event.isPayout ? "processed" : "flagged_unmapped",
-      idempotency_key: event.idempotencyKey,
-      metadata: event.metadata,
-      client_profile_id: clientProfileId,
-    }]);
 
     // 4. Update Domain Entities
     if (event.isPayout) {

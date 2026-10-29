@@ -66,7 +66,7 @@ const AUTHORITATIVE_FALLBACK_DATA: AdminBillingOverviewResponse = {
     pendingMrrCents: 50000,
     activePayingRetainersCount: 10,
     totalSubscriptionLinesCount: 13,
-    collectedRevenueMtdCents: 1578300,
+    collectedRevenueMtdCents: 0,
     collectedRevenueStatus: "reconciliation_pending",
     openInvoicesTotalCents: 295000,
     pastDueInvoicesTotalCents: 245000,
@@ -402,63 +402,10 @@ const AUTHORITATIVE_FALLBACK_DATA: AdminBillingOverviewResponse = {
     totalPages: 1,
   },
   payments: {
-    items: [
-      {
-        id: "pmt-001",
-        clientId: "fab3c44c-2779-44fb-9e44-b64437f40885",
-        clientName: "Sihara Prak",
-        paymentChannel: "stripe",
-        status: "succeeded",
-        grossAmountCents: 345000,
-        feeAmountCents: 10035,
-        netAmountCents: 334965,
-        currency: "usd",
-        bankReferenceNumber: "ch_3N01AbC9knHlV4E",
-        settledAt: "2026-10-01T12:00:00Z",
-        reconciled: true,
-        reconciledAt: "2026-10-01T12:05:00Z",
-        evidenceStatus: "verified",
-        notes: "Automated recurring charge via Stripe card",
-      },
-      {
-        id: "pmt-002",
-        clientId: "9aa48fea-7865-4dec-803c-325913561233",
-        clientName: "Pamela Noel",
-        paymentChannel: "wire",
-        status: "succeeded",
-        grossAmountCents: 249700,
-        feeAmountCents: 0,
-        netAmountCents: 249700,
-        currency: "usd",
-        bankReferenceNumber: "WIRE-OCT-2497-PN",
-        sendingBank: "Wells Fargo Bank NA",
-        settledAt: "2026-10-02T14:30:00Z",
-        reconciled: true,
-        reconciledAt: "2026-10-02T15:00:00Z",
-        evidenceStatus: "verified",
-        notes: "Admin verified wire receipt; matched to contract schedule",
-      },
-      {
-        id: "pmt-003",
-        clientId: "29234baf-2ff2-4534-b72c-7ccc276e6968",
-        clientName: "Timothy Montgomery",
-        paymentChannel: "stripe",
-        status: "succeeded",
-        grossAmountCents: 239500,
-        feeAmountCents: 6975,
-        netAmountCents: 232525,
-        currency: "usd",
-        bankReferenceNumber: "ch_3N01AbCTim01",
-        settledAt: "2026-10-01T08:00:00Z",
-        reconciled: true,
-        reconciledAt: "2026-10-01T08:05:00Z",
-        evidenceStatus: "verified",
-        notes: "Automated monthly charge for Line 1",
-      },
-    ],
+    items: [],
     page: 1,
     pageSize: 20,
-    totalItems: 3,
+    totalItems: 0,
     totalPages: 1,
   },
   exceptions: {
@@ -598,6 +545,18 @@ export default function AdminBilling() {
       return matchesSearch && matchesStatus;
     });
   }, [data.invoices.items, invoiceSearch, invoiceStatusFilter]);
+
+  // Verified payments & collections metrics from actual qualified data (no Operating MRR conflation)
+  const isSubledgerActive = Boolean(data.dataFreshness?.subledgerActive);
+  const isReconciliationPending = data.overview?.collectedRevenueStatus === "reconciliation_pending" || data.overview?.financialMetricsStatus === "reconciliation_pending";
+
+  // Server-Aggregated Financial Totals (computed across the FULL unpaginated dataset on the server)
+  const serverGrossCollectionsCents = data.overview?.grossCollectionsMtdCents ?? null;
+  const serverFeesCents = data.overview?.stripeFeesMtdCents ?? null;
+  const serverNetCashCents = data.overview?.netSettledCashMtdCents ?? null;
+  const serverPayoutsCents = data.overview?.bankPayoutsMtdCents ?? null;
+
+  const isFinancialDataUnavailable = !isSubledgerActive || isReconciliationPending || serverGrossCollectionsCents === null;
 
   return (
     <AdminShell
@@ -1110,9 +1069,29 @@ export default function AdminBilling() {
                     Gross Collections MTD
                   </span>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold font-mono text-foreground">$15,783.00</div>
-                  <span className="text-[11px] text-muted-foreground">Settled cash received</span>
+                <CardContent className="p-4 pt-0 space-y-1">
+                  {isFinancialDataUnavailable || serverGrossCollectionsCents === null ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="text-2xl font-bold font-mono text-muted-foreground">--</div>
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] py-0.5 px-2 gap-1">
+                          <Clock className="w-3 h-3" />
+                          Reconciliation Pending
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">Requires active subledger cash verification</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold font-mono text-foreground">
+                        ${(serverGrossCollectionsCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Verified Server-Aggregated Cash Total
+                      </span>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1122,9 +1101,25 @@ export default function AdminBilling() {
                     Stripe Processing Fees
                   </span>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold font-mono text-muted-foreground">$318.42</div>
-                  <span className="text-[11px] text-muted-foreground">Estimated gateway fees</span>
+                <CardContent className="p-4 pt-0 space-y-1">
+                  {isFinancialDataUnavailable || serverFeesCents === null ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="text-2xl font-bold font-mono text-muted-foreground">--</div>
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-[10px] py-0.5 px-2 gap-1">
+                          Data Unavailable
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">Documented payment processor records</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold font-mono text-muted-foreground">
+                        ${(serverFeesCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">Documented gateway fees</span>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1134,9 +1129,25 @@ export default function AdminBilling() {
                     Net Settled Operating Cash
                   </span>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">$15,464.58</div>
-                  <span className="text-[11px] text-muted-foreground">Gross minus processing fees</span>
+                <CardContent className="p-4 pt-0 space-y-1">
+                  {isFinancialDataUnavailable || serverNetCashCents === null ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="text-2xl font-bold font-mono text-muted-foreground">--</div>
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-[10px] py-0.5 px-2 gap-1">
+                          Data Unavailable
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">Gross collections minus processor fees</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                        ${(serverNetCashCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">Gross minus processing fees</span>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1146,9 +1157,20 @@ export default function AdminBilling() {
                     Bank Payouts (Non-Revenue)
                   </span>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">$11,298.00</div>
-                  <span className="text-[11px] text-muted-foreground">Operating account transfers</span>
+                <CardContent className="p-4 pt-0 space-y-1">
+                  {isFinancialDataUnavailable || serverPayoutsCents === null ? (
+                    <div className="flex items-center gap-2">
+                      <div className="text-2xl font-bold font-mono text-muted-foreground">--</div>
+                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border text-[10px] py-0.5 px-2 gap-1">
+                        Data Unavailable
+                      </Badge>
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
+                      ${(serverPayoutsCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">Operating account transfers from Stripe payouts</span>
                 </CardContent>
               </Card>
             </div>
@@ -1180,7 +1202,20 @@ export default function AdminBilling() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.payments.items.map((pmt) => (
+                      {data.payments.items.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="py-12 text-center">
+                            <div className="max-w-md mx-auto space-y-2">
+                              <Clock className="w-8 h-8 text-amber-500 mx-auto" />
+                              <p className="text-sm font-semibold text-foreground">No Verified Payment Records in Baseline</p>
+                              <p className="text-xs text-muted-foreground">
+                                Historical cash receipts, processor settlements, and cleared bank transfers will populate here once the Phase 2B subledger is operational and historical backfill is executed.
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.payments.items.map((pmt) => (
                         <TableRow key={pmt.id} className="hover:bg-muted/30">
                           <TableCell className="font-medium text-foreground">{pmt.clientName}</TableCell>
                           <TableCell>
@@ -1224,7 +1259,7 @@ export default function AdminBilling() {
                             </TooltipProvider>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )))}
                     </TableBody>
                   </Table>
                 </div>

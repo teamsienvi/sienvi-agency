@@ -265,8 +265,42 @@ async function runAllTests() {
   console.log("  ✓ Repeated allocation yields 0 additional cash; collections remain invariant ($1,000.00).");
   passedCount++;
 
+  // TEST 11: Production Backfill Governance & Circuit Breakers (Section 8)
+  console.log("\n[TEST 11] Production Backfill Governance, Allowlisting & Circuit Breakers...");
+  const { validateProductionApprovalToken, checkDiscrepancyCircuitBreaker } = await import("../server/stripe-ingestion/production-backfill-protocol.ts");
+
+  // 1. Mission boundary lock halts production execution
+  const token = {
+    approverEmail: "owner@sienvi.com",
+    approvalTimestamp: new Date().toISOString(),
+    targetProjectRef: "jdodjbzypuiyhgrzuyzp",
+    targetStripeAccountId: "acct_1SzlUQDnw1azoLSp",
+    authorizedBatchLimit: 50,
+    signature: "abc12345",
+  };
+  const tokenCheck = validateProductionApprovalToken(token, "test-secret");
+  assert.strictEqual(tokenCheck.isValid, false);
+  assert.match(tokenCheck.error, /MISSION BOUNDARY HALT/);
+
+  // 2. Circuit breaker triggers on financial discrepancy > $0
+  const cb1 = checkDiscrepancyCircuitBreaker(100, 0); // $1.00 discrepancy
+  assert.strictEqual(cb1.canContinue, false);
+  assert.match(cb1.reason, /CIRCUIT BREAKER TRIGGERED/);
+
+  // 3. Circuit breaker triggers on unmapped customer
+  const cb2 = checkDiscrepancyCircuitBreaker(0, 1);
+  assert.strictEqual(cb2.canContinue, false);
+  assert.match(cb2.reason, /unmapped customer/);
+
+  // 4. Clean pass on zero discrepancy & zero unmapped
+  const cb3 = checkDiscrepancyCircuitBreaker(0, 0);
+  assert.strictEqual(cb3.canContinue, true);
+
+  console.log("  ✓ Production backfill protocol strictly enforces mission lock, allowlist, and zero-tolerance circuit breaker.");
+  passedCount++;
+
   console.log("\n=====================================================================");
-  console.log(`ALL ${passedCount}/10 LIFECYCLE & SAFETY TESTS PASSED WITH 100% SUCCESS!`);
+  console.log(`ALL ${passedCount}/11 LIFECYCLE & SAFETY TESTS PASSED WITH 100% SUCCESS!`);
   console.log("=====================================================================");
 }
 

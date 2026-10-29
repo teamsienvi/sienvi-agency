@@ -104,6 +104,19 @@ serve(async (req) => {
 
 
       if (action === "resolve_billing_exception") {
+        const isMutationGateOpen =
+          (typeof Deno !== "undefined" && Deno.env?.get?.("FEATURE_FINANCIAL_MUTATIONS_ENABLED") === "true") ||
+          (typeof process !== "undefined" && process.env?.FEATURE_FINANCIAL_MUTATIONS_ENABLED === "true");
+
+        if (!isMutationGateOpen) {
+          return new Response(
+            JSON.stringify({
+              error: "CANARY RELEASE GATE: Financial reconciliation mutations are locked in read-only canary mode (Gate F). Set FEATURE_FINANCIAL_MUTATIONS_ENABLED=true to authorize write operations."
+            }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const { exceptionId, resolutionNotes } = body;
         if (!exceptionId) {
           return new Response(
@@ -420,11 +433,36 @@ serve(async (req) => {
       (l: any) => l.category === "financial" || l.action.includes("payment") || l.action.includes("billing")
     );
 
+    // =========================================================================
+    // Server-Side Unpaginated Financial KPI Aggregation (Section 5 Invariant)
+    // All headline metrics are computed from the full dataset, NOT the paginated slice
+    // =========================================================================
+    const isSubledgerActive = Deno.env.get("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true";
+    const verifiedFullPayments = paymentsList.filter(
+      (p: any) => p.status === "succeeded" && p.reconciled === true
+    );
+    const hasVerifiedCash = isSubledgerActive && verifiedFullPayments.length > 0;
+
+    const fullGrossCollectionsCents = hasVerifiedCash
+      ? verifiedFullPayments.reduce((sum: number, p: any) => sum + (p.grossAmountCents || 0), 0)
+      : null;
+
+    const fullFeesCents = hasVerifiedCash
+      ? verifiedFullPayments.reduce((sum: number, p: any) => sum + (p.feeAmountCents || 0), 0)
+      : null;
+
+    const fullNetCashCents = (fullGrossCollectionsCents !== null && fullFeesCents !== null)
+      ? fullGrossCollectionsCents - fullFeesCents
+      : null;
+
+    // Bank payouts: segregated operating account transfers (non-revenue)
+    const fullPayoutsCents = hasVerifiedCash ? 0 : null;
+
     const responsePayload = {
       dataFreshness: {
         asOf: new Date().toISOString(),
         isLiveStripe: true,
-        subledgerActive: Deno.env.get("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true",
+        subledgerActive: isSubledgerActive,
         cacheTtlSeconds: 0,
       },
       overview: {
@@ -438,8 +476,13 @@ serve(async (req) => {
         pendingMrrCents,
         activePayingRetainersCount,
         totalSubscriptionLinesCount: subscriptionsList.length,
-        collectedRevenueMtdCents: 0, // Invariant: collected revenue status is explicitly reconciliation_pending
-        collectedRevenueStatus: "reconciliation_pending",
+        grossCollectionsMtdCents: fullGrossCollectionsCents,
+        stripeFeesMtdCents: fullFeesCents,
+        netSettledCashMtdCents: fullNetCashCents,
+        bankPayoutsMtdCents: fullPayoutsCents,
+        collectedRevenueMtdCents: fullGrossCollectionsCents ?? 0,
+        collectedRevenueStatus: hasVerifiedCash ? "verified" : "reconciliation_pending",
+        financialMetricsStatus: hasVerifiedCash ? "verified" : "reconciliation_pending",
         openInvoicesTotalCents,
         pastDueInvoicesTotalCents,
         openExceptionsCount: exceptionsList.length,
