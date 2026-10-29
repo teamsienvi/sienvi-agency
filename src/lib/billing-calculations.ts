@@ -121,7 +121,7 @@ export function calculateRefundAdjustedCollections(
   const eligibleAdjustments = adjustments.filter(
     (a) =>
       (a.adjustmentType === "refund" || a.adjustmentType === "dispute_deduction") &&
-      a.currency.toLowerCase() === currency.toLowerCase()
+      (a.currency || "usd").toLowerCase() === currency.toLowerCase()
   );
   const totalDeductions = eligibleAdjustments.reduce((acc, a) => acc + a.amountCents, 0);
   return Math.max(0, gross - totalDeductions);
