@@ -525,8 +525,9 @@ export default function AdminClientWorkspace() {
           {/* More Actions Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs border-border text-foreground hover:bg-muted px-2.5">
-                <MoreVertical className="w-3.5 h-3.5" />
+              <Button variant="outline" size="sm" aria-label="More actions" className="h-8 text-xs border-border text-foreground hover:bg-muted px-2.5">
+                <MoreVertical className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="sr-only">More actions</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 text-xs">
@@ -1181,10 +1182,12 @@ export default function AdminClientWorkspace() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Copy Stripe Customer ID"
                         onClick={() => copyToClipboard(client.stripeCustomerId, "stripe-cus-id")}
                         className="h-8 w-8 p-0"
                       >
-                        {copiedField === "stripe-cus-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        {copiedField === "stripe-cus-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+                        <span className="sr-only">Copy Stripe Customer ID</span>
                       </Button>
                     )}
                   </div>
@@ -1202,10 +1205,12 @@ export default function AdminClientWorkspace() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Copy Stripe Subscription ID"
                         onClick={() => copyToClipboard(client.stripeSubscriptionId!, "stripe-sub-id")}
                         className="h-8 w-8 p-0"
                       >
-                        {copiedField === "stripe-sub-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        {copiedField === "stripe-sub-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+                        <span className="sr-only">Copy Stripe Subscription ID</span>
                       </Button>
                     )}
                   </div>
