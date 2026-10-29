@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { logAdminAudit } from "../_shared/audit-logger.ts";
+import { executeManualPaymentVerification } from "../_shared/manual-payment-verifier.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,211 +82,26 @@ serve(async (req) => {
       const action = body.action || "verify_manual_payment";
 
       if (action === "verify_manual_payment") {
-        const {
-          clientId,
-          subscriptionId,
-          verifiedAmountCents,
-          clearedBankRef,
-          clearedDate,
-          matchedInvoiceIds,
-          notes,
-        } = body;
-
-        // Validation
-        if (!clientId) {
-          return new Response(
-            JSON.stringify({ error: "Client ID is required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const amountCents = Number(verifiedAmountCents);
-        if (!amountCents || amountCents <= 0 || !Number.isInteger(amountCents)) {
-          return new Response(
-            JSON.stringify({ error: "Verified amount must be a positive integer in minor units (cents)" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const bankRef = typeof clearedBankRef === "string" ? clearedBankRef.trim() : "";
-        if (!bankRef || bankRef.length < 3) {
-          return new Response(
-            JSON.stringify({ error: "A valid bank reference or wire confirmation number is required (min 3 chars)" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Fetch client profile
-        const { data: profile, error: profileErr } = await supabaseAdmin
-          .from("client_profiles")
-          .select("*")
-          .eq("id", clientId)
-          .maybeSingle();
-
-        if (profileErr || !profile) {
-          return new Response(
-            JSON.stringify({ error: "Client profile not found" }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Check for duplicate bank reference to prevent replay/duplicate payment credit
-        const existingConf = profile.contract_details?.bankTransferConfirmation;
-        if (
-          existingConf &&
-          existingConf.status === "verified" &&
-          existingConf.clearedBankRef?.toLowerCase() === bankRef.toLowerCase()
-        ) {
-          return new Response(
-            JSON.stringify({ error: "A verified payment with this bank reference number has already been recorded" }),
-            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const verificationTimestamp = new Date().toISOString();
-        const effectiveClearedDate = clearedDate || verificationTimestamp.substring(0, 10);
-
-        // Update bankTransferConfirmation in contract_details
-        const updatedTransferConfirmation = {
-          ...(existingConf || {}),
-          status: "verified",
-          verifiedAt: verificationTimestamp,
-          verifiedBy: user.id,
-          verifiedAmountCents: amountCents,
-          clearedBankRef: bankRef,
-          clearedDate: effectiveClearedDate,
-          notes: notes || existingConf?.notes || "",
-        };
-
-        const updatedContractDetails = {
-          ...(profile.contract_details || {}),
-          bankTransferConfirmation: updatedTransferConfirmation,
-        };
-
-        // 1. Update client_profiles
-        const { error: profileUpdateErr } = await supabaseAdmin
-          .from("client_profiles")
-          .update({
-            contract_details: updatedContractDetails,
-            subscription_status: "active",
-            account_status: "active",
-            updated_at: verificationTimestamp,
-          })
-          .eq("id", clientId);
-
-        if (profileUpdateErr) {
-          throw new Error(`Failed to update client profile: ${profileUpdateErr.message}`);
-        }
-
-        // 2. Activate ONLY the specific target subscription line (do not activate all lines!)
-        let updatedSubscription = null;
-        if (subscriptionId) {
-          const { data: subData, error: subErr } = await supabaseAdmin
-            .from("client_subscriptions")
-            .update({
-              subscription_status: "active",
-              updated_at: verificationTimestamp,
-            })
-            .eq("id", subscriptionId)
-            .eq("client_profile_id", clientId)
-            .select()
-            .maybeSingle();
-
-          if (subErr) {
-            console.error("[Verify Manual Payment] Error updating specific subscription:", subErr);
-          } else {
-            updatedSubscription = subData;
-          }
-        } else {
-          // If no specific subscriptionId provided, find primary or first pending subscription
-          const { data: pendingSubs } = await supabaseAdmin
-            .from("client_subscriptions")
-            .select("id")
-            .eq("client_profile_id", clientId)
-            .eq("subscription_status", "pending_payment")
-            .limit(1);
-
-          if (pendingSubs && pendingSubs.length > 0) {
-            const { data: subData } = await supabaseAdmin
-              .from("client_subscriptions")
-              .update({
-                subscription_status: "active",
-                updated_at: verificationTimestamp,
-              })
-              .eq("id", pendingSubs[0].id)
-              .select()
-              .maybeSingle();
-            updatedSubscription = subData;
-          }
-        }
-
-        // 3. If billing subledger is enabled in test environment, execute ledger records
-        const isSubledgerEnabled = Deno.env.get("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true";
-        let subledgerPaymentId = null;
-        if (isSubledgerEnabled) {
-          try {
-            // Attempt to insert into billing_payments
-            const { data: paymentRow, error: paymentErr } = await supabaseAdmin
-              .from("billing_payments")
-              .insert([{
-                client_profile_id: clientId,
-                payment_channel: "ach",
-                status: "succeeded",
-                gross_amount_cents: amountCents,
-                fee_amount_cents: 0,
-                net_amount_cents: amountCents,
-                allocated_amount_cents: amountCents,
-                currency: "usd",
-                bank_reference_number: bankRef,
-                settled_at: verificationTimestamp,
-                reconciled: true,
-                reconciled_at: verificationTimestamp,
-                reconciled_by: user.id,
-                notes: notes || `Verified by admin ${user.email}`,
-              }])
-              .select("id")
-              .maybeSingle();
-
-            if (!paymentErr && paymentRow) {
-              subledgerPaymentId = paymentRow.id;
-            }
-          } catch (ledgerErr) {
-            console.warn("[Verify Manual Payment] Subledger write skipped or failed:", ledgerErr);
-          }
-        }
-
-        // 4. Record Server-Side Financial Audit Log
-        await logAdminAudit(supabaseAdmin, {
+        const result = await executeManualPaymentVerification(supabaseAdmin, {
+          clientId: body.clientId,
+          subscriptionId: body.subscriptionId,
+          verifiedAmountCents: body.verifiedAmountCents,
+          clearedBankRef: body.clearedBankRef,
+          clearedDate: body.clearedDate,
+          matchedInvoiceIds: body.matchedInvoiceIds,
+          notes: body.notes,
           adminUserId: user.id,
-          action: "manual_payment_verified",
-          category: "financial",
-          targetClientId: clientId,
-          metadata: {
-            verifiedAmountCents: amountCents,
-            bankReference: bankRef,
-            clearedDate: effectiveClearedDate,
-            subscriptionId: updatedSubscription?.id || subscriptionId || null,
-            subledgerPaymentId,
-            matchedInvoiceCount: Array.isArray(matchedInvoiceIds) ? matchedInvoiceIds.length : 0,
-          },
+          adminEmail: user.email || "admin@sienvi.com",
           ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
           userAgent: req.headers.get("user-agent"),
         });
 
         return new Response(
-          JSON.stringify({
-            success: true,
-            verifiedAmountCents: amountCents,
-            bankReference: bankRef,
-            clientProfileId: clientId,
-            subscriptionId: updatedSubscription?.id || null,
-            subledgerPaymentId,
-            status: "verified",
-            message: "Manual payment verified successfully and credited to account.",
-          }),
+          JSON.stringify(result),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
 
       if (action === "resolve_billing_exception") {
         const { exceptionId, resolutionNotes } = body;

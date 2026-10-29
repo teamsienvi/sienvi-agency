@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { sendEmail } from "../_shared/ses-client.ts";
 import { logAdminAudit } from "../_shared/audit-logger.ts";
+import { executeManualPaymentVerification } from "../_shared/manual-payment-verifier.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1173,104 +1174,27 @@ serve(async (req) => {
           );
         }
 
-        const rawAmountCents = Number(body.verifiedAmountCents);
-        if (!rawAmountCents || rawAmountCents <= 0 || !Number.isInteger(rawAmountCents)) {
-          return new Response(
-            JSON.stringify({ error: "Invalid verified amount: must be positive integer cents." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const bankRef = typeof body.clearedBankRef === "string" ? body.clearedBankRef.trim() : "";
-        if (!bankRef || bankRef.length < 3) {
-          return new Response(
-            JSON.stringify({ error: "Invalid bank reference: minimum 3 characters required." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const existingConf = profile.contract_details?.bankTransferConfirmation;
-        if (
-          existingConf &&
-          existingConf.status === "verified" &&
-          existingConf.clearedBankRef?.toLowerCase() === bankRef.toLowerCase()
-        ) {
-          return new Response(
-            JSON.stringify({ error: "Payment with this bank reference number has already been verified." }),
-            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const verificationTimestamp = new Date().toISOString();
-        const effectiveClearedDate = body.clearedDate || verificationTimestamp.substring(0, 10);
-
-        const verifiedConfirmation = {
-          ...(existingConf || {}),
-          status: "verified",
-          verifiedAt: verificationTimestamp,
-          verifiedBy: user.id,
-          verifiedAmountCents: rawAmountCents,
-          clearedBankRef: bankRef,
-          clearedDate: effectiveClearedDate,
-          notes: body.notes || existingConf?.notes || "",
-        };
-
-        updateData = {
-          contract_details: {
-            ...(profile.contract_details || {}),
-            bankTransferConfirmation: verifiedConfirmation,
-          },
-          subscription_status: "active",
-          account_status: "active",
-        };
-
-        // Activate ONLY the target subscription line
-        if (body.subscriptionId) {
-          await supabaseAdmin
-            .from("client_subscriptions")
-            .update({
-              subscription_status: "active",
-              updated_at: verificationTimestamp,
-            })
-            .eq("id", body.subscriptionId)
-            .eq("client_profile_id", profile.id);
-        } else {
-          // If no specific subscriptionId provided, activate only the first pending one
-          const { data: pendingSubs } = await supabaseAdmin
-            .from("client_subscriptions")
-            .select("id")
-            .eq("client_profile_id", profile.id)
-            .eq("subscription_status", "pending_payment")
-            .limit(1);
-
-          if (pendingSubs && pendingSubs.length > 0) {
-            await supabaseAdmin
-              .from("client_subscriptions")
-              .update({
-                subscription_status: "active",
-                updated_at: verificationTimestamp,
-              })
-              .eq("id", pendingSubs[0].id);
-          }
-        }
-
-        // Financial audit logging
-        await logAdminAudit(supabaseAdmin, {
+        // Delegate to Authoritative Manual Payment Verification Engine
+        const result = await executeManualPaymentVerification(supabaseAdmin, {
+          clientId: profile.id,
+          subscriptionId: body.subscriptionId,
+          verifiedAmountCents: body.verifiedAmountCents,
+          clearedBankRef: body.clearedBankRef,
+          clearedDate: body.clearedDate,
+          currency: body.currency || "usd",
+          idempotencyKey: body.idempotencyKey,
+          matchedInvoiceIds: body.matchedInvoiceIds,
+          notes: body.notes,
           adminUserId: user.id,
-          action: "manual_payment_verified",
-          category: "financial",
-          targetClientId: profile.id,
-          metadata: {
-            verifiedAmountCents: rawAmountCents,
-            clearedBankRef: bankRef,
-            clearedDate: effectiveClearedDate,
-            subscriptionId: body.subscriptionId || null,
-          },
+          adminEmail: user.email || "admin@sienvi.com",
           ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
           userAgent: req.headers.get("user-agent"),
         });
 
-        break;
+        return new Response(
+          JSON.stringify(result),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
 

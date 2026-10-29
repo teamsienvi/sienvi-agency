@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminClients from "./pages/AdminClients";
 import AdminClientWorkspace from "./pages/AdminClientWorkspace";
 import AdminCreateClient from "./pages/AdminCreateClient";
+import AdminBilling from "./pages/AdminBilling";
 import Success from "./pages/Success";
 import SelectServices from "./pages/SelectServices";
 import CheckoutSummary from "./pages/CheckoutSummary";
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/admin/clients" element={<AdminClients />} />
             <Route path="/admin/clients/:id" element={<AdminClientWorkspace />} />
             <Route path="/admin/create-client" element={<AdminCreateClient />} />
+            <Route path="/admin/billing" element={<AdminBilling />} />
             <Route path="/ugc-ai-influencer" element={<UgcAiInfluencer />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

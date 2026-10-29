@@ -55,6 +55,11 @@ const PRIMARY_NAV: NavItem[] = [
     href: "/admin/create-client",
     icon: UserPlus,
   },
+  {
+    label: "Revenue & Billing",
+    href: "/admin/billing",
+    icon: BarChart3,
+  },
 ];
 
 const EXTERNAL_TOOLS: NavItem[] = [
@@ -67,13 +72,6 @@ const EXTERNAL_TOOLS: NavItem[] = [
 ];
 
 const PLANNED_MODULES: NavItem[] = [
-  {
-    label: "Revenue & Billing",
-    href: "#",
-    icon: BarChart3,
-    badge: "Phase 2",
-    isPlanned: true,
-  },
   {
     label: "Agreements Archive",
     href: "#",
