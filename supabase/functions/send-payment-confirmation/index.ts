@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { requireAdmin } from "../_shared/require-admin.ts";
 import { sendEmail } from "../_shared/ses-client.ts";
 
 const corsHeaders = {
@@ -49,6 +50,9 @@ serve(async (req) => {
   }
 
   try {
+    const denied = await requireAdmin(req, corsHeaders);
+    if (denied) return denied;
+
     const { customerEmail, customerName, plan, amount, dashboardUrl, selectedServices, channelCount }: PaymentConfirmationRequest = await req.json();
 
     if (!customerEmail) {

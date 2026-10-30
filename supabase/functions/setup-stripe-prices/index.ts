@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { requireAdmin } from "../_shared/require-admin.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 
 const corsHeaders = {
@@ -12,6 +13,9 @@ serve(async (req) => {
   }
 
   try {
+    const denied = await requireAdmin(req, corsHeaders);
+    if (denied) return denied;
+
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeSecretKey) {
       throw new Error("STRIPE_SECRET_KEY not configured");

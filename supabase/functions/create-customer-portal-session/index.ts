@@ -22,11 +22,44 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
       console.error("Supabase environment variables not configured");
       throw new Error("Server configuration error");
     }
+
+    // Verify the caller: a portal session grants billing access, so only the
+    // client themselves or an admin may create one
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Initialize Supabase client with service role
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    const isAdmin = !!roleData;
 
     // Get the email and optional stripeCustomerId from the request body
     const { email, stripeCustomerId } = await req.json();
@@ -35,10 +68,17 @@ serve(async (req) => {
       console.error("Missing email in request body");
       return new Response(
         JSON.stringify({ error: "Email is required" }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
+      );
+    }
+
+    if (!isAdmin && email.toLowerCase().trim() !== (user.email || "").toLowerCase().trim()) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -49,10 +89,8 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    // Initialize Supabase client with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    let targetCustomerId: string | null = stripeCustomerId || null;
+    // Only admins may target a Stripe customer directly
+    let targetCustomerId: string | null = (isAdmin && stripeCustomerId) || null;
 
     if (!targetCustomerId) {
       // Collect all distinct Stripe customer IDs for this client

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { requireAdmin } from "../_shared/require-admin.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { sendEmail } from "../_shared/ses-client.ts";
 
@@ -48,6 +49,9 @@ serve(async (req) => {
   }
 
   try {
+    const denied = await requireAdmin(req, corsHeaders);
+    if (denied) return denied;
+
     const { customerEmail, customerName, selectedServices }: OnboardingCompleteEmailRequest = await req.json();
 
     if (!customerEmail) {
