@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 
 async function main() {
   console.log("=====================================================================");
-  console.log("SIENVI AGENCY: SPRINT 1 DATABASE VERIFICATION (POSTGRESQL 18.4)");
+  console.log("SIENVI AGENCY: SUBLEDGER VERIFICATION (POSTGRESQL 17 CERTIFICATION)");
   console.log("=====================================================================\n");
 
   const ep = new EmbeddedPostgres({
@@ -22,13 +22,17 @@ async function main() {
 
   try {
     await ep.start();
-    console.log(">>> [PG-INIT] Embedded PostgreSQL 18.4 engine running on port 54329.");
   } catch (err) {
     console.warn(">>> [PG-INIT] Startup notice:", err?.message || String(err));
   }
 
   const client = ep.getPgClient();
   await client.connect();
+
+  const verRes = await client.query("SELECT version();");
+  const pgVersion = verRes.rows[0].version;
+  console.log(`>>> [PG-VERSION] Genuine Engine: ${pgVersion}\n`);
+  assert.ok(pgVersion.includes("PostgreSQL 17"), `Expected PostgreSQL 17, got ${pgVersion}`);
 
   async function setAuthIdentity(role, userId = "", email = "") {
     await client.query(`SET ROLE ${role};`);
@@ -1015,7 +1019,7 @@ async function main() {
   } finally {
     await client.end();
     await ep.stop();
-    console.log(">>> [PG-CLEANUP] PostgreSQL 18.4 engine cleanly shut down.");
+    console.log(">>> [PG-CLEANUP] PostgreSQL 17 engine cleanly shut down.");
   }
 }
 

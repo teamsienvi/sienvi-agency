@@ -10,8 +10,8 @@ import assert from "node:assert/strict";
 
 async function runAtomicitySuite() {
   console.log("=====================================================================");
-  console.log("SIENVI AGENCY: SPRINT 4 FINANCIAL ATOMICITY & TRANSACTION INTEGRITY");
-  console.log("Engine: Genuine PostgreSQL 18.4 (Isolated Local Cluster)");
+  console.log("SIENVI AGENCY: FINANCIAL ATOMICITY & TRANSACTION INTEGRITY");
+  console.log("Target Engine: PostgreSQL 17 Certification");
   console.log("=====================================================================\n");
 
   const ep = new EmbeddedPostgres({
@@ -21,13 +21,17 @@ async function runAtomicitySuite() {
 
   try {
     await ep.start();
-    console.log(">>> [PG-INIT] Embedded PostgreSQL 18.4 engine running on port 54329.");
   } catch (err) {
     console.warn(">>> [PG-INIT] Startup notice:", err?.message || String(err));
   }
 
   const client = ep.getPgClient();
   await client.connect();
+
+  const verRes = await client.query("SELECT version();");
+  const pgVersion = verRes.rows[0].version;
+  console.log(`>>> [PG-VERSION] Genuine Engine: ${pgVersion}\n`);
+  assert.ok(pgVersion.includes("PostgreSQL 17"), `Expected PostgreSQL 17, got ${pgVersion}`);
 
   const results = [];
   function recordTest(id, name, passed, details) {
@@ -44,6 +48,10 @@ async function runAtomicitySuite() {
 
     // Ensure local test schema columns exist
     await client.query(`
+      ALTER TABLE public.client_profiles
+        ADD COLUMN IF NOT EXISTS client_name text DEFAULT 'Atom Tester',
+        ADD COLUMN IF NOT EXISTS first_name text DEFAULT 'Atom',
+        ADD COLUMN IF NOT EXISTS last_name text DEFAULT 'Tester';
       ALTER TABLE public.client_subscriptions 
         ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'active',
         ADD COLUMN IF NOT EXISTS monthly_amount numeric;
@@ -70,9 +78,9 @@ async function runAtomicitySuite() {
     // Create test client profile
     const clientRes = await client.query(`
       INSERT INTO public.client_profiles (
-        email, first_name, last_name, subscription_status, account_status
+        email, client_name, first_name, last_name, subscription_status, account_status
       ) VALUES (
-        'atomicity@test.sienvi.com', 'Atom', 'Tester', 'pending_payment', 'pending_payment'
+        'atomicity@test.sienvi.com', 'Atom Tester', 'Atom', 'Tester', 'pending_payment', 'pending_payment'
       ) RETURNING id;
     `);
     const testClientId = clientRes.rows[0].id;
@@ -637,7 +645,7 @@ async function runAtomicitySuite() {
     }
     await client.end();
     await ep.stop();
-    console.log(">>> [PG-CLEANUP] Embedded PostgreSQL 18.4 engine cleanly shut down.");
+    console.log(">>> [PG-CLEANUP] Embedded PostgreSQL 17 engine cleanly shut down.");
     process.exit(0);
   }
 }

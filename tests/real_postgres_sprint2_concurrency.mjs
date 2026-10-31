@@ -1,7 +1,7 @@
 /**
  * SIENVI AGENCY: SPRINT 2 REAL POSTGRESQL CONCURRENCY & SUBLEDGER VERIFICATION
  * Tests live, multi-session concurrency with two independent pg.Client connections
- * against a real native PostgreSQL 18.4 database engine.
+ * against a real native PostgreSQL 17.6 database engine.
  * 
  * Verifies:
  * 1. Multi-session row locking (SELECT ... FOR UPDATE) on billing_invoices.
@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 async function main() {
   console.log("=====================================================================");
   console.log("SIENVI AGENCY: SPRINT 2 REAL POSTGRESQL CONCURRENCY VERIFICATION");
-  console.log("PostgreSQL Version: 18.4 (Native Windows Engine)");
+  console.log("PostgreSQL Version: 17.6 (Native Windows Engine)");
   console.log("=====================================================================\n");
 
   const ep = new EmbeddedPostgres({
@@ -34,12 +34,16 @@ async function main() {
     console.warn(">>> [PG-START] Startup notice:", err.message);
   }
 
-  // Create TWO independent database client sessions
   const session1 = ep.getPgClient();
   const session2 = ep.getPgClient();
   await session1.connect();
   await session2.connect();
-  console.log(">>> [PG-SESSIONS] Opened Session 1 & Session 2 independent database connections.");
+
+  const verRes = await session1.query("SELECT version();");
+  const pgVersion = verRes.rows[0].version;
+  console.log(`>>> [PG-VERSION] Genuine Engine: ${pgVersion}`);
+  assert.ok(pgVersion.includes("PostgreSQL 17"), `Expected PostgreSQL 17, got ${pgVersion}`);
+  console.log(">>> [PG-SESSIONS] Opened Session 1 & Session 2 independent database connections.\n");
 
   const results = [];
   function recordResult(num, name, passed, details) {
@@ -336,7 +340,7 @@ async function main() {
     await session1.end();
     await session2.end();
     await ep.stop();
-    console.log(">>> [PG-CLEANUP] Sessions and PostgreSQL 18.4 engine cleanly shut down.");
+    console.log(">>> [PG-CLEANUP] Sessions and PostgreSQL 17 engine cleanly shut down.");
   }
 }
 
