@@ -279,32 +279,61 @@ export async function executeManualPaymentVerification(
 
   // 8. Subledger Ledger Commit (if feature flag is enabled in isolated test environment)
   let subledgerPaymentId: string | null = null;
-  const isSubledgerEnabled = Deno.env.get("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true";
+  const isSubledgerEnabled =
+    (typeof Deno !== "undefined" && Deno.env?.get?.("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true") ||
+    (typeof process !== "undefined" && process.env?.FEATURE_BILLING_SUBLEDGER_ENABLED === "true");
   if (isSubledgerEnabled) {
     try {
-      const { data: paymentRow, error: paymentErr } = await supabaseAdmin
-        .from("billing_payments")
-        .insert([{
-          client_profile_id: clientId,
-          payment_channel: "ach",
-          status: "succeeded",
-          gross_amount_cents: amountCents,
-          fee_amount_cents: 0,
-          net_amount_cents: amountCents,
-          allocated_amount_cents: totalAllocatedCents,
-          currency: effectiveCurrency,
-          bank_reference_number: bankRef,
-          settled_at: verificationTimestamp,
-          reconciled: true,
-          reconciled_at: verificationTimestamp,
-          reconciled_by: adminUserId,
-          notes: notes || `Verified by admin ${adminEmail} (Idemp: ${effectiveIdempotencyKey})`,
-        }])
-        .select("id")
-        .maybeSingle();
+      const rpcAllocations = Array.isArray(matchedInvoiceIds)
+        ? matchedInvoiceIds.map((a) => ({ invoice_id: a.invoiceId, amount_cents: a.amountCents }))
+        : [];
+      if (typeof (supabaseAdmin as any).rpc === "function") {
+        const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc("record_payment_transaction", {
+          p_client_profile_id: clientId,
+          p_gross_amount_cents: amountCents,
+          p_fee_amount_cents: 0,
+          p_currency: effectiveCurrency,
+          p_payment_channel: "ach",
+          p_bank_ref: bankRef,
+          p_stripe_charge_id: null,
+          p_stripe_payment_intent_id: null,
+          p_stripe_account_id: null,
+          p_settled_at: verificationTimestamp,
+          p_payment_method_summary: { method: "bank_transfer" },
+          p_notes: notes || `Verified by admin ${adminEmail} (Idemp: ${effectiveIdempotencyKey})`,
+          p_allocations: rpcAllocations,
+          p_manual_submission_id: null,
+          p_admin_user_id: adminUserId,
+        });
+        if (!rpcErr && rpcRes?.payment_id) {
+          subledgerPaymentId = rpcRes.payment_id;
+        }
+      }
+      if (!subledgerPaymentId && typeof (supabaseAdmin as any).from === "function") {
+        const { data: paymentRow, error: paymentErr } = await supabaseAdmin
+          .from("billing_payments")
+          .insert([{
+            client_profile_id: clientId,
+            payment_channel: "ach",
+            status: "succeeded",
+            gross_amount_cents: amountCents,
+            fee_amount_cents: 0,
+            net_amount_cents: amountCents,
+            allocated_amount_cents: totalAllocatedCents,
+            currency: effectiveCurrency,
+            bank_reference_number: bankRef,
+            settled_at: verificationTimestamp,
+            reconciled: true,
+            reconciled_at: verificationTimestamp,
+            reconciled_by: adminUserId,
+            notes: notes || `Verified by admin ${adminEmail} (Idemp: ${effectiveIdempotencyKey})`,
+          }])
+          .select("id")
+          .maybeSingle();
 
-      if (!paymentErr && paymentRow) {
-        subledgerPaymentId = paymentRow.id;
+        if (!paymentErr && paymentRow) {
+          subledgerPaymentId = paymentRow.id;
+        }
       }
     } catch (ledgerErr) {
       console.warn("[Manual Payment Verifier] Subledger write skipped:", ledgerErr);

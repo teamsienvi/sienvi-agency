@@ -346,7 +346,7 @@ async function main() {
     // CHECK 3: Test real record_payment_transaction function
     // ---------------------------------------------------------------------
     try {
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       const res = await client.query(`
         SELECT public.record_payment_transaction(
@@ -389,7 +389,7 @@ async function main() {
     // CHECK 4: Confirm privileged function execution restricted to intended callers
     // ---------------------------------------------------------------------
     try {
-      // 1. Anon calling billing_internal
+      // 1. Anon calling billing_internal or public.record_payment_transaction
       await setAuthIdentity("anon");
       let anonInternalOk = false;
       try {
@@ -400,7 +400,16 @@ async function main() {
       }
       assert.equal(anonInternalOk, false, "Anon must be denied executing billing_internal");
 
-      // 2. Client calling public.record_payment_transaction
+      let anonPublicOk = false;
+      try {
+        await client.query(`SELECT public.record_payment_transaction('${clientAProfileId}', 100, 0, 'usd', 'stripe', null, null, null, null, now(), '{}'::jsonb, '', '[]'::jsonb);`);
+        anonPublicOk = true;
+      } catch (err) {
+        anonPublicOk = false;
+      }
+      assert.equal(anonPublicOk, false, "Anon must be denied executing public.record_payment_transaction");
+
+      // 2. Normal authenticated client calling public.record_payment_transaction (blocked at ACL)
       await setAuthIdentity("authenticated", clientAUserId, "client.a@brand.com");
       let clientExecPublic = false;
       let clientErr = "";
@@ -411,11 +420,56 @@ async function main() {
         clientExecPublic = false;
         clientErr = err.message;
       }
-      assert.equal(clientExecPublic, false, "Client must be forbidden from calling public.record_payment_transaction");
-      assert.match(clientErr, /Forbidden: only administrators can record financial transactions/);
+      assert.equal(clientExecPublic, false, "Client must be denied calling public.record_payment_transaction");
+      assert.match(clientErr, /permission denied for function record_payment_transaction/);
+
+      // 3. Authenticated administrator calling public.record_payment_transaction directly via PostgREST role 'authenticated'
+      //    MUST BE BLOCKED so admins cannot bypass FEATURE_FINANCIAL_MUTATIONS_ENABLED=false canary lock!
+      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      let adminDirectRpcOk = false;
+      let adminDirectErr = "";
+      try {
+        await client.query(`SELECT public.record_payment_transaction('${clientAProfileId}', 100, 0, 'usd', 'stripe', null, null, null, null, now(), '{}'::jsonb, '', '[]'::jsonb);`);
+        adminDirectRpcOk = true;
+      } catch (err) {
+        adminDirectRpcOk = false;
+        adminDirectErr = err.message;
+      }
+      assert.equal(adminDirectRpcOk, false, "Authenticated admin must NOT be able to execute financial RPC directly outside service_role Edge Functions");
+      assert.match(adminDirectErr, /permission denied for function record_payment_transaction/);
+
+      // 4. Authenticated administrator attempting direct table write on billing_payments (MUST BE BLOCKED)
+      let adminDirectTableWriteOk = false;
+      try {
+        await client.query(`
+          INSERT INTO public.billing_payments (
+            client_profile_id, payment_channel, status, gross_amount_cents, fee_amount_cents, net_amount_cents, allocated_amount_cents, currency, settled_at
+          ) VALUES (
+            '${clientAProfileId}', 'wire', 'succeeded', 100, 0, 100, 0, 'usd', now()
+          );
+        `);
+        adminDirectTableWriteOk = true;
+      } catch (err) {
+        adminDirectTableWriteOk = false;
+      }
+      assert.equal(adminDirectTableWriteOk, false, "Authenticated admin must NOT have direct INSERT privilege on billing_payments");
+
+      // 5. Server-side service_role calling public.record_payment_transaction on behalf of a non-admin actor (MUST BE REJECTED by RBAC)
+      await setAuthIdentity("service_role", clientAUserId, "client.a@brand.com");
+      let serviceWithClientActorOk = false;
+      let serviceClientErr = "";
+      try {
+        await client.query(`SELECT public.record_payment_transaction('${clientAProfileId}', 100, 0, 'usd', 'stripe', null, null, null, null, now(), '{}'::jsonb, '', '[]'::jsonb);`);
+        serviceWithClientActorOk = true;
+      } catch (err) {
+        serviceWithClientActorOk = false;
+        serviceClientErr = err.message;
+      }
+      assert.equal(serviceWithClientActorOk, false, "service_role with non-admin actor must be rejected by RBAC check");
+      assert.match(serviceClientErr, /Forbidden: only administrators can record financial transactions/);
 
       await resetAuthIdentity();
-      recordResult(4, "Privileged Function Security & RBAC Enforcement", true, "Direct billing_internal schema denied; public gateway enforces admin check");
+      recordResult(4, "Privileged Function Security & RBAC Enforcement", true, "Direct anon/client/admin PostgREST RPC blocked; service_role + admin RBAC enforced");
     } catch (e) {
       await resetAuthIdentity();
       recordResult(4, "Privileged Function Security & RBAC Enforcement", false, e.message);
@@ -440,7 +494,7 @@ async function main() {
       partialInvId = invRes.rows[0].id;
 
       // Admin pays $400 of $1,000
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       await client.query(`
         SELECT public.record_payment_transaction(
@@ -488,7 +542,7 @@ async function main() {
       `);
       const overInvId = invRes.rows[0].id;
 
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       const res = await client.query(`
         SELECT public.record_payment_transaction(
@@ -532,7 +586,7 @@ async function main() {
     // CHECK 7: Test multiple payments to one invoice
     // ---------------------------------------------------------------------
     try {
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       // Pay remaining $600 on partialInvId
       await client.query(`
@@ -593,7 +647,7 @@ async function main() {
         ) RETURNING id;
       `);
 
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       const res = await client.query(`
         SELECT public.record_payment_transaction(
@@ -668,7 +722,7 @@ async function main() {
     // CHECK 10: Test duplicate Stripe events (Idempotency)
     // ---------------------------------------------------------------------
     try {
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       const res = await client.query(`
         SELECT public.record_payment_transaction(
@@ -707,7 +761,7 @@ async function main() {
     // CHECK 11: Test duplicate manual references and idempotency conflicts
     // ---------------------------------------------------------------------
     try {
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       // Replay same bank reference WIRE-PART-001
       const res = await client.query(`
@@ -761,7 +815,7 @@ async function main() {
     // CHECK 13: Test failed transaction rollback
     // ---------------------------------------------------------------------
     try {
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       // Count payments before failure
       const countBefore = await client.query(`SELECT count(*) FROM public.billing_payments;`);
@@ -820,7 +874,7 @@ async function main() {
         ) RETURNING id;
       `);
 
-      await setAuthIdentity("authenticated", adminUserId, "admin@sienvi.com");
+      await setAuthIdentity("service_role", adminUserId, "admin@sienvi.com");
 
       // Attempt USD payment allocation to EUR invoice
       let rejected = false;

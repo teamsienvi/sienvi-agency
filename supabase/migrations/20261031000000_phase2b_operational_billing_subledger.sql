@@ -555,7 +555,7 @@ REVOKE ALL ON FUNCTION billing_internal.record_payment_transaction FROM PUBLIC, 
 GRANT EXECUTE ON FUNCTION billing_internal.record_payment_transaction TO service_role;
 
 -- ---------------------------------------------------------------------
--- 11. PUBLIC ADMINISTRATIVE GATEWAY WITH STRICT RBAC VERIFICATION
+-- 11. SERVER-SIDE ADMINISTRATIVE GATEWAY WITH STRICT SERVICE_ROLE & RBAC LOCK
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.record_payment_transaction(
   p_client_profile_id uuid,
@@ -571,7 +571,8 @@ CREATE OR REPLACE FUNCTION public.record_payment_transaction(
   p_payment_method_summary jsonb,
   p_notes text,
   p_allocations jsonb,
-  p_manual_submission_id uuid DEFAULT NULL
+  p_manual_submission_id uuid DEFAULT NULL,
+  p_admin_user_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -579,23 +580,29 @@ SECURITY DEFINER
 SET search_path = public, billing_internal, pg_temp
 AS $$
 DECLARE
-  v_caller uuid := auth.uid();
-  v_is_admin boolean := false;
+  v_caller uuid := COALESCE(p_admin_user_id, auth.uid());
+  v_jwt_role text := COALESCE(current_setting('request.jwt.claim.role', true), '');
   v_is_service boolean := false;
+  v_is_admin boolean := false;
 BEGIN
-  -- Strict caller authorization: Must be administrator or service_role
-  v_is_service := COALESCE(current_setting('request.jwt.claim.role', true), '') = 'service_role';
+  -- 1. Enforce server-side service_role execution:
+  --    Direct PostgREST RPC calls from anon or authenticated (including browser admin sessions)
+  --    are strictly rejected so that all financial mutations must pass through protected
+  --    Edge Functions and the server-side FEATURE_FINANCIAL_MUTATIONS_ENABLED canary lock.
+  v_is_service := (current_user = 'service_role') OR (v_jwt_role = 'service_role');
   IF NOT v_is_service THEN
-    IF v_caller IS NULL THEN
-      RAISE EXCEPTION 'Unauthorized: authentication required to record payments';
-    END IF;
+    RAISE EXCEPTION 'Forbidden: direct client or browser RPC execution is locked; financial mutations must be executed via authorized server-side Edge Functions (service_role)';
+  END IF;
+
+  -- 2. Enforce server-side administrator RBAC verification whenever an actor user ID is supplied
+  IF v_caller IS NOT NULL THEN
     SELECT public.has_role(v_caller, 'admin'::public.app_role) INTO v_is_admin;
     IF NOT v_is_admin THEN
       RAISE EXCEPTION 'Forbidden: only administrators can record financial transactions';
     END IF;
   END IF;
 
-  -- Delegate to internal protected execution function
+  -- 3. Delegate to internal protected execution function
   RETURN billing_internal.record_payment_transaction(
     p_client_profile_id,
     p_gross_amount_cents,
@@ -616,9 +623,9 @@ BEGIN
 END;
 $$;
 
--- Revoke execute from anon
-REVOKE ALL ON FUNCTION public.record_payment_transaction FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.record_payment_transaction TO authenticated, service_role;
+-- Restrict execution exclusively to server-side service_role (no direct PostgREST RPC access for anon or authenticated)
+REVOKE ALL ON FUNCTION public.record_payment_transaction FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_payment_transaction TO service_role;
 
 -- ---------------------------------------------------------------------
 -- 12. ROW LEVEL SECURITY (RLS) POLICIES & PERMISSIONS
@@ -633,20 +640,20 @@ ALTER TABLE public.stripe_sync_checkpoints ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_exceptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_reconciliation_snapshots ENABLE ROW LEVEL SECURITY;
 
--- Revoke all permissions from anon
-REVOKE ALL ON public.billing_invoices FROM anon;
-REVOKE ALL ON public.billing_payments FROM anon;
-REVOKE ALL ON public.billing_invoice_allocations FROM anon;
-REVOKE ALL ON public.billing_adjustments FROM anon;
-REVOKE ALL ON public.billing_payouts FROM anon;
-REVOKE ALL ON public.manual_payment_submissions FROM anon;
-REVOKE ALL ON public.stripe_sync_checkpoints FROM anon;
-REVOKE ALL ON public.billing_exceptions FROM anon;
-REVOKE ALL ON public.billing_reconciliation_snapshots FROM anon;
+-- Revoke all default table privileges from PUBLIC, anon, and authenticated before granting explicit least-privilege access
+REVOKE ALL ON public.billing_invoices FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_payments FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_invoice_allocations FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_adjustments FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_payouts FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.manual_payment_submissions FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.stripe_sync_checkpoints FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_exceptions FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_reconciliation_snapshots FROM PUBLIC, anon, authenticated;
 
 -- Grant access to authenticated and service_role
--- Least privilege: authenticated role receives SELECT only on ledger tables.
--- Direct ledger mutations must pass through privileged server-side functions.
+-- Least privilege: authenticated role receives SELECT only on ledger tables (plus INSERT for pending client bank transfer submissions).
+-- All financial ledger mutations must pass through privileged server-side Edge Functions (service_role).
 GRANT SELECT ON public.billing_invoices TO authenticated;
 GRANT SELECT ON public.billing_payments TO authenticated;
 GRANT SELECT ON public.billing_invoice_allocations TO authenticated;
@@ -659,33 +666,33 @@ GRANT SELECT ON public.billing_reconciliation_snapshots TO authenticated;
 
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 
--- ADMIN POLICIES (Full Management for Administrators)
+-- ADMIN POLICIES (Read-Only Direct Access for Administrators; All Writes Enforced via Server-Side service_role Edge Functions)
 CREATE POLICY "Admins manage billing_invoices" ON public.billing_invoices
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage billing_payments" ON public.billing_payments
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage billing_invoice_allocations" ON public.billing_invoice_allocations
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage billing_adjustments" ON public.billing_adjustments
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage billing_payouts" ON public.billing_payouts
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage manual_payment_submissions" ON public.manual_payment_submissions
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage stripe_sync_checkpoints" ON public.stripe_sync_checkpoints
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage billing_exceptions" ON public.billing_exceptions
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 CREATE POLICY "Admins manage billing_reconciliation_snapshots" ON public.billing_reconciliation_snapshots
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 -- CLIENT POLICIES (Scoped Read-Only via get_accessible_client_profile_ids)
 CREATE POLICY "Clients view own accessible invoices" ON public.billing_invoices

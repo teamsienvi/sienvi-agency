@@ -149,8 +149,8 @@ async function main() {
 
     // Configure both sessions as authenticated admin
     for (const sess of [session1, session2]) {
-      await sess.query(`SET ROLE authenticated;`);
-      await sess.query(`SELECT set_config('request.jwt.claim.role', 'authenticated', false);`);
+      await sess.query(`SET ROLE service_role;`);
+      await sess.query(`SELECT set_config('request.jwt.claim.role', 'service_role', false);`);
       await sess.query(`SELECT set_config('request.jwt.claim.sub', '${adminId}', false);`);
       await sess.query(`SELECT set_config('request.jwt.claim.email', 'admin@sienvi.com', false);`);
     }
@@ -280,8 +280,8 @@ async function main() {
     // CHECK 4: Idempotent Batch Replay (Zero Cash Duplication)
     // ---------------------------------------------------------------------
     console.log("\n>>> [IDEMPOTENCY TEST] Replaying identical charge ID...");
-    await session1.query(`SET ROLE authenticated;`);
-    await session1.query(`SELECT set_config('request.jwt.claim.role', 'authenticated', false);`);
+    await session1.query(`SET ROLE service_role;`);
+    await session1.query(`SELECT set_config('request.jwt.claim.role', 'service_role', false);`);
     await session1.query(`SELECT set_config('request.jwt.claim.sub', '${adminId}', false);`);
     await session1.query(`SELECT set_config('request.jwt.claim.email', 'admin@sienvi.com', false);`);
 

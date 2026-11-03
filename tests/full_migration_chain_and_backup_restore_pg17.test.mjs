@@ -184,7 +184,7 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
     }
   });
 
-  it("2. Enforces strict EXECUTE privileges, RLS, and SECURITY DEFINER admin checks on record_payment_transaction", async () => {
+  it("2. Enforces strict service_role EXECUTE privileges, blocks direct authenticated admin RPC bypass, and validates audit schema compatibility", async () => {
     const db = new Client({
       connectionString: `postgresql://postgres:password@localhost:${PG_PORT}/${SYNTHETIC_DB}`,
     });
@@ -192,11 +192,11 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
 
     try {
       const fnSig =
-        "public.record_payment_transaction(uuid,bigint,bigint,text,text,text,text,text,text,timestamptz,jsonb,text,jsonb,uuid)";
+        "public.record_payment_transaction(uuid,bigint,bigint,text,text,text,text,text,text,timestamptz,jsonb,text,jsonb,uuid,uuid)";
       const internalFnSig =
         "billing_internal.record_payment_transaction(uuid,bigint,bigint,text,text,text,text,text,text,timestamptz,jsonb,text,jsonb,uuid,uuid)";
 
-      // Verify PostgreSQL ACLs directly
+      // Verify PostgreSQL ACLs directly: neither anon nor authenticated has EXECUTE on financial RPCs
       const aclRes = await db.query(`
         SELECT
           has_function_privilege('anon', '${fnSig}', 'EXECUTE') AS anon_exec_public,
@@ -206,18 +206,26 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
           has_schema_privilege('authenticated', 'billing_internal', 'USAGE') AS auth_internal_schema,
           has_schema_privilege('service_role', 'billing_internal', 'USAGE') AS service_internal_schema,
           has_function_privilege('authenticated', '${internalFnSig}', 'EXECUTE') AS auth_exec_internal,
-          has_function_privilege('service_role', '${internalFnSig}', 'EXECUTE') AS service_exec_internal;
+          has_function_privilege('service_role', '${internalFnSig}', 'EXECUTE') AS service_exec_internal,
+          has_table_privilege('authenticated', 'public.billing_invoices', 'INSERT') AS auth_insert_invoices,
+          has_table_privilege('authenticated', 'public.billing_invoices', 'UPDATE') AS auth_update_invoices,
+          has_table_privilege('authenticated', 'public.billing_payments', 'INSERT') AS auth_insert_payments,
+          has_table_privilege('authenticated', 'public.billing_exceptions', 'UPDATE') AS auth_update_exceptions;
       `);
 
       const acl = aclRes.rows[0];
       assert.strictEqual(acl.anon_exec_public, false, "anon must NOT have EXECUTE on public.record_payment_transaction");
-      assert.strictEqual(acl.auth_exec_public, true, "authenticated must have EXECUTE on public.record_payment_transaction");
-      assert.strictEqual(acl.service_exec_public, true, "service_role must have EXECUTE on public.record_payment_transaction");
+      assert.strictEqual(acl.auth_exec_public, false, "authenticated must NOT have EXECUTE on public.record_payment_transaction (direct RPC bypass closed)");
+      assert.strictEqual(acl.service_exec_public, true, "service_role MUST have EXECUTE on public.record_payment_transaction");
       assert.strictEqual(acl.anon_internal_schema, false, "anon must NOT have USAGE on billing_internal");
       assert.strictEqual(acl.auth_internal_schema, false, "authenticated must NOT have USAGE on billing_internal");
       assert.strictEqual(acl.service_internal_schema, true, "service_role must have USAGE on billing_internal");
       assert.strictEqual(acl.auth_exec_internal, false, "authenticated must NOT have EXECUTE on billing_internal function");
       assert.strictEqual(acl.service_exec_internal, true, "service_role must have EXECUTE on billing_internal function");
+      assert.strictEqual(acl.auth_insert_invoices, false, "authenticated must NOT have INSERT on billing_invoices");
+      assert.strictEqual(acl.auth_update_invoices, false, "authenticated must NOT have UPDATE on billing_invoices");
+      assert.strictEqual(acl.auth_insert_payments, false, "authenticated must NOT have INSERT on billing_payments");
+      assert.strictEqual(acl.auth_update_exceptions, false, "authenticated must NOT have UPDATE on billing_exceptions");
 
       // Seed synthetic users, client profile, subscription, and open invoice
       const adminUserRes = await db.query(
@@ -298,10 +306,45 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
             `SELECT public.record_payment_transaction($1, 494700, 0, 'usd', 'wire', 'WIRE-SYNTH-001', NULL, NULL, NULL, now(), '{}'::jsonb, 'client self-verify attempt', '[]'::jsonb, $2);`,
             [clientProfileId, manualSubId]
           ),
+        /permission denied for function record_payment_transaction/
+      );
+
+      // 2c. Authenticated ADMINISTRATOR calling public.record_payment_transaction directly via PostgREST role 'authenticated'
+      //     is strictly blocked so an admin cannot bypass FEATURE_FINANCIAL_MUTATIONS_ENABLED=false!
+      await db.query(`SELECT set_config('request.jwt.claim.sub', $1, false);`, [adminUserId]);
+      await db.query(`SELECT set_config('request.jwt.claim.email', 'admin@sienvi.com', false);`);
+
+      await assert.rejects(
+        () =>
+          db.query(
+            `SELECT public.record_payment_transaction($1, 494700, 0, 'usd', 'wire', 'WIRE-SYNTH-001', NULL, NULL, NULL, now(), '{}'::jsonb, 'admin direct rpc attempt', '[]'::jsonb, $2);`,
+            [clientProfileId, manualSubId]
+          ),
+        /permission denied for function record_payment_transaction/
+      );
+
+      // Authenticated admin also cannot directly UPDATE billing_invoices or INSERT into billing_payments
+      await assert.rejects(
+        () => db.query(`UPDATE public.billing_invoices SET status = 'paid' WHERE id = $1;`, [invoiceId]),
+        /permission denied for table billing_invoices/
+      );
+
+      await db.query(`RESET ROLE;`);
+
+      // 2d. Server-side service_role with non-admin actor user ID is rejected by internal RBAC check
+      await db.query(`SET ROLE service_role;`);
+      await db.query(`SELECT set_config('request.jwt.claim.role', 'service_role', false);`);
+      await db.query(`SELECT set_config('request.jwt.claim.sub', $1, false);`, [clientUserId]);
+      await assert.rejects(
+        () =>
+          db.query(
+            `SELECT public.record_payment_transaction($1, 494700, 0, 'usd', 'wire', 'WIRE-SYNTH-001', NULL, NULL, NULL, now(), '{}'::jsonb, 'non-admin actor via service_role', '[]'::jsonb, $2, $3);`,
+            [clientProfileId, manualSubId, clientUserId]
+          ),
         /Forbidden: only administrators can record financial transactions/
       );
 
-      // 2c. Authenticated admin caller succeeds atomically
+      // 2e. Authorized server-side service_role with verified admin actor succeeds atomically
       await db.query(`SELECT set_config('request.jwt.claim.sub', $1, false);`, [adminUserId]);
       await db.query(`SELECT set_config('request.jwt.claim.email', 'admin@sienvi.com', false);`);
 
@@ -310,13 +353,35 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
            $1, 494700, 0, 'usd', 'wire', 'WIRE-SYNTH-001', NULL, NULL, NULL, now(),
            '{"bank":"SVB"}'::jsonb, 'Verified wire receipt',
            jsonb_build_array(jsonb_build_object('invoice_id', $2::text, 'amount_cents', 494700)),
-           $3
+           $3, $4
          ) AS result;`,
-        [clientProfileId, invoiceId, manualSubId]
+        [clientProfileId, invoiceId, manualSubId, adminUserId]
       );
       assert.strictEqual(txRes.rows[0].result.success, true);
       assert.strictEqual(txRes.rows[0].result.allocated_amount_cents, 494700);
       assert.strictEqual(txRes.rows[0].result.unallocated_amount_cents, 0);
+
+      // 2f. Verify Audit Schema Compatibility:
+      //     (1) Legacy production audit writer (omits admin_email and details)
+      await db.query(
+        `INSERT INTO public.admin_audit_logs (
+           admin_user_id, action, target_client_id, metadata, ip_address, user_agent, created_at
+         ) VALUES ($1, 'admin_client_updated', $2, '{"updatedFields":["plan"]}'::jsonb, '127.0.0.1', 'Mozilla/5.0', now());`,
+        [adminUserId, clientProfileId]
+      );
+
+      //     (2) Phase 2B Edge Function audit writer (includes category in metadata)
+      await db.query(
+        `INSERT INTO public.admin_audit_logs (
+           admin_user_id, action, target_client_id, metadata, ip_address, user_agent, created_at
+         ) VALUES ($1, 'manual_payment_verified', $2, '{"category":"financial","verifiedAmountCents":494700}'::jsonb, '127.0.0.1', 'Deno/2.x', now());`,
+        [adminUserId, clientProfileId]
+      );
+
+      const auditRows = await db.query(
+        `SELECT action, admin_email, details, metadata FROM public.admin_audit_logs ORDER BY created_at ASC;`
+      );
+      assert.strictEqual(auditRows.rows.length, 3, "All 3 audit writer formats must coexist cleanly in admin_audit_logs");
 
       await db.query(`RESET ROLE;`);
     } finally {
@@ -392,7 +457,7 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
       assert.strictEqual(counts.allocations_cnt, 1);
       assert.strictEqual(counts.verified_submissions_cnt, 1);
       assert.strictEqual(counts.checkpoints_cnt, 5);
-      assert.strictEqual(counts.audit_cnt, 1);
+      assert.strictEqual(counts.audit_cnt, 3);
 
       // Verify financial ledger invariants in restored DB
       const invCheck = await targetDb.query(`
@@ -422,7 +487,7 @@ describe("PostgreSQL 17 Full Migration Chain, Privileged SQL & Encrypted Backup/
       const fnPriv = await targetDb.query(`
         SELECT has_function_privilege(
           'anon',
-          'public.record_payment_transaction(uuid,bigint,bigint,text,text,text,text,text,text,timestamptz,jsonb,text,jsonb,uuid)',
+          'public.record_payment_transaction(uuid,bigint,bigint,text,text,text,text,text,text,timestamptz,jsonb,text,jsonb,uuid,uuid)',
           'EXECUTE'
         ) AS anon_exec;
       `);

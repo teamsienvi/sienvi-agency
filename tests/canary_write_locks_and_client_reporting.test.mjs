@@ -155,4 +155,30 @@ describe("Section 4: Canary Financial Write Locks & Client Safety", () => {
     assert.strictEqual(legacySubscriptionUpdated, true);
     assert.strictEqual(subledgerResult.status, "feature_disabled");
   });
+
+  // Test 7: Direct PostgREST RPC bypass prevention for authenticated administrators
+  it("4.6 Direct PostgREST RPC execution of public.record_payment_transaction by authenticated admins is revoked and locked to service_role", async () => {
+    const fsMod = await import("node:fs");
+    const migSql = fsMod.readFileSync(
+      "supabase/migrations/20261031000000_phase2b_operational_billing_subledger.sql",
+      "utf8"
+    );
+
+    assert.ok(
+      migSql.includes("REVOKE ALL ON FUNCTION public.record_payment_transaction FROM PUBLIC, anon, authenticated;"),
+      "public.record_payment_transaction must revoke EXECUTE from PUBLIC, anon, and authenticated"
+    );
+    assert.ok(
+      migSql.includes("GRANT EXECUTE ON FUNCTION public.record_payment_transaction TO service_role;"),
+      "public.record_payment_transaction must grant EXECUTE solely to service_role"
+    );
+    assert.ok(
+      !migSql.includes("GRANT EXECUTE ON FUNCTION public.record_payment_transaction TO authenticated"),
+      "public.record_payment_transaction must NOT grant EXECUTE to authenticated"
+    );
+    assert.ok(
+      migSql.includes("v_is_service := (current_user = 'service_role') OR (v_jwt_role = 'service_role');"),
+      "Function body must also enforce service_role check as defense-in-depth"
+    );
+  });
 });
