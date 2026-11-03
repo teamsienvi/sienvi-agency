@@ -330,14 +330,21 @@ const Onboarding = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
       <Navbar />
       <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/dashboard")}
+              className="h-8 gap-2 text-xs font-medium text-foreground bg-card hover:bg-accent border-border shadow-2xs transition-colors"
+              aria-label="Back to Dashboard"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Back to Dashboard</span>
             </Button>
           </div>
 

@@ -34,7 +34,10 @@ supabase/.temp/
 .env.*
 !.env.example
 
-# Backups (strictly outside Git)
+# Backups & Local Test Database State (strictly outside Git and frontend assets)
 backups/
+data/
 *.dump
+*.enc
+*.manifest.json
 *.sql.bak

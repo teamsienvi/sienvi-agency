@@ -93,6 +93,7 @@ export default function AdminClientWorkspace() {
 
   // Modals
   const [editClientModalOpen, setEditClientModalOpen] = useState(false);
+  const [editClientModalTab, setEditClientModalTab] = useState<"services" | "profile" | "billing">("profile");
   const [deleteClientModalOpen, setDeleteClientModalOpen] = useState(false);
   const [onboardingResponsesModalOpen, setOnboardingResponsesModalOpen] = useState(false);
 
@@ -104,6 +105,7 @@ export default function AdminClientWorkspace() {
   const [migratingToStripe, setMigratingToStripe] = useState(false);
   const [previewingBilling, setPreviewingBilling] = useState(false);
   const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
+  const [oneTimePayments, setOneTimePayments] = useState<any[]>([]);
 
   // Administrative Notes state
   const [notesText, setNotesText] = useState("");
@@ -154,6 +156,20 @@ export default function AdminClientWorkspace() {
         setClient(found);
         setNotesText(found.notes || "");
         setNotesDirty(false);
+
+        // Fetch one-time invoices/payments
+        try {
+          const { data: otps } = await supabase
+            .from("client_one_time_payments")
+            .select("*")
+            .eq("client_profile_id", id)
+            .order("created_at", { ascending: false });
+          if (otps) {
+            setOneTimePayments(otps);
+          }
+        } catch (e) {
+          console.warn("Could not load one-time payments:", e);
+        }
       }
     } catch (err: any) {
       console.error("Error fetching client:", err);
@@ -496,7 +512,10 @@ export default function AdminClientWorkspace() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEditClientModalOpen(true)}
+            onClick={() => {
+              setEditClientModalTab("profile");
+              setEditClientModalOpen(true);
+            }}
             className="h-8 text-xs border-border text-foreground hover:bg-muted gap-1.5"
           >
             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
@@ -506,8 +525,9 @@ export default function AdminClientWorkspace() {
           {/* More Actions Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs border-border text-foreground hover:bg-muted px-2.5">
-                <MoreVertical className="w-3.5 h-3.5" />
+              <Button variant="outline" size="sm" aria-label="More actions" className="h-8 text-xs border-border text-foreground hover:bg-muted px-2.5">
+                <MoreVertical className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="sr-only">More actions</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 text-xs">
@@ -997,7 +1017,10 @@ export default function AdminClientWorkspace() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditClientModalOpen(true)}
+                      onClick={() => {
+                        setEditClientModalTab("services");
+                        setEditClientModalOpen(true);
+                      }}
                       className="h-7 text-xs gap-1.5"
                     >
                       <Plus className="w-3.5 h-3.5 text-primary" />
@@ -1159,10 +1182,12 @@ export default function AdminClientWorkspace() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Copy Stripe Customer ID"
                         onClick={() => copyToClipboard(client.stripeCustomerId, "stripe-cus-id")}
                         className="h-8 w-8 p-0"
                       >
-                        {copiedField === "stripe-cus-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        {copiedField === "stripe-cus-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+                        <span className="sr-only">Copy Stripe Customer ID</span>
                       </Button>
                     )}
                   </div>
@@ -1180,14 +1205,112 @@ export default function AdminClientWorkspace() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Copy Stripe Subscription ID"
                         onClick={() => copyToClipboard(client.stripeSubscriptionId!, "stripe-sub-id")}
                         className="h-8 w-8 p-0"
                       >
-                        {copiedField === "stripe-sub-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        {copiedField === "stripe-sub-id" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+                        <span className="sr-only">Copy Stripe Subscription ID</span>
                       </Button>
                     )}
                   </div>
                 </div>
+
+                {/* Bank Transfer Verification Status Card */}
+                {client.contractDetails?.bankTransferConfirmation && (
+                  <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-primary" />
+                        <span className="font-bold text-xs text-foreground">Manual Bank Transfer / Wire Verification</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          client.contractDetails.bankTransferConfirmation.status === "verified"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px]"
+                        }
+                      >
+                        {client.contractDetails.bankTransferConfirmation.status === "verified"
+                          ? "Cleared Funds Verified"
+                          : "Pending Verification"}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Verified Amount</span>
+                        <span className="font-mono font-bold text-foreground">
+                          {client.contractDetails.bankTransferConfirmation.verifiedAmountCents
+                            ? `$${(client.contractDetails.bankTransferConfirmation.verifiedAmountCents / 100).toLocaleString()}`
+                            : client.contractDetails.bankTransferConfirmation.amount || "N/A"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Bank Reference #</span>
+                        <span className="font-mono font-medium text-foreground">
+                          {client.contractDetails.bankTransferConfirmation.clearedBankRef ||
+                            client.contractDetails.bankTransferConfirmation.referenceNumber ||
+                            "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Cleared Date</span>
+                        <span className="font-medium text-foreground">
+                          {client.contractDetails.bankTransferConfirmation.clearedDate ||
+                            client.contractDetails.bankTransferConfirmation.transferDate ||
+                            "-"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Sending Bank</span>
+                        <span className="font-medium text-foreground">
+                          {client.contractDetails.bankTransferConfirmation.bankName || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* One-Time Invoices & Receivables */}
+                {oneTimePayments.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <span className="text-xs font-bold text-foreground block">
+                      One-Time Invoices & Receivables ({oneTimePayments.length})
+                    </span>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/30">
+                            <th className="text-left py-2 px-3 text-muted-foreground font-semibold">Description</th>
+                            <th className="text-left py-2 px-3 text-muted-foreground font-semibold">Amount</th>
+                            <th className="text-left py-2 px-3 text-muted-foreground font-semibold">Due Date</th>
+                            <th className="text-left py-2 px-3 text-muted-foreground font-semibold">Status</th>
+                            <th className="text-left py-2 px-3 text-muted-foreground font-semibold">Invoice Ref</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/60 font-mono">
+                          {oneTimePayments.map((otp, idx) => (
+                            <tr key={otp.id || idx} className="hover:bg-muted/40 transition-colors">
+                              <td className="py-2 px-3 font-sans font-medium text-foreground">{otp.description || "One-Time Service"}</td>
+                              <td className="py-2 px-3 font-bold text-foreground">${Number(otp.amount || 0).toLocaleString()}</td>
+                              <td className="py-2 px-3 text-muted-foreground">{otp.due_date || "-"}</td>
+                              <td className="py-2 px-3 font-sans">
+                                <Badge variant="outline" className="text-[10px]">
+                                  {otp.status || "open"}
+                                </Badge>
+                              </td>
+                              <td className="py-2 px-3 text-[11px] text-muted-foreground truncate max-w-[140px]">
+                                {otp.stripe_invoice_id || "Manual"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1541,6 +1664,7 @@ export default function AdminClientWorkspace() {
         onOpenChange={setEditClientModalOpen}
         client={client as any}
         onClientUpdated={fetchClient}
+        initialTab={editClientModalTab}
       />
 
       <DeleteClientDialog

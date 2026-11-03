@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendEmail } from "../_shared/ses-client.ts";
+import { normalizeStripeWebhookEvent, ingestEventIntoSubledger } from "../_shared/stripe-subledger-ingestion.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
   apiVersion: "2023-10-16",
@@ -1037,6 +1038,7 @@ serve(async (req) => {
     }
     
     try {
+      // 1. Production Core Handlers (Strictly Preserved)
       switch (event.type) {
         case "checkout.session.completed":
           await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
@@ -1051,12 +1053,23 @@ serve(async (req) => {
           await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
         default:
-          console.log("Unhandled event type:", event.type);
+          console.log("No legacy handler for event type:", event.type);
+      }
+
+      // 2. Operational Billing Subledger Ingestion (Phase 2B Sprint 3)
+      // Governed by FEATURE_BILLING_SUBLEDGER_ENABLED to ensure zero test pollution in production
+      let subledgerResult: { status: string; message?: string } | null = null;
+      const normalizedEvent = normalizeStripeWebhookEvent(event);
+      if (normalizedEvent) {
+        subledgerResult = await ingestEventIntoSubledger(supabase, normalizedEvent);
+        console.log(`Subledger ingestion result for ${event.id} (object: ${normalizedEvent.externalObjectId}):`, subledgerResult);
       }
       
-      // Log successful processing
+      // Log successful processing with distinct event ID and source object ID
       await logWebhookEvent(event.type, event.id, customerEmail, "success", undefined, { 
         customer_id: eventData.customer,
+        external_object_id: (eventData.id as string) || null,
+        subledger_status: subledgerResult?.status || "bypassed",
       });
     } catch (handlerError: unknown) {
       const errorMessage = handlerError instanceof Error ? handlerError.message : "Unknown error";

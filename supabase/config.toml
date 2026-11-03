@@ -42,6 +42,12 @@ verify_jwt = false
 [functions.get-admin-executive-metrics]
 verify_jwt = true
 
+[functions.get-admin-billing-overview]
+verify_jwt = true
+
+[functions.verify-manual-payment]
+verify_jwt = true
+
 [functions.update-client-status]
 verify_jwt = false
 

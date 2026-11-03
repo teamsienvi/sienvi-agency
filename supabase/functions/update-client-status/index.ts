@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { sendEmail } from "../_shared/ses-client.ts";
 import { logAdminAudit } from "../_shared/audit-logger.ts";
 import { withAllowedOrigin } from "../_shared/cors.ts";
+import { executeManualPaymentVerification } from "../_shared/manual-payment-verifier.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -971,7 +972,7 @@ serve(withAllowedOrigin(async (req) => {
       .eq("role", "admin")
       .maybeSingle();
 
-    if (adminRoleCheck && clientId && profile.user_id !== user.id) {
+    if (adminRoleCheck && clientId && profile.user_id !== user.id && action !== "verify_bank_transfer") {
       return new Response(
         JSON.stringify({ 
           error: "Admin Preview is strictly read-only. Client-facing mutations (legal signatures, onboarding status changes, transfer confirmations) cannot be submitted from administrative preview. Please manage account records in the Admin Workspace." 
@@ -1164,6 +1165,39 @@ serve(withAllowedOrigin(async (req) => {
 
         break;
       }
+
+      case "verify_bank_transfer": {
+        // Enforce admin privileges
+        if (!adminRoleCheck || adminRoleCheck.role !== "admin") {
+          return new Response(
+            JSON.stringify({ error: "Access denied. Only administrators can verify payments." }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Delegate to Authoritative Manual Payment Verification Engine
+        const result = await executeManualPaymentVerification(supabaseAdmin, {
+          clientId: profile.id,
+          subscriptionId: body.subscriptionId,
+          verifiedAmountCents: body.verifiedAmountCents,
+          clearedBankRef: body.clearedBankRef,
+          clearedDate: body.clearedDate,
+          currency: body.currency || "usd",
+          idempotencyKey: body.idempotencyKey,
+          matchedInvoiceIds: body.matchedInvoiceIds,
+          notes: body.notes,
+          adminUserId: user.id,
+          adminEmail: user.email || "admin@sienvi.com",
+          ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+          userAgent: req.headers.get("user-agent"),
+        });
+
+        return new Response(
+          JSON.stringify(result),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
 
       default:
         return new Response(

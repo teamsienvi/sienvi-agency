@@ -687,7 +687,7 @@ const ClientDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
       {paramClientId && isAdmin && (
         <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-900 dark:text-amber-200 px-4 py-2.5 text-xs font-medium flex items-center justify-between gap-2 shadow-2xs">
           <div className="flex items-center gap-2">

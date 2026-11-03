@@ -36,6 +36,7 @@ import Footer from "@/components/Footer";
 const Contract = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const paramClientId = searchParams.get("clientId");
   const isViewMode = searchParams.get("view") === "true";
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
@@ -140,66 +141,88 @@ const Contract = () => {
   const checkAccess = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const paramClientId = searchParams.get("clientId");
       
       let fetchedProfile: any = null;
 
-      if (!session) {
-        if (paramClientId) {
-          const { data: prof, error: profErr } = await supabase
-            .from("client_profiles")
-            .select("*")
-            .eq("id", paramClientId)
-            .single();
+      const mapRecord = (prof: any) => ({
+        id: prof.id,
+        email: prof.email,
+        firstName: prof.first_name,
+        lastName: prof.last_name,
+        role: prof.role || "client",
+        accountStatus: prof.account_status,
+        plan: prof.plan,
+        subscriptionStatus: prof.subscription_status,
+        stripeCustomerId: prof.stripe_customer_id,
+        stripeSubscriptionId: prof.stripe_subscription_id,
+        contractStatus: prof.contract_status,
+        contractSignedAt: prof.contract_signed_at,
+        contractSignature: prof.contract_signature,
+        contractDetails: prof.contract_details,
+        onboardingStatus: prof.onboarding_status,
+        onboardingCompletedAt: prof.onboarding_completed_at,
+        maxServices: prof.max_services || 0,
+        selectedServices: prof.selected_services || [],
+        customPrice: prof.custom_price,
+        createdAt: prof.created_at,
+        updatedAt: prof.updated_at,
+        notes: prof.notes,
+      });
 
-          if (!profErr && prof) {
-            fetchedProfile = {
-              id: prof.id,
-              email: prof.email,
-              firstName: prof.first_name,
-              lastName: prof.last_name,
-              role: prof.role || "client",
-              accountStatus: prof.account_status,
-              plan: prof.plan,
-              subscriptionStatus: prof.subscription_status,
-              stripeCustomerId: prof.stripe_customer_id,
-              stripeSubscriptionId: prof.stripe_subscription_id,
-              contractStatus: prof.contract_status,
-              contractSignedAt: prof.contract_signed_at,
-              contractSignature: prof.contract_signature,
-              contractDetails: prof.contract_details,
-              onboardingStatus: prof.onboarding_status,
-              onboardingCompletedAt: prof.onboarding_completed_at,
-              maxServices: prof.max_services || 0,
-              selectedServices: prof.selected_services || [],
-              customPrice: prof.custom_price,
-              createdAt: prof.created_at,
-              updatedAt: prof.updated_at,
-              notes: prof.notes,
-            };
-          } else {
-            navigate("/login");
-            return;
+      // 1. Direct DB lookup when clientId is in URL (works for public review and authenticated admins)
+      if (paramClientId) {
+        const { data: prof, error: profErr } = await supabase
+          .from("client_profiles")
+          .select("*")
+          .eq("id", paramClientId)
+          .maybeSingle();
+
+        if (prof && !profErr) {
+          fetchedProfile = mapRecord(prof);
+        }
+      }
+
+      // 2. Fallback to edge function if authenticated and not yet fetched
+      if (!fetchedProfile && session) {
+        try {
+          const response = await supabase.functions.invoke("get-client-profile", {
+            body: paramClientId ? { clientId: paramClientId } : undefined,
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+
+          if (!response.error && response.data?.profile) {
+            fetchedProfile = response.data.profile;
           }
-        } else {
+        } catch (e) {
+          console.warn("Edge function get-client-profile invocation failed:", e);
+        }
+      }
+
+      // 3. Fallback to session user's own profile by email
+      if (!fetchedProfile && session?.user?.email) {
+        const { data: myProf } = await supabase
+          .from("client_profiles")
+          .select("*")
+          .eq("email", session.user.email)
+          .maybeSingle();
+
+        if (myProf) {
+          fetchedProfile = mapRecord(myProf);
+        }
+      }
+
+      // 4. If still not found, redirect safely
+      if (!fetchedProfile) {
+        if (!session) {
           navigate("/login");
-          return;
-        }
-      } else {
-        const response = await supabase.functions.invoke("get-client-profile", {
-          method: "POST",
-          body: { clientId: paramClientId },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (response.error || response.data.error) {
+        } else if (paramClientId) {
+          navigate(`/admin/clients/${paramClientId}`);
+        } else {
           navigate("/dashboard");
-          return;
         }
-
-        fetchedProfile = response.data.profile;
+        return;
       }
 
       setProfile(fetchedProfile);
@@ -422,29 +445,29 @@ const Contract = () => {
     if (!packages || !Array.isArray(packages) || packages.length === 0) return null;
 
     return (
-      <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+      <div className="mt-4 border border-border rounded-xl overflow-hidden bg-card text-card-foreground shadow-xs">
+        <div className="bg-muted/50 border-b border-border px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-indigo-600" />
-            <h4 className="font-semibold text-slate-800 text-xs uppercase tracking-wider">
+            <Package className="w-4 h-4 text-primary" aria-hidden="true" />
+            <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">
               Exhibit A — Scope of Services & Deliverable Packages
             </h4>
           </div>
-          <Badge variant="outline" className="bg-white text-indigo-700 border-indigo-200 text-xs font-medium">
+          <Badge variant="outline" className="bg-card text-primary border-primary/30 text-xs font-medium">
             4 Core Packages
           </Badge>
         </div>
-        <div className="divide-y divide-slate-100 p-4 space-y-4">
+        <div className="divide-y divide-border p-4 space-y-4">
           {packages.map((pkg: any, idx: number) => (
             <div key={idx} className={idx > 0 ? "pt-4" : ""}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-slate-900 text-sm">{pkg.package}</span>
+                  <span className="font-bold text-foreground text-sm">{pkg.package}</span>
                   <Badge variant="secondary" className="text-[10px] py-0 px-1.5">{pkg.type}</Badge>
                 </div>
-                <span className="font-bold text-xs text-indigo-600 sm:text-sm">{pkg.pricing}</span>
+                <span className="font-bold text-xs text-primary dark:text-indigo-400 sm:text-sm">{pkg.pricing}</span>
               </div>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pl-2 text-xs text-slate-600">
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pl-2 text-xs text-muted-foreground">
                 {pkg.deliverables?.map((d: string, dIdx: number) => (
                   <li key={dIdx} className="flex items-start gap-1.5">
                     <span className="text-emerald-500 font-bold leading-none mt-0.5">✓</span>
@@ -464,42 +487,42 @@ const Contract = () => {
     if (!schedule || !Array.isArray(schedule) || schedule.length === 0) return null;
 
     return (
-      <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+      <div className="mt-4 border border-border rounded-xl overflow-hidden bg-card text-card-foreground shadow-xs">
+        <div className="bg-muted/50 border-b border-border px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-indigo-600" />
-            <h4 className="font-semibold text-slate-800 text-xs uppercase tracking-wider">
+            <CalendarDays className="w-4 h-4 text-primary" aria-hidden="true" />
+            <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">
               Six-Month Payment Schedule & Milestone Breakdown
             </h4>
           </div>
-          <Badge variant="outline" className="bg-white text-indigo-700 border-indigo-200 text-xs font-medium">
+          <Badge variant="outline" className="bg-card text-primary border-primary/30 text-xs font-medium">
             Total: {profile?.contractDetails?.totalContractValue || "$17,432 USD"}
           </Badge>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs sm:text-sm">
+          <table className="w-full text-xs sm:text-sm" aria-label="Payment Schedule Breakdown">
             <thead>
-              <tr className="bg-slate-50/60 border-b border-slate-200 text-xs text-slate-500 font-semibold uppercase">
-                <th className="px-4 py-2.5 text-left">Payment Period</th>
-                <th className="px-4 py-2.5 text-left">Amount (USD)</th>
-                <th className="px-4 py-2.5 text-left">Due Date / Terms</th>
-                <th className="px-4 py-2.5 text-left">Scope / Deliverable Description</th>
+              <tr className="bg-muted/30 border-b border-border text-xs text-muted-foreground font-semibold uppercase">
+                <th scope="col" className="px-4 py-2.5 text-left">Payment Period</th>
+                <th scope="col" className="px-4 py-2.5 text-left">Amount (USD)</th>
+                <th scope="col" className="px-4 py-2.5 text-left">Due Date / Terms</th>
+                <th scope="col" className="px-4 py-2.5 text-left">Scope / Deliverable Description</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {schedule.map((item: any, idx: number) => (
-                <tr key={idx} className={idx === 0 ? "bg-amber-50/40 font-medium" : "hover:bg-slate-50/50"}>
-                  <td className="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2">
+                <tr key={idx} className={idx === 0 ? "bg-amber-500/10 font-medium" : "hover:bg-muted/30"}>
+                  <td className="px-4 py-3 font-semibold text-foreground flex items-center gap-2">
                     {idx === 0 && <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />}
                     {item.period}
                   </td>
-                  <td className="px-4 py-3 font-bold text-indigo-600">{item.amount}</td>
-                  <td className="px-4 py-3 text-slate-700">
-                    <span className={idx === 0 ? "inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800" : ""}>
+                  <td className="px-4 py-3 font-bold text-primary dark:text-indigo-400">{item.amount}</td>
+                  <td className="px-4 py-3 text-foreground">
+                    <span className={idx === 0 ? "inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/20 text-amber-700 dark:text-amber-300" : ""}>
                       {item.due}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{item.details}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{item.details}</td>
                 </tr>
               ))}
             </tbody>
@@ -514,18 +537,18 @@ const Contract = () => {
     if (!bank) return null;
 
     return (
-      <div className="mt-4 border border-emerald-200 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/30 p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-emerald-100">
+      <div className="mt-4 border border-emerald-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500/5 via-card to-teal-500/5 p-5 shadow-xs text-card-foreground">
+        <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
-              <Landmark className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Landmark className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-slate-900 text-sm">Domestic ACH / Wire Bank Transfer Instructions</h4>
+                <h4 className="font-bold text-foreground text-sm">Domestic ACH / Wire Bank Transfer Instructions</h4>
                 <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2 font-medium">Approved Method</Badge>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Send invoice payments via domestic ACH or Fedwire using the details below
               </p>
             </div>
@@ -533,91 +556,101 @@ const Contract = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-xs">
-          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
-            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Beneficiary Legal Name</span>
+          <div className="p-3 bg-muted/40 rounded-lg border border-border shadow-2xs space-y-1">
+            <span className="text-muted-foreground font-medium block uppercase tracking-wider text-[10px]">Beneficiary Legal Name</span>
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 text-sm">{bank.name}</span>
+              <span className="font-bold text-foreground text-sm">{bank.name}</span>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                aria-label="Copy Beneficiary Name"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={() => copyToClipboard(bank.name, "bank-name")}
               >
-                {copiedField === "bank-name" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedField === "bank-name" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="sr-only">Copy Beneficiary Name</span>
               </Button>
             </div>
           </div>
 
-          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
-            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Account Type</span>
-            <span className="font-semibold text-slate-800 text-sm block">{bank.accountType}</span>
+          <div className="p-3 bg-muted/40 rounded-lg border border-border shadow-2xs space-y-1">
+            <span className="text-muted-foreground font-medium block uppercase tracking-wider text-[10px]">Account Type</span>
+            <span className="font-semibold text-foreground text-sm block">{bank.accountType}</span>
           </div>
 
-          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
-            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Routing Number (Wire & ACH)</span>
+          <div className="p-3 bg-muted/40 rounded-lg border border-border shadow-2xs space-y-1">
+            <span className="text-muted-foreground font-medium block uppercase tracking-wider text-[10px]">Routing Number (Wire & ACH)</span>
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-mono font-bold text-slate-900 text-base">{bank.routingNumber}</span>
-                <span className="block text-[11px] text-slate-500 mt-0.5">{bank.routingBank}</span>
+                <span className="font-mono font-bold text-foreground text-base">{bank.routingNumber}</span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">{bank.routingBank}</span>
               </div>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                aria-label="Copy Routing Number"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={() => copyToClipboard(bank.routingNumber, "bank-routing")}
               >
-                {copiedField === "bank-routing" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedField === "bank-routing" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="sr-only">Copy Routing Number</span>
               </Button>
             </div>
           </div>
 
-          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1">
-            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Account Number</span>
+          <div className="p-3 bg-muted/40 rounded-lg border border-border shadow-2xs space-y-1">
+            <span className="text-muted-foreground font-medium block uppercase tracking-wider text-[10px]">Account Number</span>
             <div className="flex items-center justify-between">
-              <span className="font-mono font-bold text-slate-900 text-base">{bank.accountNumber}</span>
+              <span className="font-mono font-bold text-foreground text-base">{bank.accountNumber}</span>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                aria-label="Copy Account Number"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={() => copyToClipboard(bank.accountNumber, "bank-account")}
               >
-                {copiedField === "bank-account" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedField === "bank-account" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="sr-only">Copy Account Number</span>
               </Button>
             </div>
           </div>
 
-          <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1 md:col-span-2">
-            <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Beneficiary Institution Address</span>
+          <div className="p-3 bg-muted/40 rounded-lg border border-border shadow-2xs space-y-1 md:col-span-2">
+            <span className="text-muted-foreground font-medium block uppercase tracking-wider text-[10px]">Beneficiary Institution Address</span>
             <div className="flex items-center justify-between">
-              <span className="text-slate-700">{bank.address}</span>
+              <span className="text-foreground">{bank.address}</span>
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                aria-label="Copy Beneficiary Address"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={() => copyToClipboard(bank.address, "bank-address")}
               >
-                {copiedField === "bank-address" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedField === "bank-address" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="sr-only">Copy Beneficiary Address</span>
               </Button>
             </div>
           </div>
 
           {bank.swiftBic && (
-            <div className="p-3 bg-white rounded-lg border border-emerald-100 shadow-2xs space-y-1 md:col-span-2">
-              <span className="text-slate-400 font-medium block uppercase tracking-wider text-[10px]">Swift / BIC (For International Reference)</span>
+            <div className="p-3 bg-muted/40 rounded-lg border border-border shadow-2xs space-y-1 md:col-span-2">
+              <span className="text-muted-foreground font-medium block uppercase tracking-wider text-[10px]">Swift / BIC (For International Reference)</span>
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-slate-800">{bank.swiftBic}</span>
+                <span className="font-mono font-bold text-foreground">{bank.swiftBic}</span>
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="h-6 w-6 text-slate-400 hover:text-slate-700"
+                  aria-label="Copy Swift/BIC code"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
                   onClick={() => copyToClipboard(bank.swiftBic, "bank-swift")}
                 >
-                  {copiedField === "bank-swift" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedField === "bank-swift" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                  <span className="sr-only">Copy Swift/BIC code</span>
                 </Button>
               </div>
             </div>
@@ -631,84 +664,84 @@ const Contract = () => {
     if (isPartnership || isNda) {
       if (isViewMode) {
         return (
-          <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:shadow-none print:border-slate-300">
-            <div className="bg-purple-50/70 border-b border-purple-100 px-4 py-3 print:bg-slate-100 print:border-slate-300 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase print:text-slate-900">Partnership & NDA Details</h3>
-              <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs">Mutual NDA</Badge>
+          <div className="mb-6 overflow-hidden border border-border rounded-xl bg-card text-card-foreground shadow-xs print:shadow-none print:border-slate-300 print:bg-white">
+            <div className="bg-purple-500/10 border-b border-purple-500/20 px-4 py-3 print:bg-slate-100 print:border-slate-300 flex items-center justify-between">
+              <h3 className="font-bold text-foreground text-sm tracking-wide uppercase print:text-slate-900">Partnership & NDA Details</h3>
+              <Badge variant="outline" className="border-purple-500/40 text-purple-600 dark:text-purple-400 bg-purple-500/10 text-xs font-semibold">Mutual NDA</Badge>
             </div>
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Partnership and NDA Details">
               <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider print:border-slate-300 print:bg-transparent">
-                  <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Field</th>
-                  <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Details</th>
+                <tr className="bg-muted/30 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider print:border-slate-300 print:bg-transparent">
+                  <th scope="col" className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Field</th>
+                  <th scope="col" className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+              <tbody className="divide-y divide-border print:divide-slate-200">
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800 w-1/2">Effective Date</td>
-                  <td className="px-4 py-3 text-slate-800 w-1/2">{effectiveDate}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800 w-1/2">Effective Date</td>
+                  <td className="px-4 py-3 text-foreground w-1/2">{effectiveDate}</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Legal Name</td>
-                  <td className="px-4 py-3 text-slate-800 font-medium">{clientLegalName}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Partner Legal Name</td>
+                  <td className="px-4 py-3 text-foreground font-medium">{clientLegalName}</td>
                 </tr>
                 {clientTradeName && (
                   <tr>
-                    <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Trade Name / Brand</td>
-                    <td className="px-4 py-3 text-slate-800">{clientTradeName}</td>
+                    <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Partner Trade Name / Brand</td>
+                    <td className="px-4 py-3 text-foreground">{clientTradeName}</td>
                   </tr>
                 )}
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Jurisdiction</td>
-                  <td className="px-4 py-3 text-slate-800">{clientJurisdiction}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Partner Jurisdiction</td>
+                  <td className="px-4 py-3 text-foreground">{clientJurisdiction}</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Address</td>
-                  <td className="px-4 py-3 text-slate-800">{clientAddress}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Partner Address</td>
+                  <td className="px-4 py-3 text-foreground">{clientAddress}</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Contact Name</td>
-                  <td className="px-4 py-3 text-slate-800">{clientContactName}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Partner Contact Name</td>
+                  <td className="px-4 py-3 text-foreground">{clientContactName}</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Partner Email</td>
-                  <td className="px-4 py-3 text-slate-800">{clientEmail}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Partner Email</td>
+                  <td className="px-4 py-3 text-foreground">{clientEmail}</td>
                 </tr>
-                <tr className="bg-slate-50/30 print:bg-transparent">
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Legal Name</td>
-                  <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Description</td>
-                  <td className="px-4 py-3 text-slate-800">AI automation, software engineering, digital optimization, and business consulting</td>
+                <tr className="bg-muted/20 print:bg-transparent">
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Legal Name</td>
+                  <td className="px-4 py-3 text-foreground">Sienvi Agency</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Jurisdiction</td>
-                  <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Description</td>
+                  <td className="px-4 py-3 text-foreground">AI automation, software engineering, digital optimization, and business consulting</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Principal Office</td>
-                  <td className="px-4 py-3 text-slate-800">9194 Tronson Road, Vernon, BC, V1H1E2</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Jurisdiction</td>
+                  <td className="px-4 py-3 text-foreground">British Columbia, Canada</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Email</td>
-                  <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Principal Office</td>
+                  <td className="px-4 py-3 text-foreground">9194 Tronson Road, Vernon, BC, V1H1E2</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agreement Purpose</td>
-                  <td className="px-4 py-3 text-slate-800 font-medium text-purple-700 print:text-slate-800">
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Email</td>
+                  <td className="px-4 py-3 text-foreground">info@sienvi.com</td>
+                </tr>
+                <tr>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agreement Purpose</td>
+                  <td className="px-4 py-3 text-foreground font-medium text-purple-600 dark:text-purple-400 print:text-slate-800">
                     Confidentiality, Non-Use, Non-Build & Feedback Collaboration
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Financial Obligations</td>
-                  <td className="px-4 py-3 text-emerald-700 font-semibold print:text-slate-800">
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Financial Obligations</td>
+                  <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-semibold print:text-slate-800">
                     None (Strategic Partnership — Zero Subscription or Monthly Service Fees)
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Confidentiality Survival Period</td>
-                  <td className="px-4 py-3 text-slate-800">{confidentialityPeriod}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Confidentiality Survival Period</td>
+                  <td className="px-4 py-3 text-foreground">{confidentialityPeriod}</td>
                 </tr>
               </tbody>
             </table>
@@ -717,144 +750,144 @@ const Contract = () => {
       }
 
       return (
-        <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:border-slate-300">
-          <div className="bg-purple-50/70 border-b border-purple-100 px-4 py-3 flex items-center justify-between">
-            <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase">Partnership & NDA Details</h3>
-            <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-xs font-semibold">Mutual NDA</Badge>
+        <div className="mb-6 overflow-hidden border border-border rounded-xl bg-card text-card-foreground shadow-xs print:border-slate-300">
+          <div className="bg-purple-500/10 border-b border-purple-500/20 px-4 py-3 flex items-center justify-between">
+            <h3 className="font-bold text-foreground text-sm tracking-wide uppercase">Partnership & NDA Details</h3>
+            <Badge variant="outline" className="border-purple-500/40 text-purple-600 dark:text-purple-400 bg-purple-500/10 text-xs font-semibold">Mutual NDA</Badge>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Partnership and NDA Form Details">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <th className="px-4 py-2.5 text-left w-1/2">Field</th>
-                <th className="px-4 py-2.5 text-left w-1/2">Details</th>
+              <tr className="bg-muted/30 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th scope="col" className="px-4 py-2.5 text-left w-1/2">Field</th>
+                <th scope="col" className="px-4 py-2.5 text-left w-1/2">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1 w-1/2">
-                  Effective Date <span className="text-red-500">*</span>
+                <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1 w-1/2">
+                  Effective Date <span className="text-destructive">*</span>
                 </td>
                 <td className="px-4 py-2 w-1/2">
                   <Input
                     type="date"
                     value={effectiveDate}
                     onChange={(e) => setEffectiveDate(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     required
                   />
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                  Partner Legal Name <span className="text-red-500">*</span>
+                <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                  Partner Legal Name <span className="text-destructive">*</span>
                 </td>
                 <td className="px-4 py-2">
                   <Input
                     placeholder="e.g. Corey Robert Rickett"
                     value={clientLegalName}
                     onChange={(e) => setClientLegalName(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     required
                   />
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Partner Trade Name / Brand (if applicable)</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Partner Trade Name / Brand (if applicable)</td>
                 <td className="px-4 py-2">
                   <Input
                     placeholder="e.g. Company Name"
                     value={clientTradeName}
                     onChange={(e) => setClientTradeName(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   />
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                  Partner Jurisdiction <span className="text-red-500">*</span>
+                <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                  Partner Jurisdiction <span className="text-destructive">*</span>
                 </td>
                 <td className="px-4 py-2">
                   <Input
                     placeholder="e.g., California, USA or United States"
                     value={clientJurisdiction}
                     onChange={(e) => setClientJurisdiction(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     required
                   />
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                  Partner Address <span className="text-red-500">*</span>
+                <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                  Partner Address <span className="text-destructive">*</span>
                 </td>
                 <td className="px-4 py-2">
                   <Input
                     placeholder="Full address / City, State, ZIP"
                     value={clientAddress}
                     onChange={(e) => setClientAddress(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     required
                   />
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                  Partner Contact Name <span className="text-red-500">*</span>
+                <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                  Partner Contact Name <span className="text-destructive">*</span>
                 </td>
                 <td className="px-4 py-2">
                   <Input
                     placeholder="Full Contact Name"
                     value={clientContactName}
                     onChange={(e) => setClientContactName(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     required
                   />
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Partner Email</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Partner Email</td>
                 <td className="px-4 py-2">
                   <Input
                     type="email"
                     value={clientEmail}
                     readOnly
                     disabled
-                    className="max-w-md h-9 text-sm bg-slate-50 cursor-not-allowed"
+                    className="max-w-md h-9 text-sm bg-muted/50 text-muted-foreground cursor-not-allowed border-border"
                   />
                 </td>
               </tr>
-              <tr className="bg-slate-50/30">
-                <td className="px-4 py-3 font-semibold text-slate-600">Agency Legal Name</td>
-                <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+              <tr className="bg-muted/20">
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Legal Name</td>
+                <td className="px-4 py-3 text-foreground">Sienvi Agency</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Agency Jurisdiction</td>
-                <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Jurisdiction</td>
+                <td className="px-4 py-3 text-foreground">British Columbia, Canada</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Agency Email</td>
-                <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Email</td>
+                <td className="px-4 py-3 text-foreground">info@sienvi.com</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Agreement Purpose</td>
-                <td className="px-4 py-3 font-medium text-purple-700">
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agreement Purpose</td>
+                <td className="px-4 py-3 font-medium text-purple-600 dark:text-purple-400">
                   Confidentiality, Non-Use, Non-Build & Feedback Collaboration
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Financial Terms</td>
-                <td className="px-4 py-3 text-emerald-700 font-semibold">
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Financial Terms</td>
+                <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-semibold">
                   None (Strategic Partnership — Zero Subscription or Monthly Service Fees)
                 </td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Confidentiality Survival Period</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Confidentiality Survival Period</td>
                 <td className="px-4 py-2">
                   <Input
                     placeholder="e.g., 5 years"
                     value={confidentialityPeriod}
                     onChange={(e) => setConfidentialityPeriod(e.target.value)}
-                    className="max-w-md h-9 text-sm"
+                    className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   />
                 </td>
               </tr>
@@ -866,149 +899,150 @@ const Contract = () => {
 
     if (isViewMode) {
       return (
-        <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:shadow-none print:border-slate-300">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 print:bg-slate-100 print:border-slate-300">
-            <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase print:text-slate-900">Agreement Details</h3>
+        <div className="mb-6 overflow-hidden border border-border rounded-xl bg-card text-card-foreground shadow-xs print:shadow-none print:border-slate-300 print:bg-white">
+          <div className="bg-muted/50 border-b border-border px-4 py-3 print:bg-slate-100 print:border-slate-300 flex items-center justify-between">
+            <h3 className="font-bold text-foreground text-sm tracking-wide uppercase print:text-slate-900">Agreement Details</h3>
+            <Badge variant="outline" className="border-border text-foreground text-xs font-semibold bg-muted/60">Standard Service Agreement</Badge>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Agreement Details">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider print:border-slate-300 print:bg-transparent">
-                <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Field</th>
-                <th className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Details</th>
+              <tr className="bg-muted/30 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider print:border-slate-300 print:bg-transparent">
+                <th scope="col" className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Field</th>
+                <th scope="col" className="px-4 py-2.5 text-left w-1/2 print:text-slate-700">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+            <tbody className="divide-y divide-border print:divide-slate-200">
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800 w-1/2">Effective Date</td>
-                <td className="px-4 py-3 text-slate-800 w-1/2">{effectiveDate}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800 w-1/2">Effective Date</td>
+                <td className="px-4 py-3 text-foreground w-1/2">{effectiveDate}</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Legal Name</td>
-                <td className="px-4 py-3 text-slate-800 font-semibold">{clientLegalName}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Legal Name</td>
+                <td className="px-4 py-3 text-foreground font-semibold">{clientLegalName}</td>
               </tr>
               {(clientEntityType || profile?.contractDetails?.clientEntityType) && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Entity Type</td>
-                  <td className="px-4 py-3 text-slate-800 font-medium">{clientEntityType || profile?.contractDetails?.clientEntityType}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Entity Type</td>
+                  <td className="px-4 py-3 text-foreground font-medium">{clientEntityType || profile?.contractDetails?.clientEntityType}</td>
                 </tr>
               )}
               {clientTradeName && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Trade Name / DBA, if applicable</td>
-                  <td className="px-4 py-3 text-slate-800">{clientTradeName}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Trade Name / DBA, if applicable</td>
+                  <td className="px-4 py-3 text-foreground">{clientTradeName}</td>
                 </tr>
               )}
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Jurisdiction</td>
-                <td className="px-4 py-3 text-slate-800">{clientJurisdiction}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Jurisdiction</td>
+                <td className="px-4 py-3 text-foreground">{clientJurisdiction}</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Address</td>
-                <td className="px-4 py-3 text-slate-800">{clientAddress}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Address</td>
+                <td className="px-4 py-3 text-foreground">{clientAddress}</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Contact Name</td>
-                <td className="px-4 py-3 text-slate-800">{clientContactName}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Contact Name</td>
+                <td className="px-4 py-3 text-foreground">{clientContactName}</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Client Email</td>
-                <td className="px-4 py-3 text-slate-800">{clientEmail}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Client Email</td>
+                <td className="px-4 py-3 text-foreground">{clientEmail}</td>
               </tr>
               {approvedWebsites && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Approved Website(s)</td>
-                  <td className="px-4 py-3 text-slate-800">{approvedWebsites}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Approved Website(s)</td>
+                  <td className="px-4 py-3 text-foreground">{approvedWebsites}</td>
                 </tr>
               )}
               {shopifySite && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Shopify Site for AI Assistant</td>
-                  <td className="px-4 py-3 text-slate-800">{shopifySite}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Shopify Site for AI Assistant</td>
+                  <td className="px-4 py-3 text-foreground">{shopifySite}</td>
                 </tr>
               )}
-              <tr className="bg-slate-50/30 print:bg-transparent">
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Legal Name</td>
-                <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+              <tr className="bg-muted/20 print:bg-transparent">
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Legal Name</td>
+                <td className="px-4 py-3 text-foreground">Sienvi Agency</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Description</td>
-                <td className="px-4 py-3 text-slate-800">AI automation, search optimization, digital advertising, and business consulting</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Description</td>
+                <td className="px-4 py-3 text-foreground">AI automation, search optimization, digital advertising, and business consulting</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Jurisdiction</td>
-                <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Jurisdiction</td>
+                <td className="px-4 py-3 text-foreground">British Columbia, Canada</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Principal Office</td>
-                <td className="px-4 py-3 text-slate-800">9194 Tronson Road, Vernon, BC, V1H1E2</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Principal Office</td>
+                <td className="px-4 py-3 text-foreground">9194 Tronson Road, Vernon, BC, V1H1E2</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Agency Email</td>
-                <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Agency Email</td>
+                <td className="px-4 py-3 text-foreground">info@sienvi.com</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Initial Term</td>
-                <td className="px-4 py-3 text-slate-800">{initialTerm}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Initial Term</td>
+                <td className="px-4 py-3 text-foreground">{initialTerm}</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Month-to-Month Renewal</td>
-                <td className="px-4 py-3 text-slate-800">Yes, after the Initial Term</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Month-to-Month Renewal</td>
+                <td className="px-4 py-3 text-foreground">Yes, after the Initial Term</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Notice Period</td>
-                <td className="px-4 py-3 text-slate-800">{noticePeriod} written notice</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Notice Period</td>
+                <td className="px-4 py-3 text-foreground">{noticePeriod} written notice</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Monthly Fee</td>
-                <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{getPlanPrice()}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Monthly Fee</td>
+                <td className="px-4 py-3 text-primary dark:text-indigo-400 font-semibold print:text-slate-800">{getPlanPrice()}</td>
               </tr>
               {profile?.contractDetails?.setupFee && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">One-Time Setup Fee</td>
-                  <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{profile.contractDetails.setupFee}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">One-Time Setup Fee</td>
+                  <td className="px-4 py-3 text-primary dark:text-indigo-400 font-semibold print:text-slate-800">{profile.contractDetails.setupFee}</td>
                 </tr>
               )}
               {profile?.contractDetails?.initialPayment && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Initial Payment (Due Upon Signing)</td>
-                  <td className="px-4 py-3 text-slate-800 font-bold text-amber-600 print:text-slate-800">{profile.contractDetails.initialPayment}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Initial Payment (Due Upon Signing)</td>
+                  <td className="px-4 py-3 text-amber-600 dark:text-amber-400 font-bold print:text-slate-800">{profile.contractDetails.initialPayment}</td>
                 </tr>
               )}
               {profile?.contractDetails?.totalContractValue && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Six-Month Base Contract Value</td>
-                  <td className="px-4 py-3 text-slate-800 font-bold text-emerald-700 print:text-slate-800">{profile.contractDetails.totalContractValue}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Six-Month Base Contract Value</td>
+                  <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold print:text-slate-800">{profile.contractDetails.totalContractValue}</td>
                 </tr>
               )}
               {profile?.contractDetails?.commissionTerms && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Lead Generation Commissions</td>
-                  <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600 print:text-slate-800">{profile.contractDetails.commissionTerms}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Lead Generation Commissions</td>
+                  <td className="px-4 py-3 text-primary dark:text-indigo-400 font-medium print:text-slate-800">{profile.contractDetails.commissionTerms}</td>
                 </tr>
               )}
               {profile?.contractDetails?.compensationStructure && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Compensation Breakdown</td>
-                  <td className="px-4 py-3 text-slate-800 print:text-slate-800 leading-relaxed">{profile.contractDetails.compensationStructure}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Compensation Breakdown</td>
+                  <td className="px-4 py-3 text-foreground print:text-slate-800 leading-relaxed">{profile.contractDetails.compensationStructure}</td>
                 </tr>
               )}
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Billing and Due Date</td>
-                <td className="px-4 py-3 text-slate-800">{billingTerms}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Billing and Due Date</td>
+                <td className="px-4 py-3 text-foreground">{billingTerms}</td>
               </tr>
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Service Delivery</td>
-                <td className="px-4 py-3 text-slate-800">{serviceDelivery}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Service Delivery</td>
+                <td className="px-4 py-3 text-foreground">{serviceDelivery}</td>
               </tr>
               {strategyPeriod && (
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Strategy Discussion Date / Period</td>
-                  <td className="px-4 py-3 text-slate-800">{strategyPeriod}</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Strategy Discussion Date / Period</td>
+                  <td className="px-4 py-3 text-foreground">{strategyPeriod}</td>
                 </tr>
               )}
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600 print:text-slate-800">Confidentiality Survival Period</td>
-                <td className="px-4 py-3 text-slate-800">{confidentialityPeriod}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground print:text-slate-800">Confidentiality Survival Period</td>
+                <td className="px-4 py-3 text-foreground">{confidentialityPeriod}</td>
               </tr>
             </tbody>
           </table>
@@ -1020,244 +1054,244 @@ const Contract = () => {
     }
 
     return (
-      <div className="mb-6 overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm print:border-slate-300">
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-          <h3 className="font-bold text-slate-800 text-sm tracking-wide uppercase">Agreement Details</h3>
+      <div className="mb-6 overflow-hidden border border-border rounded-xl bg-card text-card-foreground shadow-xs print:border-slate-300">
+        <div className="bg-muted/50 border-b border-border px-4 py-3">
+          <h3 className="font-bold text-foreground text-sm tracking-wide uppercase">Agreement Details</h3>
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" aria-label="Agreement Configuration Details">
           <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              <th className="px-4 py-2.5 text-left w-1/2">Field</th>
-              <th className="px-4 py-2.5 text-left w-1/2">Details</th>
+            <tr className="bg-muted/30 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2.5 text-left w-1/2">Field</th>
+              <th scope="col" className="px-4 py-2.5 text-left w-1/2">Details</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1 w-1/2">
-                Effective Date <span className="text-red-500">*</span>
+              <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1 w-1/2">
+                Effective Date <span className="text-destructive">*</span>
               </td>
               <td className="px-4 py-2 w-1/2">
                 <Input
                   type="date"
                   value={effectiveDate}
                   onChange={(e) => setEffectiveDate(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   required
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                Client Legal Name <span className="text-red-500">*</span>
+              <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                Client Legal Name <span className="text-destructive">*</span>
               </td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., Acme Corporation LLC"
                   value={clientLegalName}
                   onChange={(e) => setClientLegalName(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   required
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                Client Entity Type <span className="text-red-500">*</span>
+              <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                Client Entity Type <span className="text-destructive">*</span>
               </td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., Corporation, LLC, Sole Proprietorship"
                   value={clientEntityType}
                   onChange={(e) => setClientEntityType(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   required
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Client Trade Name / DBA, if applicable</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Client Trade Name / DBA, if applicable</td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., Acme Labs"
                   value={clientTradeName}
                   onChange={(e) => setClientTradeName(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                Client Jurisdiction <span className="text-red-500">*</span>
+              <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                Client Jurisdiction <span className="text-destructive">*</span>
               </td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., Delaware, USA or United States"
                   value={clientJurisdiction}
                   onChange={(e) => setClientJurisdiction(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   required
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                Client Address <span className="text-red-500">*</span>
+              <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                Client Address <span className="text-destructive">*</span>
               </td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., 123 Main St, Suite 100, New York, NY 10001"
                   value={clientAddress}
                   onChange={(e) => setClientAddress(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   required
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600 flex items-center gap-1">
-                Client Contact Name <span className="text-red-500">*</span>
+              <td scope="row" className="px-4 py-3 font-semibold text-foreground flex items-center gap-1">
+                Client Contact Name <span className="text-destructive">*</span>
               </td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="Full Name"
                   value={clientContactName}
                   onChange={(e) => setClientContactName(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                   required
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Client Email</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Client Email</td>
               <td className="px-4 py-2">
                 <Input
                   type="email"
                   value={clientEmail}
                   readOnly
                   disabled
-                  className="max-w-md h-9 text-sm bg-slate-50 cursor-not-allowed"
+                  className="max-w-md h-9 text-sm bg-muted/50 text-muted-foreground cursor-not-allowed border-border"
                 />
               </td>
             </tr>
             {profile?.contractDetails?.uploadedContractUrl && (
               <>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600">Approved Website(s)</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Approved Website(s)</td>
                   <td className="px-4 py-2">
                     <Input
                       placeholder="e.g., www.example.com"
                       value={approvedWebsites}
                       onChange={(e) => setApprovedWebsites(e.target.value)}
-                      className="max-w-md h-9 text-sm"
+                      className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     />
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-semibold text-slate-600">Shopify Site for AI Assistant</td>
+                  <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Shopify Site for AI Assistant</td>
                   <td className="px-4 py-2">
                     <Input
                       placeholder="e.g., mystore.myshopify.com"
                       value={shopifySite}
                       onChange={(e) => setShopifySite(e.target.value)}
-                      className="max-w-md h-9 text-sm"
+                      className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                     />
                   </td>
                 </tr>
               </>
             )}
-            <tr className="bg-slate-50/30">
-              <td className="px-4 py-3 font-semibold text-slate-600">Agency Legal Name</td>
-              <td className="px-4 py-3 text-slate-800">Sienvi Agency</td>
+            <tr className="bg-muted/20">
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Legal Name</td>
+              <td className="px-4 py-3 text-foreground">Sienvi Agency</td>
             </tr>
-            <tr className="bg-slate-50/30">
-              <td className="px-4 py-3 font-semibold text-slate-600">Agency Description</td>
-              <td className="px-4 py-3 text-slate-800">AI automation, search optimization, digital advertising, and business consulting</td>
-            </tr>
-            <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Agency Jurisdiction</td>
-              <td className="px-4 py-3 text-slate-800">British Columbia, Canada</td>
+            <tr className="bg-muted/20">
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Description</td>
+              <td className="px-4 py-3 text-foreground">AI automation, search optimization, digital advertising, and business consulting</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Agency Principal Office</td>
-              <td className="px-4 py-3 text-slate-800">9194 Tronson Road, Vernon, BC, V1H1E2</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Jurisdiction</td>
+              <td className="px-4 py-3 text-foreground">British Columbia, Canada</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Agency Email</td>
-              <td className="px-4 py-3 text-slate-800">info@sienvi.com</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Principal Office</td>
+              <td className="px-4 py-3 text-foreground">9194 Tronson Road, Vernon, BC, V1H1E2</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Initial Term</td>
-              <td className="px-4 py-3 text-slate-800">{initialTerm}</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Agency Email</td>
+              <td className="px-4 py-3 text-foreground">info@sienvi.com</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Month-to-Month Renewal</td>
-              <td className="px-4 py-3 text-slate-800">Yes, after the Initial Term</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Initial Term</td>
+              <td className="px-4 py-3 text-foreground">{initialTerm}</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Notice Period</td>
-              <td className="px-4 py-3 text-slate-800">{noticePeriod} written notice</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Month-to-Month Renewal</td>
+              <td className="px-4 py-3 text-foreground">Yes, after the Initial Term</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Monthly Fee</td>
-              <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{getPlanPrice()}</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Notice Period</td>
+              <td className="px-4 py-3 text-foreground">{noticePeriod} written notice</td>
+            </tr>
+            <tr>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Monthly Fee</td>
+              <td className="px-4 py-3 text-primary dark:text-indigo-400 font-semibold">{getPlanPrice()}</td>
             </tr>
             {profile?.contractDetails?.setupFee && (
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">One-Time Setup Fee</td>
-                <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{profile.contractDetails.setupFee}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">One-Time Setup Fee</td>
+                <td className="px-4 py-3 text-primary dark:text-indigo-400 font-semibold">{profile.contractDetails.setupFee}</td>
               </tr>
             )}
             {profile?.contractDetails?.initialPayment && (
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Initial Payment (Due Upon Signing)</td>
-                <td className="px-4 py-3 text-slate-800 font-bold text-amber-600">{profile.contractDetails.initialPayment}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Initial Payment (Due Upon Signing)</td>
+                <td className="px-4 py-3 text-amber-600 dark:text-amber-400 font-bold">{profile.contractDetails.initialPayment}</td>
               </tr>
             )}
             {profile?.contractDetails?.totalContractValue && (
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Six-Month Base Contract Value</td>
-                <td className="px-4 py-3 text-slate-800 font-bold text-emerald-700">{profile.contractDetails.totalContractValue}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Six-Month Base Contract Value</td>
+                <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">{profile.contractDetails.totalContractValue}</td>
               </tr>
             )}
             {profile?.contractDetails?.commissionTerms && (
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Lead Generation Commissions</td>
-                <td className="px-4 py-3 text-slate-800 font-medium text-indigo-600">{profile.contractDetails.commissionTerms}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Lead Generation Commissions</td>
+                <td className="px-4 py-3 text-primary dark:text-indigo-400 font-medium">{profile.contractDetails.commissionTerms}</td>
               </tr>
             )}
             {profile?.contractDetails?.compensationStructure && (
               <tr>
-                <td className="px-4 py-3 font-semibold text-slate-600">Compensation Breakdown</td>
-                <td className="px-4 py-3 text-slate-800 leading-relaxed">{profile.contractDetails.compensationStructure}</td>
+                <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Compensation Breakdown</td>
+                <td className="px-4 py-3 text-foreground leading-relaxed">{profile.contractDetails.compensationStructure}</td>
               </tr>
             )}
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Billing and Due Date</td>
-              <td className="px-4 py-3 text-slate-800">{billingTerms}</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Billing and Due Date</td>
+              <td className="px-4 py-3 text-foreground">{billingTerms}</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Service Delivery</td>
-              <td className="px-4 py-3 text-slate-800">{serviceDelivery}</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Service Delivery</td>
+              <td className="px-4 py-3 text-foreground">{serviceDelivery}</td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Strategy Discussion Date / Period</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Strategy Discussion Date / Period</td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., June 2026 or leave blank"
                   value={strategyPeriod}
                   onChange={(e) => setStrategyPeriod(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                 />
               </td>
             </tr>
             <tr>
-              <td className="px-4 py-3 font-semibold text-slate-600">Confidentiality Survival Period</td>
+              <td scope="row" className="px-4 py-3 font-semibold text-muted-foreground">Confidentiality Survival Period</td>
               <td className="px-4 py-2">
                 <Input
                   placeholder="e.g., 5 years"
                   value={confidentialityPeriod}
                   onChange={(e) => setConfidentialityPeriod(e.target.value)}
-                  className="max-w-md h-9 text-sm"
+                  className="max-w-md h-9 text-sm bg-background border-input text-foreground"
                 />
               </td>
             </tr>
@@ -1284,7 +1318,7 @@ const Contract = () => {
 
   if (alreadySigned) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors">
         <Navbar />
         <main className="flex-1 container mx-auto px-4 py-8">
           <motion.div
@@ -1294,18 +1328,18 @@ const Contract = () => {
           >
             <Card>
               <CardHeader className="text-center">
-                <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
                 <CardTitle>Contract Already Signed</CardTitle>
                 <CardDescription>
                   You have already signed the service agreement.
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center flex flex-col sm:flex-row justify-center gap-4">
-                <Button variant="outline" onClick={() => window.open("/contract?view=true", "_blank")}>
+                <Button variant="outline" onClick={() => window.open(paramClientId ? `/contract?view=true&clientId=${paramClientId}` : "/contract?view=true", "_blank")}>
                   View Signed Copy
                 </Button>
-                <Button onClick={() => navigate("/dashboard")}>
-                  Go to Dashboard
+                <Button onClick={() => paramClientId ? navigate(`/admin/clients/${paramClientId}`) : navigate("/dashboard")}>
+                  {paramClientId ? "Return to Client Workspace" : "Go to Dashboard"}
                 </Button>
               </CardContent>
             </Card>
@@ -1316,8 +1350,18 @@ const Contract = () => {
     );
   }
 
+  const handleBackNavigation = () => {
+    if (paramClientId) {
+      navigate(`/admin/clients/${paramClientId}`);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 print:bg-white print:min-h-0">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors print:bg-white print:text-black print:min-h-0">
       <div className="print:hidden">
         <Navbar />
       </div>
@@ -1327,31 +1371,55 @@ const Contract = () => {
           animate={{ opacity: 1, y: 0 }}
           className="max-w-3xl mx-auto space-y-6 print:space-y-0"
         >
-          {/* Header */}
-          <div className="flex items-center gap-4 print:hidden">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+          {/* Header Bar */}
+          <div className="flex items-center justify-between gap-4 print:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBackNavigation}
+              className="bg-card hover:bg-accent border-border shadow-2xs font-medium text-xs rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+              {paramClientId ? "Back to Client" : "Back"}
             </Button>
+
+            {(isViewMode || alreadySigned) && (
+              <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/40 text-xs px-2.5 py-1 font-medium flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Executed & Archived
+              </Badge>
+            )}
           </div>
 
           <div className="text-center space-y-2 print:hidden">
             {isPartnership ? (
-              <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">Partnership NDA</Badge>
+              <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-3 py-1">
+                {isViewMode || alreadySigned ? "Executed Partnership NDA" : "Partnership NDA"}
+              </Badge>
+            ) : isViewMode || alreadySigned ? (
+              <Badge variant="secondary" className="bg-muted text-foreground font-semibold px-3 py-1 border border-border">
+                Executed Agreement Record
+              </Badge>
             ) : (
-              <Badge className="bg-blue-500">Step 2 of 4</Badge>
+              <Badge className="bg-primary text-primary-foreground font-semibold px-3 py-1">
+                Step 2 of 4
+              </Badge>
             )}
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               {isPartnership
                 ? "Confidentiality & Non-Disclosure Agreement"
                 : isAmazonContract
                 ? "Business Agreement"
-                : "Service Agreement"}
+                : "Client Service Agreement"}
             </h1>
-            <p className="text-muted-foreground max-w-lg mx-auto">
+            <p className="text-muted-foreground max-w-lg mx-auto text-sm">
               {isPartnership
-                ? "Please review and digitally sign the Confidentiality, Non-Use, Non-Build & Feedback Agreement to confirm our strategic partnership."
-                : "Please review and sign the agreement to continue."}
+                ? (isViewMode || alreadySigned
+                    ? "Executed copy of the Confidentiality, Non-Use, Non-Build & Feedback Agreement."
+                    : "Please review and digitally sign the Confidentiality, Non-Use, Non-Build & Feedback Agreement to confirm our strategic partnership.")
+                : (isViewMode || alreadySigned
+                    ? "Legally executed copy of the Client Service Agreement and onboarding terms."
+                    : "Please review and sign the agreement to continue.")}
             </p>
           </div>
 
@@ -1382,19 +1450,19 @@ const Contract = () => {
                     {renderAgreementDetailsTable()}
                     
                     {profile?.contractDetails?.uploadedProposalUrl && (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 mb-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-blue-50/60 shadow-sm print:hidden">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 mb-4 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/90 to-blue-50/60 dark:from-indigo-950/40 dark:to-blue-950/30 shadow-xs print:hidden">
                         <div className="flex items-center gap-3">
-                          <div className="p-2.5 rounded-lg bg-indigo-100 text-indigo-700">
+                          <div className="p-2.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
                             <FileText className="w-5 h-5" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <Badge className="bg-indigo-600 text-white text-[10px] py-0 px-2 font-semibold">PROPOSAL</Badge>
-                              <p className="font-semibold text-sm text-slate-900">
+                              <p className="font-semibold text-sm text-foreground">
                                 {profile.contractDetails.uploadedProposalName || "B2B Revenue Pipeline & Wholesale Portal Proposal"}
                               </p>
                             </div>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               Comprehensive proposal outlining project scope, revenue architecture, and delivery timeline
                             </p>
                           </div>
@@ -1403,7 +1471,7 @@ const Contract = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => window.open(profile.contractDetails.uploadedProposalUrl, "_blank")}
-                          className="bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200 shrink-0 font-medium text-xs shadow-2xs"
+                          className="bg-card hover:bg-accent text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 shrink-0 font-medium text-xs shadow-2xs"
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
                           View Proposal PDF
@@ -1555,7 +1623,12 @@ const Contract = () => {
                   </>
                 );
               })() : isAmazonContract ? (
-                <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
+                <div 
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Amazon Advertising Services Business Agreement terms"
+                  className={`bg-muted/40 border border-border p-6 rounded-lg space-y-4 text-sm print:bg-white print:border-none print:max-h-none print:p-0 print:overflow-visible focus:outline-hidden focus:ring-1 focus:ring-primary ${isViewMode || alreadySigned ? 'overflow-visible' : 'max-h-[420px] overflow-y-auto'}`}
+                >
                   <h3 className="font-semibold text-center text-base border-b pb-2 mb-4 print:hidden">BUSINESS AGREEMENT FOR AMAZON ADVERTISING SERVICES</h3>
                   {renderAgreementDetailsTable()}
                   
@@ -1654,7 +1727,12 @@ const Contract = () => {
                   </div>
                 </div>
               ) : isNda ? (
-                <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
+                <div 
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Confidentiality, Non-Use, Non-Build & Feedback Agreement terms"
+                  className={`bg-muted/40 border border-border p-6 rounded-lg space-y-4 text-sm print:bg-white print:border-none print:max-h-none print:p-0 print:overflow-visible focus:outline-hidden focus:ring-1 focus:ring-primary ${isViewMode || alreadySigned ? 'overflow-visible' : 'max-h-[420px] overflow-y-auto'}`}
+                >
                   <h3 className="font-semibold print:hidden">Confidentiality, Non-Use, Non-Build & Feedback Agreement</h3>
                   {renderAgreementDetailsTable()}
 
@@ -1738,13 +1816,18 @@ const Contract = () => {
                     relating thereto. Any amendments must be in writing and signed by both Parties.
                   </p>
 
-                  <p className="mt-6 italic text-muted-foreground">
+                  <p className="mt-6 italic text-slate-700 dark:text-slate-300 font-medium">
                     By signing below, you acknowledge that you have read, understood, and 
                     agree to be bound by the terms of this Confidentiality, Non-Use, Non-Build & Feedback Agreement.
                   </p>
                 </div>
               ) : (
-                <div className="bg-muted p-6 rounded-lg max-h-[400px] overflow-y-auto space-y-4 text-sm print:bg-white print:max-h-none print:p-0 print:overflow-visible">
+                <div 
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Client Service Agreement Terms of Service"
+                  className={`bg-muted/40 border border-border p-6 rounded-lg space-y-4 text-sm print:bg-white print:border-none print:max-h-none print:p-0 print:overflow-visible focus:outline-hidden focus:ring-1 focus:ring-primary ${isViewMode || alreadySigned ? 'overflow-visible' : 'max-h-[420px] overflow-y-auto'}`}
+                >
                   <h3 className="font-semibold print:hidden">Terms of Service</h3>
                   {renderAgreementDetailsTable()}
                   
@@ -1790,7 +1873,7 @@ const Contract = () => {
                     This Agreement shall be governed by the laws of the State of California.
                   </p>
 
-                  <p className="mt-6 italic text-muted-foreground">
+                  <p className="mt-6 italic text-slate-700 dark:text-slate-300 font-medium">
                     By signing below, you acknowledge that you have read, understood, and 
                     agree to be bound by the terms of this Agreement.
                   </p>
@@ -1805,17 +1888,17 @@ const Contract = () => {
 
                 if (isViewMode || alreadySigned) {
                   return (
-                    <div className="w-full space-y-6 pt-4 border-t">
+                    <div className="w-full space-y-6 pt-4 border-t border-border">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             {isDual 
                               ? `Authorized Co-Signatures (${profile?.entityName || "In the Dome"})` 
                               : isPartnership
                               ? "Authorized Strategic Partner Digital Signature"
                               : "Authorized Digital Signature"}
                           </h4>
-                          <span className="text-xs text-slate-500 font-medium">Entity: <strong className="text-slate-800">{clientEntityName}</strong></span>
+                          <span className="text-xs text-muted-foreground font-medium">Entity: <strong className="text-foreground">{clientEntityName}</strong></span>
                         </div>
 
                         {isDual ? (
@@ -1823,33 +1906,33 @@ const Contract = () => {
                             {coSigners.map((signer: any, idx: number) => {
                               const isSignerCompleted = signer.status === "signed" || !!signer.signature;
                               return (
-                                <div key={idx} className="p-5 border border-slate-200 rounded-xl bg-slate-50/70 space-y-3">
+                                <div key={idx} className="p-5 border border-border rounded-xl bg-card space-y-3">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Co-Signer {idx + 1}</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Co-Signer {idx + 1}</span>
                                     {isSignerCompleted ? (
-                                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">✓ Signed</Badge>
+                                      <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs">✓ Signed</Badge>
                                     ) : (
-                                      <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Awaiting Signature</Badge>
+                                      <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">Awaiting Signature</Badge>
                                     )}
                                   </div>
                                   <div>
-                                    <p className="text-xs text-slate-500">Signer Legal Name:</p>
-                                    <p className="font-bold text-slate-900">{signer.name || signer.email}</p>
+                                    <p className="text-xs text-muted-foreground">Signer Legal Name:</p>
+                                    <p className="font-bold text-foreground">{signer.name || signer.email}</p>
                                   </div>
-                                  <div className="pt-2 border-t border-slate-200">
-                                    <p className="text-xs text-slate-500">Digital Signature:</p>
-                                    <p className="font-serif italic font-bold text-2xl text-indigo-700 py-1">
+                                  <div className="pt-2 border-t border-border">
+                                    <p className="text-xs text-muted-foreground">Digital Signature:</p>
+                                    <p className="font-serif italic font-bold text-2xl text-indigo-600 dark:text-indigo-400 py-1">
                                       {signer.signature || "(Pending Execution)"}
                                     </p>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border">
                                     <div>
-                                      <span className="text-slate-400 block">Title:</span>
-                                      <span className="font-semibold text-slate-700">{signer.title || "Co-Founder / Principal"}</span>
+                                      <span className="text-slate-500 dark:text-slate-400 font-medium block">Title:</span>
+                                      <span className="font-semibold text-foreground">{signer.title || "Co-Founder / Principal"}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-400 block">Date Signed:</span>
-                                      <span className="font-semibold text-slate-700">
+                                      <span className="text-slate-500 dark:text-slate-400 font-medium block">Date Signed:</span>
+                                      <span className="font-semibold text-foreground">
                                         {signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "Pending"}
                                       </span>
                                     </div>
@@ -1859,25 +1942,25 @@ const Contract = () => {
                             })}
                           </div>
                         ) : (
-                          <div className="p-5 border border-slate-200 rounded-xl bg-slate-50/60 space-y-3 max-w-lg">
+                          <div className="p-5 border border-border rounded-xl bg-card space-y-3 max-w-lg">
                             <div>
-                              <p className="text-xs font-semibold text-slate-500 uppercase">For and on behalf of:</p>
-                              <p className="font-bold text-base text-slate-900">{clientEntityName}</p>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase">For and on behalf of:</p>
+                              <p className="font-bold text-base text-foreground">{clientEntityName}</p>
                             </div>
-                            <div className="pt-2 border-t border-slate-200">
-                              <p className="text-xs text-slate-500">Authorized Digital Signature:</p>
-                              <p className="font-serif italic font-bold text-2xl text-indigo-700 py-1">
+                            <div className="pt-2 border-t border-border">
+                              <p className="text-xs text-muted-foreground">Authorized Digital Signature:</p>
+                              <p className="font-serif italic font-bold text-2xl text-indigo-600 dark:text-indigo-400 py-1">
                                 {profile?.contractSignature || signatureName || "Jordan"}
                               </p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                            <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground pt-1 border-t border-border">
                               <div>
-                                <span className="text-slate-400 block">Title:</span>
-                                <span className="font-semibold text-slate-700">{signerTitle || (isPartnership ? "Partner / Principal" : "Authorized Signatory")}</span>
+                                <span className="text-slate-500 dark:text-slate-400 font-medium block">Title:</span>
+                                <span className="font-semibold text-foreground">{signerTitle || (isPartnership ? "Partner / Principal" : "Authorized Signatory")}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 block">Date Signed:</span>
-                                <span className="font-semibold text-slate-700">
+                                <span className="text-slate-500 dark:text-slate-400 font-medium block">Date Signed:</span>
+                                <span className="font-semibold text-foreground">
                                   {profile?.contractSignedAt ? new Date(profile.contractSignedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : displaySignDate}
                                 </span>
                               </div>
@@ -1885,14 +1968,14 @@ const Contract = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg no-print print:hidden">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Shield className="w-4 h-4 text-green-500" />
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/40 border border-border p-4 rounded-lg no-print print:hidden">
+                        <span className="text-xs text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-emerald-500 shrink-0" />
                           This document is digitally signed and securely archived.
                         </span>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" onClick={() => navigate("/dashboard")}>
-                            Back to Dashboard
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button size="sm" variant="outline" onClick={handleBackNavigation}>
+                            {paramClientId ? "Back to Client" : "Back to Dashboard"}
                           </Button>
                           <Button size="sm" variant="default" onClick={() => window.print()}>
                             Print / Save as PDF
@@ -1905,13 +1988,13 @@ const Contract = () => {
 
                 if (hasMySignature) {
                   return (
-                    <div className="w-full space-y-6 pt-4 border-t">
-                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-                        <div className="flex items-center gap-2 text-emerald-800 font-semibold">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <div className="w-full space-y-6 pt-4 border-t border-border">
+                      <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-semibold">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                           <span>You have submitted your signature as {signatureName || currentSignerName}</span>
                         </div>
-                        <p className="text-xs text-emerald-700 leading-relaxed">
+                        <p className="text-xs text-emerald-700/90 dark:text-emerald-300/90 leading-relaxed">
                           {isDual 
                             ? "This agreement requires co-signatures from both co-founders before full execution. We are awaiting the second signature."
                             : "Your signature has been securely submitted and recorded."}
@@ -1923,29 +2006,29 @@ const Contract = () => {
                           {coSigners.map((signer: any, idx: number) => {
                             const isSignerCompleted = signer.status === "signed" || !!signer.signature;
                             return (
-                              <div key={idx} className="p-4 border border-slate-200 rounded-xl bg-white space-y-2">
+                              <div key={idx} className="p-4 border border-border rounded-xl bg-card space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-xs font-bold text-slate-500">{signer.name || signer.email}</span>
+                                  <span className="text-xs font-bold text-muted-foreground">{signer.name || signer.email}</span>
                                   {isSignerCompleted ? (
-                                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">✓ Signed</Badge>
+                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs">✓ Signed</Badge>
                                   ) : (
-                                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Pending</Badge>
+                                    <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs">Pending</Badge>
                                   )}
                                 </div>
-                                <p className="font-serif italic text-lg text-indigo-700">{signer.signature || "Awaiting Signature"}</p>
+                                <p className="font-serif italic text-lg text-indigo-600 dark:text-indigo-400">{signer.signature || "Awaiting Signature"}</p>
                               </div>
                             );
                           })}
                         </div>
                       )}
 
-                      <div className="flex justify-between items-center gap-4 bg-muted/50 p-4 rounded-lg">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Shield className="w-4 h-4 text-emerald-500" />
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/40 border border-border p-4 rounded-lg">
+                        <span className="text-xs text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-emerald-500 shrink-0" />
                           Signature recorded securely. You will be notified once fully executed.
                         </span>
-                        <Button size="sm" variant="default" onClick={() => navigate("/dashboard")}>
-                          Continue to Dashboard
+                        <Button size="sm" variant="default" onClick={handleBackNavigation}>
+                          {paramClientId ? "Return to Client Workspace" : "Continue to Dashboard"}
                         </Button>
                       </div>
                     </div>
@@ -1955,23 +2038,23 @@ const Contract = () => {
                 return (
                   <div className="w-full space-y-4">
                     {isDual && (
-                      <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-800 flex items-center justify-between">
+                      <div className="p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl text-xs text-blue-900 dark:text-blue-300 flex items-center justify-between">
                         <span>Co-Signers Review: <strong>Jordan Ellams & Michael Wilson (In the Dome)</strong></span>
-                        <Badge variant="outline" className="bg-white text-blue-700 border-blue-200 text-xs">2 Signatures Required</Badge>
+                        <Badge variant="outline" className="bg-card text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 text-xs">2 Signatures Required</Badge>
                       </div>
                     )}
 
-                    <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-4">
-                      <div className="border-b border-slate-200 pb-3">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Signing Entity</p>
-                        <p className="text-base font-bold text-slate-900">
+                    <div className="border border-border rounded-xl p-5 bg-card space-y-4">
+                      <div className="border-b border-border pb-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Signing Entity</p>
+                        <p className="text-base font-bold text-foreground">
                           {clientEntityName}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="signatureName" className="text-xs font-semibold text-slate-600">
+                          <Label htmlFor="signatureName" className="text-xs font-semibold text-foreground">
                             Full Legal Name (Digital Signature) *
                           </Label>
                           <Input 
@@ -1979,12 +2062,12 @@ const Contract = () => {
                             placeholder="Type your full name to sign"
                             value={signatureName}
                             onChange={(e) => setSignatureName(e.target.value)}
-                            className="font-medium bg-white"
+                            className="font-medium bg-background border-input text-foreground"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label htmlFor="signerTitle" className="text-xs font-semibold text-slate-600">
+                          <Label htmlFor="signerTitle" className="text-xs font-semibold text-foreground">
                             Title / Role
                           </Label>
                           <Input 
@@ -1992,18 +2075,18 @@ const Contract = () => {
                             placeholder={isPartnership ? "e.g. Partner / Principal" : "e.g. Co-Founder / Principal"}
                             value={signerTitle}
                             onChange={(e) => setSignerTitle(e.target.value)}
-                            className="font-medium bg-white"
+                            className="font-medium bg-background border-input text-foreground"
                           />
                         </div>
                       </div>
 
-                      <div className="text-xs text-slate-500 pt-1">
+                      <div className="text-xs text-muted-foreground pt-1">
                         <span>Date: </span>
-                        <span className="font-semibold text-slate-700">{displaySignDate}</span>
+                        <span className="font-semibold text-foreground">{displaySignDate}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3 w-full p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center space-x-3 w-full p-4 bg-muted/40 border border-border rounded-lg">
                       <Checkbox 
                         id="agree" 
                         checked={agreed}
