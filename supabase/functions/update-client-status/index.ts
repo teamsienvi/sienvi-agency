@@ -926,6 +926,11 @@ serve(withAllowedOrigin(async (req) => {
                                p.email?.toLowerCase() === userEmail;
           if (isAuthorized) {
             profile = p;
+          } else {
+            return new Response(
+              JSON.stringify({ error: "Access denied. You are not authorized to modify this client profile." }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
           }
         }
       }
