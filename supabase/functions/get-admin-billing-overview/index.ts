@@ -79,6 +79,8 @@ serve(withAllowedOrigin(async (req) => {
     // =========================================================================
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
+      const hasMutationPayload = Boolean(body && (body.action || body.clientId || body.exceptionId || body.verifiedAmountCents));
+      if (hasMutationPayload && body.action !== "get_overview") {
       const action = body.action || "verify_manual_payment";
 
       if (action === "verify_manual_payment") {
@@ -174,6 +176,7 @@ serve(withAllowedOrigin(async (req) => {
         JSON.stringify({ error: `Unknown action: ${action}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+      }
     }
 
     // =========================================================================
