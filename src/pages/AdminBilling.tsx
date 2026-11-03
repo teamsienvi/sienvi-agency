@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DollarSign,
   CreditCard,
   Building2,
   AlertTriangle,
@@ -23,382 +23,71 @@ import {
   CheckCircle2,
   RefreshCw,
   Search,
-  Filter,
   ShieldCheck,
-  Receipt,
-  ArrowUpRight,
-  ArrowDownLeft,
   Lock,
-  Layers,
-  FileText,
   Copy,
   Check,
   Info,
   ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import type {
-  AdminBillingOverviewResponse,
-  AdminSubscriptionItem,
-  AdminInvoiceItem,
-  AdminPaymentItem,
-  AdminExceptionItem,
-  AdminAuditItem,
-} from "@/types/billing-subledger";
+import type { AdminBillingOverviewResponse } from "@/types/billing-subledger";
 import { toast } from "sonner";
 
-// Authoritative Fallback State (Exact Sprint 3/Phase 2A Invariant Baseline)
-const AUTHORITATIVE_FALLBACK_DATA: AdminBillingOverviewResponse = {
+const EMPTY_BILLING_STATE: AdminBillingOverviewResponse = {
+  feature_flags: {
+    billing_subledger_enabled: false,
+    financial_mutations_enabled: false,
+  },
   dataFreshness: {
     asOf: new Date().toISOString(),
     isLiveStripe: true,
     subledgerActive: false,
-    cacheTtlSeconds: 60,
+    mutationsEnabled: false,
+    cacheTtlSeconds: 0,
   },
   overview: {
-    operatingMrrCents: 1578300,
-    operatingMrrFormatted: "$15,783.00",
-    stripeMrrCents: 1129800,
-    stripeMrrFormatted: "$11,298.00",
-    manualMrrCents: 448500,
-    manualMrrFormatted: "$4,485.00",
-    pastDueMrrCents: 245000,
-    pendingMrrCents: 50000,
-    activePayingRetainersCount: 10,
-    totalSubscriptionLinesCount: 13,
+    operatingMrrCents: 0,
+    operatingMrrFormatted: "--",
+    stripeMrrCents: 0,
+    stripeMrrFormatted: "--",
+    manualMrrCents: 0,
+    manualMrrFormatted: "--",
+    pastDueMrrCents: 0,
+    pendingMrrCents: 0,
+    activePayingRetainersCount: 0,
+    totalSubscriptionLinesCount: 0,
+    grossCollectionsMtdCents: null,
+    stripeFeesMtdCents: null,
+    netSettledCashMtdCents: null,
+    bankPayoutsMtdCents: null,
     collectedRevenueMtdCents: 0,
     collectedRevenueStatus: "reconciliation_pending",
-    openInvoicesTotalCents: 295000,
-    pastDueInvoicesTotalCents: 245000,
-    openExceptionsCount: 2,
+    financialMetricsStatus: "reconciliation_pending",
+    openInvoicesTotalCents: 0,
+    pastDueInvoicesTotalCents: 0,
+    openExceptionsCount: 0,
     sourceValidationCounts: {
-      classA_directVerified: 7,
+      classA_directVerified: 0,
       classB_proposedEmail: 0,
-      classC_manualAgreement: 3,
+      classC_manualAgreement: 0,
       classD_unmappedException: 0,
-      classE_scheduledInstallment: 1,
+      classE_scheduledInstallment: 0,
     },
   },
   subscriptions: {
-    items: [
-      {
-        id: "fe4131c4-a305-4a9a-8f99-15716056cceb",
-        clientId: "fab3c44c-2779-44fb-9e44-b64437f40885",
-        clientName: "Sihara Prak",
-        clientEmail: "siharaprak@yahoo.com",
-        label: "Custom Automation & Growth Suite",
-        plan: "custom",
-        monthlyAmountCents: 345000,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1U9PkDDnw1azoLSp9knHlV4E",
-        stripeCustomerId: "cus_V9jCLv0p8ntR66",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "e3a8dc06-33e3-4c96-b915-b91edaec28bd",
-        clientId: "9aa48fea-7865-4dec-803c-325913561233",
-        clientName: "Pamela Noel",
-        clientEmail: "pmlnoel@gmail.com",
-        label: "Commercial Launch & Growth Services",
-        plan: "custom",
-        monthlyAmountCents: 249700,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "manual_retainer",
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-        sourceValidationClass: "class_c_manual_agreement",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "854a9a40-ad26-4d31-8680-fd4869875fec",
-        clientId: "692bc695-094e-489d-ba16-218a3a14129a",
-        clientName: "Susie Jung Hea Oh",
-        clientEmail: "susieoh820@gmail.com",
-        label: "Social Media Suite, Website Maintenance & Amazon Ads",
-        plan: "triple",
-        monthlyAmountCents: 245000,
-        billingDay: 15,
-        subscriptionStatus: "past_due",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1Tnk9nDnw1azoLSpNnULqVri",
-        stripeCustomerId: "cus_Un5bQkKb53Qk6k",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-10-15",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "213f77d2-260b-4d36-bf1d-33d4996ba2b7",
-        clientId: "29234baf-2ff2-4534-b72c-7ccc276e6968",
-        clientName: "Timothy Montgomery",
-        clientEmail: "sienviclienttimothymontgomery@gmail.com",
-        label: "Social Media Suite",
-        plan: "single",
-        monthlyAmountCents: 239500,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1U4QV5Dnw1azoLSpGgNreI75",
-        stripeCustomerId: "cus_V4ZeASoHbdFj8w",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "1e758239-a5c0-4b4a-bb99-64b3ed5825c4",
-        clientId: "b6b4cbbd-50da-424d-bfc9-fc27101c88a2",
-        clientName: "Sam Roberts",
-        clientEmail: "sam@hairtamin.com",
-        label: "SEO/AEO & Custom GPT Suite",
-        plan: "triple",
-        monthlyAmountCents: 195000,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1U3JiNDnw1azoLSpkIk6ywU4",
-        stripeCustomerId: "cus_V1GdXG4R1T8Slm",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "f72e7b8d-8fae-4322-86e8-369bef7d6bf0",
-        clientId: "29234baf-2ff2-4534-b72c-7ccc276e6968",
-        clientName: "Timothy Montgomery",
-        clientEmail: "sienviclienttimothymontgomery@gmail.com",
-        label: "Website Maintenance + Advertising Package",
-        plan: "advertising",
-        monthlyAmountCents: 160500,
-        billingDay: 15,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1UJKtEDnw1azoLSplkEvxlif",
-        stripeCustomerId: "cus_V4ZeASoHbdFj8w",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-15",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "975c05a8-d911-47f4-9f30-8d06681a994c",
-        clientId: "fdad0784-ab86-40d6-8399-c09fda53fa3b",
-        clientName: "Rick Anderson",
-        clientEmail: "ricka@futuresign.ca",
-        label: "Custom Website & AI Assistant",
-        plan: "custom",
-        monthlyAmountCents: 110000,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "manual_retainer",
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-        sourceValidationClass: "class_c_manual_agreement",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "0f8fbea0-0516-48fc-92bf-fd534319f138",
-        clientId: "3eb08e4a-4c9e-4da6-8f4f-5176eb854803",
-        clientName: "Guillermo Carillo",
-        clientEmail: "gcq1@me.com",
-        label: "Custom GPT & Website Development",
-        plan: "advertising",
-        monthlyAmountCents: 99900,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1TUTE1Dnw1azoLSp26LcGmPS",
-        stripeCustomerId: "cus_UT9Kog8XjMujZG",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "dfffc14e-c495-4a7b-88f3-cb7c838398e2",
-        clientId: "aea9052f-4b4d-4953-a92c-653dc728bf99",
-        clientName: "Billie Sue",
-        clientEmail: "billiesroe@gmail.com",
-        label: "Custom Tool Development",
-        plan: "custom",
-        monthlyAmountCents: 88800,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "manual_retainer",
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-        sourceValidationClass: "class_c_manual_agreement",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "4db21829-6c18-4521-8f87-fbfc891a237e",
-        clientId: "d0034027-6a1d-4f0d-8d8a-41638506b459",
-        clientName: "George Fahmy",
-        clientEmail: "outoftheboxtm@gmail.com",
-        label: "Amazon Ads — 1st Installment (Billed 15th)",
-        plan: "amazon",
-        monthlyAmountCents: 50000,
-        billingDay: 15,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1UQe7fDnw1azoLSpaeISVf6u",
-        stripeCustomerId: "cus_VRSiLpaPAqrhDG",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-15",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "92457818-4b5a-4d50-b079-1d8e80f37c1a",
-        clientId: "d0034027-6a1d-4f0d-8d8a-41638506b459",
-        clientName: "George Fahmy",
-        clientEmail: "outoftheboxtm@gmail.com",
-        label: "Amazon Ads — 2nd Installment (Billed 30th)",
-        plan: "amazon",
-        monthlyAmountCents: 50000,
-        billingDay: 30,
-        subscriptionStatus: "pending_payment",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-        sourceValidationClass: "class_e_scheduled_installment",
-        nextBillingDate: "2026-10-30",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "efd4bcd1-12a0-46cc-b454-0bf3681102d2",
-        clientId: "29234baf-2ff2-4534-b72c-7ccc276e6968",
-        clientName: "Timothy Montgomery",
-        clientEmail: "sienviclienttimothymontgomery@gmail.com",
-        label: "B2B Revenue Pipeline & Wholesale Portal Administration",
-        plan: "custom",
-        monthlyAmountCents: 39900,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "stripe_automated",
-        stripeSubscriptionId: "sub_1UJKtHDnw1azoLSpX0lMdLFD",
-        stripeCustomerId: "cus_V4ZeASoHbdFj8w",
-        sourceValidationClass: "class_a_direct_verified",
-        nextBillingDate: "2026-11-01",
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-      {
-        id: "86d56b2c-be21-4b6b-b6f0-b8ed3a399a95",
-        clientId: "f174ea2c-78c6-4bcc-a497-777b7dc7ffe2",
-        clientName: "Jordan Ellams",
-        clientEmail: "jordan@jordanellams.com",
-        label: "Custom Data Dashboard",
-        plan: "custom",
-        monthlyAmountCents: 0,
-        billingDay: 1,
-        subscriptionStatus: "active",
-        billingChannel: "manual_retainer",
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-        sourceValidationClass: "class_c_manual_agreement",
-        nextBillingDate: null,
-        createdAt: "2026-08-14T00:00:00Z",
-        updatedAt: "2026-10-29T00:00:00Z",
-      },
-    ],
+    items: [],
     page: 1,
     pageSize: 20,
-    totalItems: 13,
+    totalItems: 0,
     totalPages: 1,
   },
   invoices: {
-    items: [
-      {
-        id: "inv-001",
-        clientId: "fab3c44c-2779-44fb-9e44-b64437f40885",
-        clientName: "Sihara Prak",
-        clientEmail: "siharaprak@yahoo.com",
-        invoiceNumber: "INV-2026-001",
-        description: "Custom Automation & Growth Suite — Monthly Cycle",
-        totalAmountCents: 345000,
-        amountPaidCents: 345000,
-        amountDueCents: 0,
-        currency: "usd",
-        status: "paid",
-        dueDate: "2026-10-01",
-        paidAt: "2026-10-01T12:00:00Z",
-        billingChannel: "stripe",
-        stripeInvoiceId: "in_1U9PkDDnw1azoLSpPaid01",
-        createdAt: "2026-10-01T00:00:00Z",
-      },
-      {
-        id: "inv-002",
-        clientId: "9aa48fea-7865-4dec-803c-325913561233",
-        clientName: "Pamela Noel",
-        clientEmail: "pmlnoel@gmail.com",
-        invoiceNumber: "INV-2026-002",
-        description: "Commercial Launch & Growth Retainer — Wire Settlement",
-        totalAmountCents: 249700,
-        amountPaidCents: 249700,
-        amountDueCents: 0,
-        currency: "usd",
-        status: "paid",
-        dueDate: "2026-10-01",
-        paidAt: "2026-10-02T14:30:00Z",
-        billingChannel: "manual_wire",
-        stripeInvoiceId: null,
-        createdAt: "2026-10-01T00:00:00Z",
-      },
-      {
-        id: "inv-003",
-        clientId: "692bc695-094e-489d-ba16-218a3a14129a",
-        clientName: "Susie Jung Hea Oh",
-        clientEmail: "susieoh820@gmail.com",
-        invoiceNumber: "INV-2026-003",
-        description: "Social Media Suite & Advertising — Overdue Retainer",
-        totalAmountCents: 245000,
-        amountPaidCents: 0,
-        amountDueCents: 245000,
-        currency: "usd",
-        status: "past_due",
-        dueDate: "2026-10-15",
-        paidAt: null,
-        billingChannel: "stripe",
-        stripeInvoiceId: "in_1Tnk9nDnw1azoLSpPastDue",
-        createdAt: "2026-10-15T00:00:00Z",
-      },
-      {
-        id: "inv-004",
-        clientId: "d0034027-6a1d-4f0d-8d8a-41638506b459",
-        clientName: "George Fahmy",
-        clientEmail: "outoftheboxtm@gmail.com",
-        invoiceNumber: "INV-2026-004",
-        description: "Amazon Ads — 2nd Installment Balance",
-        totalAmountCents: 50000,
-        amountPaidCents: 0,
-        amountDueCents: 50000,
-        currency: "usd",
-        status: "open",
-        dueDate: "2026-10-30",
-        paidAt: null,
-        billingChannel: "manual_ach",
-        stripeInvoiceId: null,
-        createdAt: "2026-10-15T00:00:00Z",
-      },
-    ],
+    items: [],
     page: 1,
     pageSize: 20,
-    totalItems: 4,
+    totalItems: 0,
     totalPages: 1,
   },
   payments: {
@@ -409,77 +98,28 @@ const AUTHORITATIVE_FALLBACK_DATA: AdminBillingOverviewResponse = {
     totalPages: 1,
   },
   exceptions: {
-    items: [
-      {
-        id: "exc-001",
-        clientId: "692bc695-094e-489d-ba16-218a3a14129a",
-        clientName: "Susie Jung Hea Oh",
-        exceptionType: "failed_charge",
-        severity: "high",
-        status: "open",
-        title: "Overdue Retainer: Susie Jung Hea Oh ($2,450.00)",
-        description: "Charge attempt failed on card ending 4242. Account marked past_due and isolated from Operating MRR.",
-        suggestedAction: "Contact client to update card payment method in billing portal.",
-        createdAt: "2026-10-15T00:00:00Z",
-      },
-      {
-        id: "exc-002",
-        clientId: "d0034027-6a1d-4f0d-8d8a-41638506b459",
-        clientName: "George Fahmy",
-        exceptionType: "installment_mismatch",
-        severity: "medium",
-        status: "open",
-        title: "Pending 2nd Installment: George Fahmy ($500.00)",
-        description: "Scheduled installment 2 due on 30th. Staged in pending_payment status awaiting settlement.",
-        suggestedAction: "Verify incoming bank transfer or send Stripe checkout reminder.",
-        createdAt: "2026-10-25T00:00:00Z",
-      },
-    ],
+    items: [],
     page: 1,
     pageSize: 20,
-    totalItems: 2,
+    totalItems: 0,
     totalPages: 1,
   },
   auditLogs: {
-    items: [
-      {
-        id: "aud-001",
-        admin_user_id: "00000000-0000-0000-0000-000000000000",
-        action: "manual_payment_verified",
-        category: "financial",
-        target_client_id: "9aa48fea-7865-4dec-803c-325913561233",
-        metadata: {
-          verifiedAmountCents: 249700,
-          bankReference: "WIRE-OCT-2497-PN",
-          clearedDate: "2026-10-02",
-          subscriptionId: "e3a8dc06-33e3-4c96-b915-b91edaec28bd",
-          currency: "usd",
-        },
-        created_at: "2026-10-02T15:00:00Z",
-      },
-      {
-        id: "aud-002",
-        admin_user_id: "00000000-0000-0000-0000-000000000000",
-        action: "reconciliation_snapshot_generated",
-        category: "financial",
-        metadata: {
-          operatingMrrCents: 1578300,
-          activePayingRetainers: 10,
-          status: "reconciliation_pending",
-        },
-        created_at: "2026-10-29T23:59:59Z",
-      },
-    ],
+    items: [],
     page: 1,
     pageSize: 20,
-    totalItems: 2,
+    totalItems: 0,
     totalPages: 1,
   },
 };
 
 export default function AdminBilling() {
-  const [data, setData] = useState<AdminBillingOverviewResponse>(AUTHORITATIVE_FALLBACK_DATA);
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [data, setData] = useState<AdminBillingOverviewResponse>(EMPTY_BILLING_STATE);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -500,19 +140,52 @@ export default function AdminBilling() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Fetch overview from Edge Function if available
+  // Verify admin session & fetch live overview from Edge Function
   const loadBillingData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
-      const { data: resData, error } = await supabase.functions.invoke("get-admin-billing-overview");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/admin");
+        return;
+      }
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!roleData) {
+        toast.error("Access denied. Administrator privileges required.");
+        navigate("/dashboard");
+        return;
+      }
+
+      setIsAuthorizedAdmin(true);
+      setAuthChecking(false);
+
+      const { data: resData, error } = await supabase.functions.invoke("get-admin-billing-overview", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
       if (error) {
-        console.warn("[AdminBilling] Falling back to authoritative cached baseline:", error);
+        console.error("[AdminBilling] Edge function error:", error);
+        setFetchError(error.message || "Failed to load live billing overview");
       } else if (resData && resData.overview) {
         setData(resData);
+      } else {
+        setFetchError("Received unexpected response format from billing overview service");
       }
-    } catch (err) {
-      console.warn("[AdminBilling] Network error; loaded authoritative baseline:", err);
+    } catch (err: any) {
+      console.error("[AdminBilling] Network error:", err);
+      setFetchError(err.message || "Network error while loading billing overview");
     } finally {
+      setAuthChecking(false);
       setLoading(false);
     }
   };
@@ -526,6 +199,7 @@ export default function AdminBilling() {
     return data.subscriptions.items.filter((sub) => {
       const matchesSearch =
         sub.clientName.toLowerCase().includes(subSearch.toLowerCase()) ||
+        sub.clientEmail.toLowerCase().includes(subSearch.toLowerCase()) ||
         sub.label.toLowerCase().includes(subSearch.toLowerCase()) ||
         (sub.stripeSubscriptionId && sub.stripeSubscriptionId.toLowerCase().includes(subSearch.toLowerCase()));
       const matchesStatus = subStatusFilter === "all" || sub.subscriptionStatus === subStatusFilter;
@@ -540,15 +214,36 @@ export default function AdminBilling() {
       const matchesSearch =
         inv.clientName.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
         inv.invoiceNumber.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
-        inv.description.toLowerCase().includes(invoiceSearch.toLowerCase());
+        inv.description.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+        (inv.stripeInvoiceId && inv.stripeInvoiceId.toLowerCase().includes(invoiceSearch.toLowerCase()));
       const matchesStatus = invoiceStatusFilter === "all" || inv.status === invoiceStatusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [data.invoices.items, invoiceSearch, invoiceStatusFilter]);
 
+  if (authChecking || !isAuthorizedAdmin) {
+    return (
+      <AdminShell
+        title="Revenue & Billing Operations Center"
+        description="Verifying administrative credentials..."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin/dashboard" },
+          { label: "Revenue & Billing" },
+        ]}
+      >
+        <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <div className="w-9 h-9 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm font-medium">Verifying administrative access & loading billing telemetry...</p>
+        </div>
+      </AdminShell>
+    );
+  }
+
   // Verified payments & collections metrics from actual qualified data (no Operating MRR conflation)
   const isSubledgerActive = Boolean(data.dataFreshness?.subledgerActive);
-  const isReconciliationPending = data.overview?.collectedRevenueStatus === "reconciliation_pending" || data.overview?.financialMetricsStatus === "reconciliation_pending";
+  const isReconciliationPending =
+    data.overview?.collectedRevenueStatus === "reconciliation_pending" ||
+    data.overview?.financialMetricsStatus === "reconciliation_pending";
 
   // Server-Aggregated Financial Totals (computed across the FULL unpaginated dataset on the server)
   const serverGrossCollectionsCents = data.overview?.grossCollectionsMtdCents ?? null;
@@ -557,6 +252,13 @@ export default function AdminBilling() {
   const serverPayoutsCents = data.overview?.bankPayoutsMtdCents ?? null;
 
   const isFinancialDataUnavailable = !isSubledgerActive || isReconciliationPending || serverGrossCollectionsCents === null;
+
+  const counts = data.overview.sourceValidationCounts || {};
+  const classACount = counts.classA_directVerified ?? counts.classB_stripeVerified ?? 0;
+  const classCCount = counts.classC_manualAgreement ?? counts.classD_manualAgreement ?? 0;
+  const classECount = counts.classE_scheduledInstallment ?? counts.classA_supabase ?? 0;
+  const classBCount = counts.classB_proposedEmail ?? counts.classC_proposedEmail ?? 0;
+  const classDCount = counts.classD_unmappedException ?? counts.classE_unmatched ?? 0;
 
   return (
     <AdminShell
@@ -568,12 +270,11 @@ export default function AdminBilling() {
       ]}
       actions={
         <div className="flex items-center gap-2">
-          {/* Invariant badge */}
           <Badge
             variant="outline"
             className="hidden sm:inline-flex bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs px-2.5 py-1 gap-1.5"
           >
-            <Clock className="w-3.5 h-3.5 animate-spin" />
+            <Clock className="w-3.5 h-3.5" />
             <span>Reconciliation Pending</span>
           </Badge>
           <Button
@@ -590,6 +291,18 @@ export default function AdminBilling() {
       }
     >
       <div className="space-y-6">
+        {fetchError && (
+          <div className="p-4 rounded-xl border border-destructive/40 bg-destructive/10 flex items-center justify-between gap-3 text-xs text-destructive">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>Failed to refresh live billing overview: {fetchError}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadBillingData} className="h-7 text-xs">
+              Retry
+            </Button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
           <TabsList className="bg-muted/60 p-1 border border-border/80 rounded-xl grid grid-cols-2 sm:grid-cols-5 w-full h-auto gap-1">
@@ -600,7 +313,7 @@ export default function AdminBilling() {
               Subscriptions ({data.subscriptions.totalItems})
             </TabsTrigger>
             <TabsTrigger value="invoices" className="text-xs py-2 px-3 data-[state=active]:bg-background data-[state=active]:shadow-xs">
-              Invoices & Receivables
+              Invoices & Receivables ({data.invoices.totalItems})
             </TabsTrigger>
             <TabsTrigger value="payments" className="text-xs py-2 px-3 data-[state=active]:bg-background data-[state=active]:shadow-xs">
               Payments & Settlement
@@ -670,7 +383,7 @@ export default function AdminBilling() {
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Isolated from Operating MRR</span>
+                    <span>Isolated from Operating MRR • Pending: ${(data.overview.pendingMrrCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </p>
                 </CardContent>
               </Card>
@@ -691,7 +404,7 @@ export default function AdminBilling() {
                     <span>Reconciliation Pending</span>
                   </Badge>
                   <p className="text-[11px] text-muted-foreground">
-                    Phase 2A baseline locked; awaiting subledger operational activation.
+                    Subledger ingestion disabled (`FEATURE_BILLING_SUBLEDGER_ENABLED=false`). Historical cash backfill pending Gate D/E.
                   </p>
                 </CardContent>
               </Card>
@@ -705,7 +418,7 @@ export default function AdminBilling() {
                   <span>Authoritative Provenance & Evidence Classification</span>
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Subledger classification across all 13 subscription lines and payment channels
+                  Subledger classification across all {data.overview.totalSubscriptionLinesCount} subscription lines and payment channels
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4">
@@ -713,7 +426,7 @@ export default function AdminBilling() {
                   <div className="p-3 rounded-lg border border-border/70 bg-muted/20">
                     <span className="font-semibold text-foreground block">Class A: Direct Stripe</span>
                     <span className="text-lg font-bold font-mono text-primary block mt-1">
-                      {data.overview.sourceValidationCounts.classA_directVerified}
+                      {classACount}
                     </span>
                     <span className="text-[11px] text-muted-foreground">Live-mode Stripe ID matched</span>
                   </div>
@@ -721,7 +434,7 @@ export default function AdminBilling() {
                   <div className="p-3 rounded-lg border border-border/70 bg-muted/20">
                     <span className="font-semibold text-foreground block">Class C: Offline Retainers</span>
                     <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 block mt-1">
-                      {data.overview.sourceValidationCounts.classC_manualAgreement}
+                      {classCCount}
                     </span>
                     <span className="text-[11px] text-muted-foreground">Signed contract (ACH/wire)</span>
                   </div>
@@ -729,7 +442,7 @@ export default function AdminBilling() {
                   <div className="p-3 rounded-lg border border-border/70 bg-muted/20">
                     <span className="font-semibold text-foreground block">Class E: Installments</span>
                     <span className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400 block mt-1">
-                      {data.overview.sourceValidationCounts.classE_scheduledInstallment}
+                      {classECount}
                     </span>
                     <span className="text-[11px] text-muted-foreground">Staged scheduled installment</span>
                   </div>
@@ -737,7 +450,7 @@ export default function AdminBilling() {
                   <div className="p-3 rounded-lg border border-border/70 bg-muted/20">
                     <span className="font-semibold text-foreground block">Class B: Proposed Email</span>
                     <span className="text-lg font-bold font-mono text-muted-foreground block mt-1">
-                      {data.overview.sourceValidationCounts.classB_proposedEmail}
+                      {classBCount}
                     </span>
                     <span className="text-[11px] text-muted-foreground">Requires manual confirmation</span>
                   </div>
@@ -745,7 +458,7 @@ export default function AdminBilling() {
                   <div className="p-3 rounded-lg border border-border/70 bg-muted/20">
                     <span className="font-semibold text-foreground block">Class D: Exceptions</span>
                     <span className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400 block mt-1">
-                      {data.overview.sourceValidationCounts.classD_unmappedException}
+                      {classDCount}
                     </span>
                     <span className="text-[11px] text-muted-foreground">Unmapped queue items</span>
                   </div>
@@ -759,7 +472,7 @@ export default function AdminBilling() {
               <div>
                 <span className="font-semibold text-foreground">Read-Only Safety Enforcement Active: </span>
                 All financial write actions (mark verified, cancel subscription, issue invoice, refund charge) are locked
-                pending end-to-end acceptance tests. Direct browser ledger mutation is disabled.
+                server-side (`FEATURE_FINANCIAL_MUTATIONS_ENABLED=false`). Direct browser ledger mutation is disabled.
               </div>
             </div>
           </TabsContent>
@@ -776,7 +489,7 @@ export default function AdminBilling() {
                       Subscription Line Items ({filteredSubscriptions.length})
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      Searchable registry of active and pending recurring client billing lines
+                      Searchable registry of active, past-due, and pending recurring client billing lines
                     </CardDescription>
                   </div>
 
@@ -801,7 +514,7 @@ export default function AdminBilling() {
                   <div className="relative flex-1 min-w-[200px]">
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                     <Input
-                      placeholder="Search by client, service, or Stripe ID..."
+                      placeholder="Search by client, email, service, or Stripe ID..."
                       value={subSearch}
                       onChange={(e) => setSubSearch(e.target.value)}
                       className="h-8 text-xs pl-8"
@@ -810,6 +523,7 @@ export default function AdminBilling() {
                   <select
                     value={subStatusFilter}
                     onChange={(e) => setSubStatusFilter(e.target.value)}
+                    aria-label="Filter subscriptions by status"
                     className="h-8 text-xs rounded-md border border-border bg-background px-2.5 text-foreground"
                   >
                     <option value="all">All Statuses</option>
@@ -820,6 +534,7 @@ export default function AdminBilling() {
                   <select
                     value={subChannelFilter}
                     onChange={(e) => setSubChannelFilter(e.target.value)}
+                    aria-label="Filter subscriptions by billing channel"
                     className="h-8 text-xs rounded-md border border-border bg-background px-2.5 text-foreground"
                   >
                     <option value="all">All Channels</option>
@@ -840,85 +555,111 @@ export default function AdminBilling() {
                         <TableHead className="font-semibold">Cycle Day</TableHead>
                         <TableHead className="font-semibold">Status</TableHead>
                         <TableHead className="font-semibold">Stripe Object ID</TableHead>
-                        <TableHead className="text-right font-semibold">Actions</TableHead>
+                        <TableHead className="text-right font-semibold">Workspace & Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSubscriptions.map((sub) => (
-                        <TableRow key={sub.id} className="hover:bg-muted/30">
-                          <TableCell className="font-medium">
-                            <span className="font-semibold text-foreground block">{sub.clientName}</span>
-                            <span className="text-[11px] text-muted-foreground">{sub.clientEmail}</span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-foreground font-medium">{sub.label}</span>
-                            <span className="text-[10px] text-muted-foreground block uppercase font-mono">{sub.plan}</span>
-                          </TableCell>
-                          <TableCell className="font-mono font-bold text-foreground">
-                            ${(sub.monthlyAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}/mo
-                          </TableCell>
-                          <TableCell>
-                            {sub.billingChannel === "stripe_automated" ? (
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 text-[10px]">
-                                Stripe Auto
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]">
-                                Manual Retainer
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-muted-foreground">
-                            {sub.billingDay ? `Day ${sub.billingDay}` : "Auto"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                sub.subscriptionStatus === "active"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                  : sub.subscriptionStatus === "past_due"
-                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                              }
-                            >
-                              {sub.subscriptionStatus}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {sub.stripeSubscriptionId ? (
-                              <div className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
-                                <span className="truncate max-w-[130px]">{sub.stripeSubscriptionId}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCopy(sub.stripeSubscriptionId!, sub.id)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  {copiedId === sub.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground italic">None (Offline)</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-50 cursor-not-allowed">
-                                    <Lock className="w-3 h-3 mr-1" />
-                                    <span>Manage</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Subscription changes locked (Read-Only Mode)</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                      {filteredSubscriptions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="py-10 text-center text-xs text-muted-foreground">
+                            No subscription records match the current search or filter criteria.
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        filteredSubscriptions.map((sub) => (
+                          <TableRow key={sub.id} className="hover:bg-muted/30">
+                            <TableCell className="font-medium">
+                              <Link
+                                to={`/admin/clients/${sub.clientId}?tab=billing`}
+                                className="font-semibold text-foreground hover:text-primary transition-colors block"
+                              >
+                                {sub.clientName}
+                              </Link>
+                              <span className="text-[11px] text-muted-foreground">{sub.clientEmail}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-foreground font-medium">{sub.label}</span>
+                              <span className="text-[10px] text-muted-foreground block uppercase font-mono">{sub.plan}</span>
+                            </TableCell>
+                            <TableCell className="font-mono font-bold text-foreground">
+                              ${(sub.monthlyAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}/mo
+                            </TableCell>
+                            <TableCell>
+                              {sub.billingChannel === "stripe_automated" ? (
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 text-[10px]">
+                                  Stripe Auto
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]">
+                                  Manual Retainer
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground">
+                              {sub.billingDay ? `Day ${sub.billingDay}` : "Auto"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  sub.subscriptionStatus === "active"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                    : sub.subscriptionStatus === "past_due"
+                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                    : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                                }
+                              >
+                                {sub.subscriptionStatus}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {sub.stripeSubscriptionId ? (
+                                <div className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                                  <span className="truncate max-w-[130px]">{sub.stripeSubscriptionId}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleCopy(sub.stripeSubscriptionId!, sub.id)}
+                                    className="h-6 w-6 p-0"
+                                    title="Copy Stripe Subscription ID"
+                                  >
+                                    {copiedId === sub.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground italic">None (Offline)</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                  className="h-7 text-xs px-2.5"
+                                >
+                                  <Link to={`/admin/clients/${sub.clientId}?tab=billing`}>
+                                    <span>Workspace</span>
+                                    <ExternalLink className="w-3 h-3 ml-1" />
+                                  </Link>
+                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-50 cursor-not-allowed px-2">
+                                        <Lock className="w-3 h-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">Subscription mutations locked (Read-Only Mode)</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -930,6 +671,22 @@ export default function AdminBilling() {
           {/* TAB 3: INVOICES & RECEIVABLES                                     */}
           {/* ================================================================= */}
           <TabsContent value="invoices" className="space-y-4">
+            {/* Reconciliation Pending Banner for Historical Invoices */}
+            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-start justify-between gap-3 text-xs">
+              <div className="flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-foreground">Reconciliation Pending — Recurring Stripe Invoice Backfill Locked: </span>
+                  <span className="text-muted-foreground">
+                    Displaying verified one-time and recorded subledger invoices from production. Historical recurring Stripe subscription invoices will populate after Gate D/E backfill activation.
+                  </span>
+                </div>
+              </div>
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] shrink-0">
+                Reconciliation Pending
+              </Badge>
+            </div>
+
             <Card className="bg-card border-border shadow-xs">
               <CardHeader className="pb-3 border-b border-border/60">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -938,7 +695,7 @@ export default function AdminBilling() {
                       Authoritative Invoice Ledger ({filteredInvoices.length})
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      Obligations, open balances, overdue receivables, and settlement allocations
+                      Verified production invoice records, open balances, and settlement statuses
                     </CardDescription>
                   </div>
 
@@ -961,7 +718,7 @@ export default function AdminBilling() {
                   <div className="relative flex-1 min-w-[200px]">
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                     <Input
-                      placeholder="Search invoice number, client, or notes..."
+                      placeholder="Search invoice number, client, Stripe ID, or description..."
                       value={invoiceSearch}
                       onChange={(e) => setInvoiceSearch(e.target.value)}
                       className="h-8 text-xs pl-8"
@@ -970,6 +727,7 @@ export default function AdminBilling() {
                   <select
                     value={invoiceStatusFilter}
                     onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                    aria-label="Filter invoices by status"
                     className="h-8 text-xs rounded-md border border-border bg-background px-2.5 text-foreground"
                   >
                     <option value="all">All Invoices</option>
@@ -996,60 +754,88 @@ export default function AdminBilling() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredInvoices.map((inv) => (
-                        <TableRow key={inv.id} className="hover:bg-muted/30">
-                          <TableCell className="font-mono font-bold text-foreground">
-                            {inv.invoiceNumber}
-                          </TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            {inv.clientName}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground max-w-[220px] truncate">
-                            {inv.description}
-                          </TableCell>
-                          <TableCell className="font-mono font-semibold text-foreground">
-                            ${(inv.totalAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="font-mono text-emerald-600 dark:text-emerald-400">
-                            ${(inv.amountPaidCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="font-mono font-bold text-foreground">
-                            ${(inv.amountDueCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="font-mono text-muted-foreground">
-                            {inv.dueDate}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                inv.status === "paid"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                  : inv.status === "past_due"
-                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                              }
-                            >
-                              {inv.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-50 cursor-not-allowed">
-                                    <Lock className="w-3 h-3 mr-1" />
-                                    <span>Void</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Voiding disabled (Read-Only Mode)</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                      {filteredInvoices.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="py-10 text-center text-xs text-muted-foreground">
+                            No invoice records match the current filter criteria. Historical recurring Stripe invoices are pending subledger reconciliation.
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        filteredInvoices.map((inv) => (
+                          <TableRow key={inv.id} className="hover:bg-muted/30">
+                            <TableCell className="font-mono font-bold text-foreground">
+                              <div>{inv.invoiceNumber}</div>
+                              {inv.stripeInvoiceId && (
+                                <span className="text-[10px] text-muted-foreground font-normal block">
+                                  {inv.stripeInvoiceId}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">
+                              <Link
+                                to={`/admin/clients/${inv.clientId}?tab=billing`}
+                                className="hover:text-primary transition-colors font-semibold"
+                              >
+                                {inv.clientName}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground max-w-[240px] truncate">
+                              {inv.description}
+                            </TableCell>
+                            <TableCell className="font-mono font-semibold text-foreground">
+                              ${(inv.totalAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="font-mono text-emerald-600 dark:text-emerald-400">
+                              ${(inv.amountPaidCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="font-mono font-bold text-foreground">
+                              ${(inv.amountDueCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground">
+                              {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  inv.status === "paid"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                    : inv.status === "past_due"
+                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                    : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                                }
+                              >
+                                {inv.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {inv.hostedInvoiceUrl && (
+                                  <Button variant="outline" size="sm" asChild className="h-7 text-xs px-2">
+                                    <a href={inv.hostedInvoiceUrl} target="_blank" rel="noopener noreferrer">
+                                      <span>Invoice</span>
+                                      <ExternalLink className="w-3 h-3 ml-1" />
+                                    </a>
+                                  </Button>
+                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-50 cursor-not-allowed">
+                                        <Lock className="w-3 h-3 mr-1" />
+                                        <span>Void</span>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">Voiding disabled (Read-Only Mode)</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1182,7 +968,7 @@ export default function AdminBilling() {
                   Cash Settlement & Payment Transactions ({data.payments.totalItems})
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Stripe charges, cleared bank wires, and reconciled cash receipts
+                  Stripe charges, cleared bank wires, and reconciled cash receipts in `billing_payments`
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
@@ -1205,61 +991,74 @@ export default function AdminBilling() {
                       {data.payments.items.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="py-12 text-center">
-                            <div className="max-w-md mx-auto space-y-2">
-                              <Clock className="w-8 h-8 text-amber-500 mx-auto" />
-                              <p className="text-sm font-semibold text-foreground">No Verified Payment Records in Baseline</p>
+                            <div className="max-w-lg mx-auto space-y-2.5">
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs py-1 px-2.5 gap-1.5 mx-auto">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Reconciliation Pending</span>
+                              </Badge>
+                              <p className="text-sm font-semibold text-foreground">
+                                Subledger Settlement Ingestion Disabled (`FEATURE_BILLING_SUBLEDGER_ENABLED=false`)
+                              </p>
                               <p className="text-xs text-muted-foreground">
-                                Historical cash receipts, processor settlements, and cleared bank transfers will populate here once the Phase 2B subledger is operational and historical backfill is executed.
+                                Historical Stripe charges, processor fee deductions, and cleared bank transfers exist in upstream Stripe and bank statements but have not yet been backfilled into `billing_payments`. Client-submitted transfer notices awaiting verification are listed under the Exceptions & Audit tab.
                               </p>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : (
                         data.payments.items.map((pmt) => (
-                        <TableRow key={pmt.id} className="hover:bg-muted/30">
-                          <TableCell className="font-medium text-foreground">{pmt.clientName}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                              {pmt.paymentChannel}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-mono font-bold text-foreground">
-                            ${(pmt.grossAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="font-mono text-muted-foreground">
-                            ${(pmt.feeAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                            ${(pmt.netAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </TableCell>
-                          <TableCell className="font-mono text-muted-foreground text-[11px]">
-                            {pmt.bankReferenceNumber}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-[11px]">
-                            {new Date(pmt.settledAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]">
-                              {pmt.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-50 cursor-not-allowed">
-                                    <Lock className="w-3 h-3 mr-1" />
-                                    <span>Refund</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Refunds disabled (Read-Only Mode)</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
-                        </TableRow>
-                      )))}
+                          <TableRow key={pmt.id} className="hover:bg-muted/30">
+                            <TableCell className="font-medium text-foreground">{pmt.clientName}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                                {pmt.paymentChannel}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono font-bold text-foreground">
+                              ${(pmt.grossAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground">
+                              ${(pmt.feeAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                              ${(pmt.netAmountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground text-[11px]">
+                              {pmt.bankReferenceNumber}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-[11px]">
+                              {new Date(pmt.settledAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  pmt.status === "succeeded"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]"
+                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px]"
+                                }
+                              >
+                                {pmt.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" disabled className="h-7 text-xs opacity-50 cursor-not-allowed">
+                                      <Lock className="w-3 h-3 mr-1" />
+                                      <span>Refund</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Refunds disabled (Read-Only Mode)</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1284,39 +1083,55 @@ export default function AdminBilling() {
                   </Badge>
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Unmatched transactions, past-due retainers, and pending settlement verification
+                  Unverified bank transfer notices, past-due retainers, and scheduled installments awaiting settlement
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                {data.exceptions.items.map((exc) => (
-                  <div key={exc.id} className="p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={
-                            exc.severity === "high"
-                              ? "bg-destructive/10 text-destructive border-destructive/20 text-[10px]"
-                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px]"
-                          }
-                        >
-                          {exc.severity.toUpperCase()}
-                        </Badge>
-                        <span className="font-bold text-xs text-foreground">{exc.title}</span>
-                      </div>
-                      <Badge variant="outline" className="text-[10px]">
-                        {exc.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{exc.description}</p>
-                    {exc.suggestedAction && (
-                      <div className="p-2.5 rounded-md bg-background border border-border/60 text-[11px] text-muted-foreground flex items-center gap-2">
-                        <Info className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>Recommended action: {exc.suggestedAction}</span>
-                      </div>
-                    )}
+                {data.exceptions.items.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    No open billing exceptions or discrepancies in the queue.
                   </div>
-                ))}
+                ) : (
+                  data.exceptions.items.map((exc) => (
+                    <div key={exc.id} className="p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={
+                              exc.severity === "critical" || exc.severity === "high"
+                                ? "bg-destructive/10 text-destructive border-destructive/20 text-[10px]"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px]"
+                            }
+                          >
+                            {exc.severity.toUpperCase()}
+                          </Badge>
+                          <span className="font-bold text-xs text-foreground">{exc.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {exc.clientId && (
+                            <Button variant="outline" size="sm" asChild className="h-6 text-[11px] px-2">
+                              <Link to={`/admin/clients/${exc.clientId}?tab=billing`}>
+                                <span>{exc.clientName}</span>
+                                <ExternalLink className="w-3 h-3 ml-1" />
+                              </Link>
+                            </Button>
+                          )}
+                          <Badge variant="outline" className="text-[10px]">
+                            {exc.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{exc.description}</p>
+                      {exc.suggestedAction && (
+                        <div className="p-2.5 rounded-md bg-background border border-border/60 text-[11px] text-muted-foreground flex items-center gap-2">
+                          <Info className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span>Recommended action: {exc.suggestedAction}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -1328,7 +1143,7 @@ export default function AdminBilling() {
                   <span>Durable Financial Audit Events ({data.auditLogs.totalItems})</span>
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Immutable audit records with sanitized credentials and actor attribution
+                  Immutable audit records from `admin_audit_logs` with sanitized credentials and actor attribution
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
@@ -1344,25 +1159,33 @@ export default function AdminBilling() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.auditLogs.items.map((log) => (
-                        <TableRow key={log.id} className="hover:bg-muted/30">
-                          <TableCell className="font-mono text-muted-foreground text-[11px]">
-                            {new Date(log.created_at).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="font-mono font-bold text-foreground">{log.action}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                              {log.category || "financial"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-muted-foreground text-[11px]">
-                            {log.target_client_id ? log.target_client_id.slice(0, 8) + "..." : "System"}
-                          </TableCell>
-                          <TableCell className="font-mono text-[11px] text-muted-foreground max-w-[280px] truncate">
-                            {JSON.stringify(log.metadata || {})}
+                      {data.auditLogs.items.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="py-10 text-center text-xs text-muted-foreground">
+                            No administrative financial mutation events have been recorded in `admin_audit_logs` yet (Read-Only Canary Mode Active).
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        data.auditLogs.items.map((log) => (
+                          <TableRow key={log.id} className="hover:bg-muted/30">
+                            <TableCell className="font-mono text-muted-foreground text-[11px]">
+                              {new Date(log.created_at).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="font-mono font-bold text-foreground">{log.action}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                                {log.category || "financial"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground text-[11px]">
+                              {log.target_client_id ? log.target_client_id.slice(0, 8) + "..." : "System"}
+                            </TableCell>
+                            <TableCell className="font-mono text-[11px] text-muted-foreground max-w-[280px] truncate">
+                              {JSON.stringify(log.metadata || {})}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>

@@ -44,7 +44,6 @@ serve(withAllowedOrigin(async (req) => {
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -79,30 +78,37 @@ serve(withAllowedOrigin(async (req) => {
     // POST / ACTION HANDLER: Administrative Manual Payment Verification & Exceptions
     // =========================================================================
     if (req.method === "POST") {
-      const body = await req.json();
+      const body = await req.json().catch(() => ({}));
       const action = body.action || "verify_manual_payment";
 
       if (action === "verify_manual_payment") {
-        const result = await executeManualPaymentVerification(supabaseAdmin, {
-          clientId: body.clientId,
-          subscriptionId: body.subscriptionId,
-          verifiedAmountCents: body.verifiedAmountCents,
-          clearedBankRef: body.clearedBankRef,
-          clearedDate: body.clearedDate,
-          matchedInvoiceIds: body.matchedInvoiceIds,
-          notes: body.notes,
-          adminUserId: user.id,
-          adminEmail: user.email || "admin@sienvi.com",
-          ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
-          userAgent: req.headers.get("user-agent"),
-        });
+        try {
+          const result = await executeManualPaymentVerification(supabaseAdmin, {
+            clientId: body.clientId,
+            subscriptionId: body.subscriptionId,
+            verifiedAmountCents: body.verifiedAmountCents,
+            clearedBankRef: body.clearedBankRef,
+            clearedDate: body.clearedDate,
+            matchedInvoiceIds: body.matchedInvoiceIds,
+            notes: body.notes,
+            adminUserId: user.id,
+            adminEmail: user.email || "admin@sienvi.com",
+            ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+            userAgent: req.headers.get("user-agent"),
+          });
 
-        return new Response(
-          JSON.stringify(result),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+          return new Response(
+            JSON.stringify(result),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (verifyErr: any) {
+          const status = verifyErr.message?.includes("CANARY RELEASE GATE") ? 403 : 400;
+          return new Response(
+            JSON.stringify({ error: verifyErr.message || "Manual payment verification failed" }),
+            { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
-
 
       if (action === "resolve_billing_exception") {
         const isMutationGateOpen =
@@ -174,21 +180,28 @@ serve(withAllowedOrigin(async (req) => {
     // GET HANDLER: Typed, Paginated Financial Read API
     // =========================================================================
     const pagination = parsePagination(url);
-    const tab = url.searchParams.get("tab") || "all";
     const statusFilter = url.searchParams.get("status");
     const clientIdFilter = url.searchParams.get("clientId");
     const searchFilter = url.searchParams.get("search")?.toLowerCase().trim();
 
-    // Query core data tables in parallel
+    // Query core data tables and Phase 2B subledger tables in parallel
     const [
       { data: clientsRaw, error: clientsErr },
       { data: subscriptionsRaw, error: subsErr },
-      { data: otpsRaw, error: otpsErr },
-      { data: auditLogsRaw, error: auditErr },
+      { data: otpsRaw },
+      { data: billingInvoicesRaw },
+      { data: billingPaymentsRaw },
+      { data: billingExceptionsRaw },
+      { data: manualSubmissionsRaw },
+      { data: auditLogsRaw },
     ] = await Promise.all([
       supabaseAdmin.from("client_profiles").select("*").order("created_at", { ascending: false }),
       supabaseAdmin.from("client_subscriptions").select("*").order("created_at", { ascending: true }),
       supabaseAdmin.from("client_one_time_payments").select("*").order("due_date", { ascending: true }),
+      supabaseAdmin.from("billing_invoices").select("*").order("due_date", { ascending: false }),
+      supabaseAdmin.from("billing_payments").select("*").order("settled_at", { ascending: false }),
+      supabaseAdmin.from("billing_exceptions").select("*").order("created_at", { ascending: false }),
+      supabaseAdmin.from("manual_payment_submissions").select("*").order("submitted_at", { ascending: false }),
       supabaseAdmin.from("admin_audit_logs").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
 
@@ -203,6 +216,10 @@ serve(withAllowedOrigin(async (req) => {
     const clients = clientsRaw || [];
     const subscriptions = subscriptionsRaw || [];
     const otps = otpsRaw || [];
+    const billingInvoices = billingInvoicesRaw || [];
+    const billingPayments = billingPaymentsRaw || [];
+    const billingExceptions = billingExceptionsRaw || [];
+    const manualSubmissions = manualSubmissionsRaw || [];
     const auditLogs = auditLogsRaw || [];
 
     // Map clients by ID for lookup
@@ -227,11 +244,11 @@ serve(withAllowedOrigin(async (req) => {
     const exceptionsList: any[] = [];
 
     // Source validation counters
-    let classACount = 0; // Verified Supabase
-    let classBCount = 0; // Verified Stripe source object
-    let classCCount = 0; // Proposed email match
-    let classDCount = 0; // Manual agreement (wire/ACH)
-    let classECount = 0; // Unmatched exception
+    let classADirectVerifiedCount = 0; // Verified live Stripe subscription object
+    let classBProposedEmailCount = 0;  // Proposed email match
+    let classCManualAgreementCount = 0; // Manual agreement (wire/ACH)
+    let classDUnmappedCount = 0;       // Unmatched exception
+    let classEScheduledInstallmentCount = 0; // Staged scheduled installment
 
     for (const s of subscriptions) {
       const client = clientMap.get(s.client_profile_id);
@@ -247,24 +264,29 @@ serve(withAllowedOrigin(async (req) => {
       const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Client";
 
       // Evidence classification
-      let sourceValidationClass: "class_a_supabase" | "class_b_stripe_verified" | "class_c_proposed_email" | "class_d_manual_agreement" | "class_e_unmatched";
+      let sourceValidationClass: string;
       if (hasStripeSub) {
         sourceValidationClass = "class_b_stripe_verified";
-        classBCount++;
+        classADirectVerifiedCount++;
+      } else if (s.subscription_status === "pending_payment") {
+        sourceValidationClass = "class_a_supabase";
+        classEScheduledInstallmentCount++;
       } else if (s.payment_channel === "ach" || s.payment_channel === "wire" || (!hasStripeSub && s.subscription_status === "active")) {
         sourceValidationClass = "class_d_manual_agreement";
-        classDCount++;
+        classCManualAgreementCount++;
       } else if (client?.email) {
-        sourceValidationClass = "class_a_supabase";
-        classACount++;
+        sourceValidationClass = "class_c_proposed_email";
+        classBProposedEmailCount++;
       } else {
         sourceValidationClass = "class_e_unmatched";
-        classECount++;
+        classDUnmappedCount++;
       }
 
       if (s.subscription_status === "active") {
         operatingMrrCents += amountCents;
-        activePayingRetainersCount++;
+        if (amountCents > 0) {
+          activePayingRetainersCount++;
+        }
         if (hasStripeSub) {
           stripeMrrCents += amountCents;
         } else {
@@ -296,9 +318,55 @@ serve(withAllowedOrigin(async (req) => {
       });
     }
 
-    // Process One-Time Payments / Invoices
+    // 2. Process Authoritative Subledger Invoices (billing_invoices) + Legacy One-Time Payments (client_one_time_payments)
     const now = new Date();
+    const seenOtpIds = new Set<string>();
+    const seenStripeInvoiceIds = new Set<string>();
+
+    for (const binv of billingInvoices) {
+      if (binv.legacy_one_time_payment_id) seenOtpIds.add(binv.legacy_one_time_payment_id);
+      if (binv.stripe_invoice_id) seenStripeInvoiceIds.add(binv.stripe_invoice_id);
+
+      const totalCents = Number(binv.total_amount_cents) || 0;
+      const paidCents = Number(binv.amount_paid_cents) || 0;
+      const dueCents = Number(binv.amount_due_cents) || 0;
+      const client = clientMap.get(binv.client_profile_id);
+      const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Client";
+      const isOverdue = binv.due_date ? new Date(binv.due_date) < now && binv.status !== "paid" && binv.status !== "void" : false;
+      const effectiveStatus = binv.status === "open" && isOverdue ? "past_due" : binv.status;
+
+      if (effectiveStatus === "open" || effectiveStatus === "past_due" || effectiveStatus === "partially_paid") {
+        openInvoicesTotalCents += dueCents;
+        if (effectiveStatus === "past_due" || isOverdue) {
+          pastDueInvoicesTotalCents += dueCents;
+        }
+      }
+
+      invoicesList.push({
+        id: binv.id,
+        clientId: binv.client_profile_id,
+        clientName,
+        clientEmail: client?.email || "",
+        invoiceNumber: binv.invoice_number,
+        description: binv.description || "Invoice",
+        totalAmountCents: totalCents,
+        amountPaidCents: paidCents,
+        amountDueCents: dueCents,
+        currency: binv.currency || "usd",
+        status: effectiveStatus,
+        dueDate: binv.due_date,
+        paidAt: binv.paid_at || null,
+        billingChannel: binv.billing_channel || "stripe",
+        stripeInvoiceId: binv.stripe_invoice_id || null,
+        hostedInvoiceUrl: binv.hosted_invoice_url || null,
+        createdAt: binv.created_at,
+      });
+    }
+
     for (const otp of otps) {
+      if (seenOtpIds.has(otp.id) || (otp.stripe_invoice_id && seenStripeInvoiceIds.has(otp.stripe_invoice_id))) {
+        continue;
+      }
       const amtCents = Math.round((Number(otp.amount) || 0) * 100);
       const client = clientMap.get(otp.client_profile_id);
       const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Client";
@@ -321,57 +389,129 @@ serve(withAllowedOrigin(async (req) => {
         totalAmountCents: amtCents,
         amountPaidCents: otp.status === "paid" ? amtCents : 0,
         amountDueCents: otp.status === "paid" ? 0 : amtCents,
-        currency: "usd",
+        currency: otp.currency || "usd",
         status: otp.status === "paid" ? "paid" : (isOverdue ? "past_due" : "open"),
         dueDate: otp.due_date,
         paidAt: otp.paid_at || null,
         billingChannel: otp.stripe_invoice_id ? "stripe" : "manual_ach",
         stripeInvoiceId: otp.stripe_invoice_id || null,
+        hostedInvoiceUrl: otp.hosted_invoice_url || null,
         createdAt: otp.created_at,
       });
     }
 
-    // Extract manual payments and submissions
+    // 3. Process Authoritative Subledger Payments (billing_payments) + Verified Manual Confirmations
+    const seenBankRefs = new Set<string>();
+    for (const bpmt of billingPayments) {
+      if (bpmt.bank_reference_number) seenBankRefs.add(bpmt.bank_reference_number);
+      const client = bpmt.client_profile_id ? clientMap.get(bpmt.client_profile_id) : null;
+      const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Unmatched Payment";
+
+      paymentsList.push({
+        id: bpmt.id,
+        clientId: bpmt.client_profile_id || "",
+        clientName,
+        paymentChannel: bpmt.payment_channel || "stripe",
+        status: bpmt.status || "succeeded",
+        grossAmountCents: Number(bpmt.gross_amount_cents) || 0,
+        feeAmountCents: Number(bpmt.fee_amount_cents) || 0,
+        netAmountCents: Number(bpmt.net_amount_cents) || 0,
+        currency: bpmt.currency || "usd",
+        bankReferenceNumber: bpmt.bank_reference_number || bpmt.stripe_charge_id || "-",
+        sendingBank: bpmt.payment_method_summary?.bankName || undefined,
+        settledAt: bpmt.settled_at,
+        reconciled: Boolean(bpmt.reconciled),
+        reconciledAt: bpmt.reconciled_at || null,
+        evidenceStatus: bpmt.reconciled ? "verified" : "pending_verification",
+        notes: bpmt.notes || "",
+      });
+    }
+
+    // Extract client bank transfer confirmations (ONLY verified ones enter paymentsList; unverified enter exceptionsList)
     for (const c of clients) {
       const conf = c.contract_details?.bankTransferConfirmation;
-      if (conf) {
-        paymentsList.push({
-          id: `manual_conf_${c.id}`,
-          clientId: c.id,
-          clientName: [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email,
-          paymentChannel: "ach",
-          status: conf.status === "verified" ? "succeeded" : "pending",
-          grossAmountCents: conf.verifiedAmountCents || 494700,
-          feeAmountCents: 0,
-          netAmountCents: conf.verifiedAmountCents || 494700,
-          currency: "usd",
-          bankReferenceNumber: conf.clearedBankRef || conf.referenceNumber || "PENDING",
-          sendingBank: conf.sendingBank || "Wise / Column Bank",
-          settledAt: conf.verifiedAt || conf.submittedAt || c.created_at,
-          reconciled: conf.status === "verified",
-          reconciledAt: conf.verifiedAt || null,
-          evidenceStatus: conf.status,
-          notes: conf.notes || "",
-        });
+      if (!conf) continue;
 
-        if (conf.status === "pending_verification") {
-          exceptionsList.push({
-            id: `pending_transfer_${c.id}`,
+      const clientName = [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email;
+      const refNum = conf.clearedBankRef || conf.referenceNumber || "";
+
+      if (conf.status === "verified" && (!refNum || !seenBankRefs.has(refNum))) {
+        const verifiedCents = Number(conf.verifiedAmountCents) || 0;
+        if (verifiedCents > 0) {
+          paymentsList.push({
+            id: `manual_conf_${c.id}`,
             clientId: c.id,
-            clientName: [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email,
-            exceptionType: "unmatched_transaction",
-            severity: "high",
-            status: "open",
-            title: `Bank Transfer Awaiting Verification: ${conf.amount || "$4,947"}`,
-            description: `Client reported bank transfer from ${conf.sendingBank || "Bank"} (Ref: ${conf.referenceNumber}). Funds must be independently confirmed before service activation.`,
-            suggestedAction: "Check Column/Wise operating account, verify funds, and click 'Verify Payment'.",
-            createdAt: conf.submittedAt || c.updated_at,
+            clientName,
+            paymentChannel: "ach",
+            status: "succeeded",
+            grossAmountCents: verifiedCents,
+            feeAmountCents: 0,
+            netAmountCents: verifiedCents,
+            currency: conf.currency || "usd",
+            bankReferenceNumber: refNum || "VERIFIED",
+            sendingBank: conf.sendingBank || conf.bankName || undefined,
+            settledAt: conf.verifiedAt || conf.submittedAt || c.created_at,
+            reconciled: true,
+            reconciledAt: conf.verifiedAt || null,
+            evidenceStatus: "verified",
+            notes: conf.notes || "",
           });
         }
+      } else if (conf.status === "pending_verification" || conf.status === "submitted") {
+        exceptionsList.push({
+          id: `pending_transfer_${c.id}`,
+          clientId: c.id,
+          clientName,
+          exceptionType: "unmatched_transaction",
+          severity: "high",
+          status: "open",
+          title: `Bank Transfer Awaiting Verification: ${conf.amount || "Submitted Transfer"}`,
+          description: `Client reported bank transfer${conf.sendingBank ? ` from ${conf.sendingBank}` : ""}${conf.referenceNumber ? ` (Ref: ${conf.referenceNumber})` : " (No reference provided)"}. Funds must be independently confirmed in agency operating account before service activation.`,
+          suggestedAction: "Inspect operating bank statement; verify cleared funds once financial mutations are enabled.",
+          createdAt: conf.submittedAt || c.updated_at,
+        });
       }
     }
 
-    // Filter Exceptions from past due subscriptions
+    // Include any explicit manual_payment_submissions awaiting verification
+    for (const msub of manualSubmissions) {
+      if (msub.status === "pending_verification") {
+        const client = clientMap.get(msub.client_profile_id);
+        const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Client";
+        exceptionsList.push({
+          id: `msub_${msub.id}`,
+          clientId: msub.client_profile_id,
+          clientName,
+          exceptionType: "unmatched_transaction",
+          severity: "high",
+          status: "open",
+          title: `Manual Wire Submission: $${(Number(msub.amount_cents || 0) / 100).toLocaleString()}`,
+          description: `Wire reference ${msub.wire_reference_number} from ${msub.sending_bank} awaiting verification.`,
+          suggestedAction: "Confirm cleared funds in bank statement before verifying.",
+          createdAt: msub.submitted_at,
+        });
+      }
+    }
+
+    // Include any explicit rows from billing_exceptions
+    for (const bexc of billingExceptions) {
+      const client = bexc.client_profile_id ? clientMap.get(bexc.client_profile_id) : null;
+      const clientName = client ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.email : "Unassigned";
+      exceptionsList.push({
+        id: bexc.id,
+        clientId: bexc.client_profile_id || "",
+        clientName,
+        exceptionType: bexc.exception_type,
+        severity: bexc.severity,
+        status: bexc.status,
+        title: bexc.title,
+        description: bexc.description,
+        suggestedAction: bexc.suggested_action || undefined,
+        createdAt: bexc.created_at,
+      });
+    }
+
+    // Include Exceptions from past_due and pending_payment subscriptions
     for (const s of subscriptionsList) {
       if (s.subscriptionStatus === "past_due") {
         exceptionsList.push({
@@ -381,9 +521,22 @@ serve(withAllowedOrigin(async (req) => {
           exceptionType: "failed_charge",
           severity: "critical",
           status: "open",
-          title: `Past-Due Subscription: $${(s.monthlyAmountCents / 100).toLocaleString()}/mo`,
-          description: `Subscription "${s.label}" failed recurring renewal. Retainer collection is past due.`,
-          suggestedAction: "Retry payment method or contact client to update card.",
+          title: `Past-Due Subscription: ${s.clientName} ($${(s.monthlyAmountCents / 100).toLocaleString()}/mo)`,
+          description: `Subscription "${s.label}" (${s.stripeSubscriptionId || "manual"}) failed recurring renewal. Retainer collection is past due and isolated from Operating MRR.`,
+          suggestedAction: "Retry payment method or contact client to update card in billing portal.",
+          createdAt: s.updatedAt,
+        });
+      } else if (s.subscriptionStatus === "pending_payment") {
+        exceptionsList.push({
+          id: `pending_sub_${s.id}`,
+          clientId: s.clientId,
+          clientName: s.clientName,
+          exceptionType: "installment_mismatch",
+          severity: "medium",
+          status: "open",
+          title: `Scheduled Installment Pending: ${s.clientName} ($${(s.monthlyAmountCents / 100).toLocaleString()}/mo)`,
+          description: `Subscription line "${s.label}" (Billing Day ${s.billingDay}) is staged in pending_payment status awaiting settlement.`,
+          suggestedAction: "Monitor scheduled installment settlement or send checkout link.",
           createdAt: s.updatedAt,
         });
       }
@@ -425,13 +578,13 @@ serve(withAllowedOrigin(async (req) => {
         page: pagination.page,
         pageSize: pagination.pageSize,
         totalItems: total,
-        totalPages: Math.ceil(total / pagination.pageSize),
+        totalPages: Math.max(1, Math.ceil(total / pagination.pageSize)),
       };
     };
 
     // Filter Financial Audits
     const financialAudits = auditLogs.filter(
-      (l: any) => l.category === "financial" || l.action.includes("payment") || l.action.includes("billing")
+      (l: any) => l.category === "financial" || l.action?.includes("payment") || l.action?.includes("billing") || l.action?.includes("client")
     );
 
     // =========================================================================
@@ -439,6 +592,7 @@ serve(withAllowedOrigin(async (req) => {
     // All headline metrics are computed from the full dataset, NOT the paginated slice
     // =========================================================================
     const isSubledgerActive = Deno.env.get("FEATURE_BILLING_SUBLEDGER_ENABLED") === "true";
+    const isMutationsActive = Deno.env.get("FEATURE_FINANCIAL_MUTATIONS_ENABLED") === "true";
     const verifiedFullPayments = paymentsList.filter(
       (p: any) => p.status === "succeeded" && p.reconciled === true
     );
@@ -460,10 +614,15 @@ serve(withAllowedOrigin(async (req) => {
     const fullPayoutsCents = hasVerifiedCash ? 0 : null;
 
     const responsePayload = {
+      feature_flags: {
+        billing_subledger_enabled: isSubledgerActive,
+        financial_mutations_enabled: isMutationsActive,
+      },
       dataFreshness: {
         asOf: new Date().toISOString(),
         isLiveStripe: true,
         subledgerActive: isSubledgerActive,
+        mutationsEnabled: isMutationsActive,
         cacheTtlSeconds: 0,
       },
       overview: {
@@ -488,11 +647,16 @@ serve(withAllowedOrigin(async (req) => {
         pastDueInvoicesTotalCents,
         openExceptionsCount: exceptionsList.length,
         sourceValidationCounts: {
-          classA_supabase: classACount,
-          classB_stripeVerified: classBCount,
-          classC_proposedEmail: classCCount,
-          classD_manualAgreement: classDCount,
-          classE_unmatched: classECount,
+          classA_directVerified: classADirectVerifiedCount,
+          classB_proposedEmail: classBProposedEmailCount,
+          classC_manualAgreement: classCManualAgreementCount,
+          classD_unmappedException: classDUnmappedCount,
+          classE_scheduledInstallment: classEScheduledInstallmentCount,
+          classA_supabase: classEScheduledInstallmentCount,
+          classB_stripeVerified: classADirectVerifiedCount,
+          classC_proposedEmail: classBProposedEmailCount,
+          classD_manualAgreement: classCManualAgreementCount,
+          classE_unmatched: classDUnmappedCount,
         },
       },
       subscriptions: paginateArray(filteredSubs),

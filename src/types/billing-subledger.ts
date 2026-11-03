@@ -304,14 +304,24 @@ export type SourceValidationClass =
   | "class_b_stripe_verified"
   | "class_c_proposed_email"
   | "class_d_manual_agreement"
-  | "class_e_unmatched";
+  | "class_e_unmatched"
+  | "class_a_direct_verified"
+  | "class_b_proposed_email"
+  | "class_c_manual_agreement"
+  | "class_d_unmapped_exception"
+  | "class_e_scheduled_installment";
 
 export interface SourceValidationCounts {
-  classA_supabase: number;
-  classB_stripeVerified: number;
-  classC_proposedEmail: number;
-  classD_manualAgreement: number;
-  classE_unmatched: number;
+  classA_directVerified?: number;
+  classB_proposedEmail?: number;
+  classC_manualAgreement?: number;
+  classD_unmappedException?: number;
+  classE_scheduledInstallment?: number;
+  classA_supabase?: number;
+  classB_stripeVerified?: number;
+  classC_proposedEmail?: number;
+  classD_manualAgreement?: number;
+  classE_unmatched?: number;
 }
 
 export interface BillingOverviewKpis {
@@ -325,8 +335,13 @@ export interface BillingOverviewKpis {
   pendingMrrCents: number;
   activePayingRetainersCount: number;
   totalSubscriptionLinesCount: number;
+  grossCollectionsMtdCents?: number | null;
+  stripeFeesMtdCents?: number | null;
+  netSettledCashMtdCents?: number | null;
+  bankPayoutsMtdCents?: number | null;
   collectedRevenueMtdCents: number;
-  collectedRevenueStatus: "reconciliation_pending" | "reconciled" | "discrepancy_flagged";
+  collectedRevenueStatus: "reconciliation_pending" | "verified" | "reconciled" | "discrepancy_flagged";
+  financialMetricsStatus?: "reconciliation_pending" | "verified" | "reconciled" | "discrepancy_flagged";
   openInvoicesTotalCents: number;
   pastDueInvoicesTotalCents: number;
   openExceptionsCount: number;
@@ -368,6 +383,7 @@ export interface AdminInvoiceItem {
   paidAt: string | null;
   billingChannel: "stripe" | "manual_ach" | "manual_wire" | "other";
   stripeInvoiceId: string | null;
+  hostedInvoiceUrl?: string | null;
   createdAt: string;
 }
 
@@ -424,10 +440,15 @@ export interface PaginatedResult<T> {
 }
 
 export interface AdminBillingOverviewResponse {
+  feature_flags?: {
+    billing_subledger_enabled: boolean;
+    financial_mutations_enabled: boolean;
+  };
   dataFreshness: {
     asOf: string;
     isLiveStripe: boolean;
     subledgerActive: boolean;
+    mutationsEnabled?: boolean;
     cacheTtlSeconds: number;
   };
   overview: BillingOverviewKpis;
@@ -465,4 +486,3 @@ export interface ResolveBillingExceptionRequest {
   exceptionId: string;
   resolutionNotes: string;
 }
-

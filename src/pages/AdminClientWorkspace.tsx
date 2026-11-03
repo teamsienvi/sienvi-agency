@@ -1102,9 +1102,17 @@ export default function AdminClientWorkspace() {
                     <CreditCard className="w-4 h-4 text-primary" />
                     <span>Independent Subscription Lines</span>
                   </div>
-                  <Badge variant="outline" className="text-xs font-mono font-bold">
-                    Combined: ${combinedRetainer.toLocaleString()}/mo
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs font-mono font-bold">
+                      Combined: ${combinedRetainer.toLocaleString()}/mo
+                    </Badge>
+                    <Button variant="outline" size="sm" asChild className="h-7 text-xs px-2.5">
+                      <Link to="/admin/billing">
+                        <span>Billing Operations Center</span>
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      </Link>
+                    </Button>
+                  </div>
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground">
                   Preserved multi-subscription billing schedules, Stripe IDs, and payment channels
@@ -1266,7 +1274,7 @@ export default function AdminClientWorkspace() {
                       <div>
                         <span className="text-muted-foreground block text-[11px]">Sending Bank</span>
                         <span className="font-medium text-foreground">
-                          {client.contractDetails.bankTransferConfirmation.bankName || "-"}
+                          {client.contractDetails.bankTransferConfirmation.sendingBank || client.contractDetails.bankTransferConfirmation.bankName || "-"}
                         </span>
                       </div>
                     </div>
