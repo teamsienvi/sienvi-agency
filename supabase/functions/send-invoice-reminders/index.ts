@@ -606,6 +606,9 @@ serve(async (req) => {
     for (const sub of (clientSubs as unknown as ClientSubWithProfile[])) {
       const profile = sub.client_profile;
       if (!profile || !profile.email) continue;
+      if (profile.account_status === "inactive" || profile.subscription_status === "canceled" || sub.subscription_status === "canceled") {
+        continue;
+      }
 
       if (testClientIds && !testClientIds.includes(profile.id) && !testClientIds.includes(sub.id)) {
         continue;
