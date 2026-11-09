@@ -820,8 +820,8 @@ serve(async (req) => {
         }
       }
 
-      // === REMINDER CHECK 3: 15 Days Overdue (If NOT Paid Yet) ===
-      if (daysPastDue === 15) {
+      // === REMINDER CHECK 3: 15 Days Overdue (Stripe Card Clients Only) ===
+      if (daysPastDue === 15 && !isBankTransfer && Boolean(sub.stripe_subscription_id)) {
         const pastDueDateIso = pastDueDate.toISOString().split("T")[0];
         const dedupeKey = `${profile.id}:overdue_15_days:${pastDueDateIso}`;
 
