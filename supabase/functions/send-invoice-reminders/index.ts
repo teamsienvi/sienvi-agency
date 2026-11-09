@@ -734,7 +734,7 @@ serve(async (req) => {
           const sendRes = await sendEmail({
             from: "Sienvi Billing <info@sienvi.com>",
             to: recipients,
-            bcc: ["teamsienvi@gmail.com", "info@sienvi.com"],
+            cc: ["teamsienvi@gmail.com", "info@sienvi.com", "sienvifba@gmail.com"],
             subject,
             html,
           });
@@ -789,7 +789,7 @@ serve(async (req) => {
           const sendRes = await sendEmail({
             from: "Sienvi Billing <info@sienvi.com>",
             to: recipients,
-            bcc: ["teamsienvi@gmail.com", "info@sienvi.com"],
+            cc: ["teamsienvi@gmail.com", "info@sienvi.com", "sienvifba@gmail.com"],
             subject,
             html,
           });
@@ -846,7 +846,7 @@ serve(async (req) => {
           const sendRes = await sendEmail({
             from: "Sienvi Billing <info@sienvi.com>",
             to: recipients,
-            bcc: ["teamsienvi@gmail.com", "info@sienvi.com"],
+            cc: ["teamsienvi@gmail.com", "info@sienvi.com", "sienvifba@gmail.com"],
             subject,
             html,
           });

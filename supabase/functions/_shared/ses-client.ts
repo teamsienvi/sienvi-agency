@@ -3,6 +3,7 @@ import { SESClient, SendEmailCommand } from "npm:@aws-sdk/client-ses@3.693.0";
 export interface SendEmailOptions {
   from?: string;
   to: string | string[];
+  cc?: string | string[];
   bcc?: string | string[];
   replyTo?: string | string[];
   subject: string;
@@ -80,6 +81,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       };
     }
 
+    const ccAddresses = options.cc
+      ? (Array.isArray(options.cc) ? options.cc : [options.cc])
+          .map(e => e.trim().toLowerCase())
+          .filter(e => e.length > 0 && e.includes("@"))
+      : undefined;
+
     const bccAddresses = options.bcc
       ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc])
           .map(e => e.trim().toLowerCase())
@@ -100,6 +107,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         Source: source,
         Destination: {
           ToAddresses: toAddresses,
+          CcAddresses: ccAddresses && ccAddresses.length > 0 ? ccAddresses : undefined,
           BccAddresses: bccAddresses && bccAddresses.length > 0 ? bccAddresses : undefined,
         },
         ReplyToAddresses: replyToAddresses && replyToAddresses.length > 0 ? replyToAddresses : undefined,
