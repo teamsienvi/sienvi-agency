@@ -95,37 +95,48 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     const source = resolveFromAddress(options.from);
     const configurationSetName = Deno.env.get("AWS_SES_CONFIGURATION_SET") || undefined;
 
-    const command = new SendEmailCommand({
-      Source: source,
-      Destination: {
-        ToAddresses: toAddresses,
-        BccAddresses: bccAddresses && bccAddresses.length > 0 ? bccAddresses : undefined,
-      },
-      ReplyToAddresses: replyToAddresses && replyToAddresses.length > 0 ? replyToAddresses : undefined,
-      ConfigurationSetName: configurationSetName,
-      Message: {
-        Subject: {
-          Data: options.subject,
-          Charset: "UTF-8",
+    const buildCommand = (includeConfigSet: boolean) =>
+      new SendEmailCommand({
+        Source: source,
+        Destination: {
+          ToAddresses: toAddresses,
+          BccAddresses: bccAddresses && bccAddresses.length > 0 ? bccAddresses : undefined,
         },
-        Body: {
-          Html: {
-            Data: options.html,
+        ReplyToAddresses: replyToAddresses && replyToAddresses.length > 0 ? replyToAddresses : undefined,
+        ConfigurationSetName: includeConfigSet ? configurationSetName : undefined,
+        Message: {
+          Subject: {
+            Data: options.subject,
             Charset: "UTF-8",
           },
-          ...(options.text
-            ? {
-                Text: {
-                  Data: options.text,
-                  Charset: "UTF-8",
-                },
-              }
-            : {}),
+          Body: {
+            Html: {
+              Data: options.html,
+              Charset: "UTF-8",
+            },
+            ...(options.text
+              ? {
+                  Text: {
+                    Data: options.text,
+                    Charset: "UTF-8",
+                  },
+                }
+              : {}),
+          },
         },
-      },
-    });
+      });
 
-    const response = await client.send(command);
+    let response;
+    try {
+      response = await client.send(buildCommand(Boolean(configurationSetName)));
+    } catch (firstErr: any) {
+      if (configurationSetName && String(firstErr?.message || "").includes("configuration-set")) {
+        console.warn("[Amazon SES] ConfigurationSetName not authorized; retrying without ConfigurationSetName.");
+        response = await client.send(buildCommand(false));
+      } else {
+        throw firstErr;
+      }
+    }
 
     console.log(`[Amazon SES] Email sent successfully. MessageId: ${response.MessageId} to ${toAddresses.join(", ")}`);
 

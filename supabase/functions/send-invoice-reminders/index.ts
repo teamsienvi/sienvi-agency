@@ -19,6 +19,8 @@ const serviceLabels: Record<string, string> = {
   "custom-tool": "Custom Tool Development",
   "amazon-design": "Amazon Design Package",
   "advertising-package": "Advertising Package",
+  "b2b-pipeline": "B2B Lead Generation & Sales Pipeline",
+  "linkedin-outreach": "Recurring LinkedIn Outreach & Positioning",
   "channel-amazon": "Amazon Ads",
   "channel-google": "Google Ads",
   "channel-meta": "Meta Ads",
@@ -26,6 +28,16 @@ const serviceLabels: Record<string, string> = {
   "channel-youtube": "YouTube Ads",
   "channel-reddit": "Reddit Ads",
   "channel-linkedin": "LinkedIn Ads",
+};
+
+const DEFAULT_BANK_TRANSFER_DETAILS = {
+  name: "Sienvi Fashion Inc.",
+  accountType: "Deposit (domestic transfers)",
+  routingNumber: "084009519",
+  accountNumber: "700663363841311",
+  routingBank: "Column Bank (partner to Wise)",
+  address: "Wise US Inc, 108 W 13th St, Wilmington, DE, 19801, United States",
+  swiftBic: "TRWIUS35XXX",
 };
 
 function parseAdditionalEmails(notes: string | null | undefined): string[] {
@@ -52,6 +64,7 @@ interface ClientSubWithProfile {
   subscription_status: string;
   stripe_subscription_id: string | null;
   stripe_customer_id: string | null;
+  notes?: string | null;
   client_profile: {
     id: string;
     email: string;
@@ -75,36 +88,54 @@ function formatDate(d: Date): string {
 function buildInvoiceEmailHtml(params: {
   reminderType: "upcoming_7_days" | "upcoming_3_days" | "due_today" | "overdue_15_days";
   displayName: string;
+  companyName?: string | null;
   subscriptionLabel: string;
   amount: number;
   dueDateStr: string;
   services: string[];
   stripeSubscriptionId?: string | null;
+  isBankTransfer: boolean;
   bankTransferDetails?: any;
 }): { subject: string; html: string } {
-  const { reminderType, displayName, subscriptionLabel, amount, dueDateStr, services, stripeSubscriptionId, bankTransferDetails } = params;
+  const {
+    reminderType,
+    displayName,
+    companyName,
+    subscriptionLabel,
+    amount,
+    dueDateStr,
+    services,
+    isBankTransfer,
+    bankTransferDetails,
+  } = params;
 
   const formattedAmount = `$${amount.toLocaleString()}`;
   const portalUrl = "https://sienvi.com/dashboard";
+  const clientWithCompany = companyName ? `${displayName} (${companyName})` : displayName;
+  const memoReference = companyName ? `${companyName} - ${displayName}` : displayName;
 
   const servicesHtml = services.length > 0
     ? services.map(s => `<li style="padding: 4px 0; color: #374151;">${serviceLabels[s] || s}</li>`).join("")
     : `<li style="padding: 4px 0; color: #374151;">${subscriptionLabel}</li>`;
 
-  const bankTransferHtml = bankTransferDetails ? `
+  const resolvedBankDetails = isBankTransfer
+    ? (bankTransferDetails || DEFAULT_BANK_TRANSFER_DETAILS)
+    : null;
+
+  const bankTransferHtml = resolvedBankDetails ? `
     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
       <h4 style="margin: 0 0 12px 0; color: #166534; font-size: 15px; font-weight: 700;">🏦 Domestic ACH / Wire Bank Transfer Instructions</h4>
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px;">
-        <tr><td style="padding: 5px 0; color: #4b5563;">Beneficiary Name:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${bankTransferDetails.name || 'Sienvi Fashion Inc.'}</td></tr>
-        <tr><td style="padding: 5px 0; color: #4b5563;">Account Type:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${bankTransferDetails.accountType || 'Deposit (domestic transfers)'}</td></tr>
-        <tr><td style="padding: 5px 0; color: #4b5563;">Routing Number (ACH/Wire):</td><td style="padding: 5px 0; font-weight: 700; text-align: right; color: #047857; font-family: monospace; font-size: 14px;">${bankTransferDetails.routingNumber || '084009519'}</td></tr>
-        <tr><td style="padding: 5px 0; color: #4b5563;">Account Number:</td><td style="padding: 5px 0; font-weight: 700; text-align: right; color: #047857; font-family: monospace; font-size: 14px;">${bankTransferDetails.accountNumber || '700663363841311'}</td></tr>
-        <tr><td style="padding: 5px 0; color: #4b5563;">Partner Bank:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${bankTransferDetails.routingBank || 'Provided to Wise by Column Bank'}</td></tr>
-        <tr><td style="padding: 5px 0; color: #4b5563;">Bank Address:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${bankTransferDetails.address || 'Wise US Inc, 108 W 13th St, Wilmington, DE, 19801, United States'}</td></tr>
-        ${bankTransferDetails.swiftBic ? `<tr><td style="padding: 5px 0; color: #4b5563;">Swift/BIC:</td><td style="padding: 5px 0; font-weight: 700; text-align: right; color: #1f2937; font-family: monospace;">${bankTransferDetails.swiftBic}</td></tr>` : ''}
+        <tr><td style="padding: 5px 0; color: #4b5563;">Beneficiary Name:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${resolvedBankDetails.name || 'Sienvi Fashion Inc.'}</td></tr>
+        <tr><td style="padding: 5px 0; color: #4b5563;">Account Type:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${resolvedBankDetails.accountType || 'Deposit (domestic transfers)'}</td></tr>
+        <tr><td style="padding: 5px 0; color: #4b5563;">Routing Number (ACH/Wire):</td><td style="padding: 5px 0; font-weight: 700; text-align: right; color: #047857; font-family: monospace; font-size: 14px;">${resolvedBankDetails.routingNumber || '084009519'}</td></tr>
+        <tr><td style="padding: 5px 0; color: #4b5563;">Account Number:</td><td style="padding: 5px 0; font-weight: 700; text-align: right; color: #047857; font-family: monospace; font-size: 14px;">${resolvedBankDetails.accountNumber || '700663363841311'}</td></tr>
+        <tr><td style="padding: 5px 0; color: #4b5563;">Partner Bank:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${resolvedBankDetails.routingBank || 'Column Bank (partner to Wise)'}</td></tr>
+        <tr><td style="padding: 5px 0; color: #4b5563;">Bank Address:</td><td style="padding: 5px 0; font-weight: 600; text-align: right; color: #1f2937;">${resolvedBankDetails.address || 'Wise US Inc, 108 W 13th St, Wilmington, DE, 19801, United States'}</td></tr>
+        ${resolvedBankDetails.swiftBic ? `<tr><td style="padding: 5px 0; color: #4b5563;">Swift/BIC:</td><td style="padding: 5px 0; font-weight: 700; text-align: right; color: #1f2937; font-family: monospace;">${resolvedBankDetails.swiftBic}</td></tr>` : ''}
       </table>
       <p style="margin: 12px 0 0 0; font-size: 12px; color: #15803d; line-height: 1.4;">
-        💡 Please include <strong>${displayName}</strong> in your wire or transfer memo for immediate reconciliation.
+        💡 Please include <strong>${memoReference}</strong> in your wire or transfer memo for immediate reconciliation.
       </p>
     </div>
   ` : '';
@@ -140,6 +171,10 @@ function buildInvoiceEmailHtml(params: {
               
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Client / Organization:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${clientWithCompany}</td>
+                  </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subscription / Service:</td>
                     <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${subscriptionLabel}</td>
@@ -190,8 +225,24 @@ function buildInvoiceEmailHtml(params: {
   }
 
   if (reminderType === "upcoming_3_days") {
+    const introParagraph = isBankTransfer
+      ? `This is a friendly reminder that your upcoming monthly invoice for <strong>${subscriptionLabel}</strong> is due in <strong>3 days</strong> on <strong>${dueDateStr}</strong> via bank transfer.`
+      : `This is a friendly reminder that your upcoming monthly subscription invoice for <strong>${subscriptionLabel}</strong> is scheduled to be automatically processed in <strong>3 days</strong> on <strong>${dueDateStr}</strong>.`;
+
+    const calloutHtml = isBankTransfer
+      ? `<div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 28px;">
+          <p style="margin: 0; font-size: 13px; color: #1e40af;">
+            <strong>💡 Bank Transfer Payment:</strong> Please initiate your ACH or wire transfer using the banking details above so it arrives by <strong>${dueDateStr}</strong>. Once sent, you can confirm the transfer in your Client Dashboard or reply directly to this email.
+          </p>
+        </div>`
+      : `<div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 28px;">
+          <p style="margin: 0; font-size: 13px; color: #1e40af;">
+            <strong>💡 Auto-Pay:</strong> No action is required if your payment method is active. You can manage your account and invoices anytime in the dashboard.
+          </p>
+        </div>`;
+
     return {
-      subject: `🗓️ Upcoming Invoice Preview - ${subscriptionLabel} (${formattedAmount})`,
+      subject: `🗓️ Upcoming Invoice Reminder (Due in 3 Days) - ${subscriptionLabel} (${formattedAmount})`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -207,33 +258,43 @@ function buildInvoiceEmailHtml(params: {
           <tr>
             <td style="background: #3b82f6; padding: 28px; text-align: center; color: #ffffff;">
               <span style="font-size: 36px;">🗓️</span>
-              <h1 style="margin: 12px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Upcoming Subscription Invoice</h1>
-              <p style="margin: 6px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Scheduled for processing in 3 days</p>
+              <h1 style="margin: 12px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Upcoming Invoice (Due in 3 Days)</h1>
+              <p style="margin: 6px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Payment due on ${dueDateStr}</p>
             </td>
           </tr>
           <tr>
             <td style="padding: 32px 36px;">
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #1f2937;">Hi <strong>${displayName}</strong>,</p>
               <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563;">
-                This is a friendly reminder that your upcoming monthly subscription invoice for <strong>${subscriptionLabel}</strong> is scheduled to be automatically processed in <strong>3 days</strong> on <strong>${dueDateStr}</strong>.
+                ${introParagraph}
               </p>
               
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subscription:</td>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Client / Organization:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${clientWithCompany}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subscription / Service:</td>
                     <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${subscriptionLabel}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Scheduled Date:</td>
-                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${dueDateStr}</td>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Due Date:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${dueDateStr} (in 3 days)</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Payment Method:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${isBankTransfer ? "ACH / Wire Bank Transfer" : "Card on File (Auto-Pay)"}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Amount Due:</td>
-                    <td style="padding: 6px 0; text-align: right; color: #3b82f6; font-weight: 700; font-size: 18px;">${formattedAmount}/mo</td>
+                    <td style="padding: 6px 0; text-align: right; color: #3b82f6; font-weight: 700; font-size: 18px;">${formattedAmount} USD</td>
                   </tr>
                 </table>
               </div>
+
+              ${bankTransferHtml}
 
               <div style="margin-bottom: 24px;">
                 <h4 style="margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280;">Included Services</h4>
@@ -242,11 +303,7 @@ function buildInvoiceEmailHtml(params: {
                 </ul>
               </div>
 
-              <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin-bottom: 28px;">
-                <p style="margin: 0; font-size: 13px; color: #1e40af;">
-                  <strong>💡 Auto-Pay:</strong> No action is required if your payment method is active. You can manage your account and invoices anytime in the dashboard.
-                </p>
-              </div>
+              ${calloutHtml}
 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -274,8 +331,20 @@ function buildInvoiceEmailHtml(params: {
   }
 
   if (reminderType === "due_today") {
+    const introParagraph = isBankTransfer
+      ? `Your monthly subscription invoice for <strong>${subscriptionLabel}</strong> is due today, <strong>${dueDateStr}</strong>, via bank transfer.`
+      : `Your monthly subscription invoice for <strong>${subscriptionLabel}</strong> is due today, <strong>${dueDateStr}</strong>, and will be processed via your payment method on file.`;
+
+    const calloutHtml = isBankTransfer
+      ? `<div style="background: #eef2ff; border-left: 4px solid #6366f1; padding: 12px 16px; border-radius: 4px; margin-bottom: 28px;">
+          <p style="margin: 0; font-size: 13px; color: #3730a3;">
+            <strong>💡 Already Sent Your Transfer?</strong> Thank you! You can log your transfer confirmation in the Client Dashboard or reply to this email so our billing team can immediately mark your invoice as settled.
+          </p>
+        </div>`
+      : "";
+
     return {
-      subject: `💳 Invoice Due Today - ${subscriptionLabel} (${formattedAmount})`,
+      subject: `${isBankTransfer ? "🏦" : "💳"} Invoice Due Today - ${subscriptionLabel} (${formattedAmount})`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -290,34 +359,44 @@ function buildInvoiceEmailHtml(params: {
         <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
           <tr>
             <td style="background: #6366f1; padding: 28px; text-align: center; color: #ffffff;">
-              <span style="font-size: 36px;">💳</span>
+              <span style="font-size: 36px;">${isBankTransfer ? "🏦" : "💳"}</span>
               <h1 style="margin: 12px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Invoice Due Today</h1>
-              <p style="margin: 6px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Monthly Subscription Processing</p>
+              <p style="margin: 6px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Payment Due Today (${dueDateStr})</p>
             </td>
           </tr>
           <tr>
             <td style="padding: 32px 36px;">
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #1f2937;">Hi <strong>${displayName}</strong>,</p>
               <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563;">
-                Your monthly subscription invoice for <strong>${subscriptionLabel}</strong> is due today, <strong>${dueDateStr}</strong>, and will be processed via your payment method on file.
+                ${introParagraph}
               </p>
               
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subscription:</td>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Client / Organization:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${clientWithCompany}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subscription / Service:</td>
                     <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${subscriptionLabel}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Billing Date:</td>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Due Date:</td>
                     <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">Today (${dueDateStr})</td>
                   </tr>
                   <tr>
+                    <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Payment Method:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${isBankTransfer ? "ACH / Wire Bank Transfer" : "Card on File (Auto-Pay)"}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 6px 0; color: #6b7280; font-size: 14px;">Amount Due:</td>
-                    <td style="padding: 6px 0; text-align: right; color: #6366f1; font-weight: 700; font-size: 18px;">${formattedAmount}</td>
+                    <td style="padding: 6px 0; text-align: right; color: #6366f1; font-weight: 700; font-size: 18px;">${formattedAmount} USD</td>
                   </tr>
                 </table>
               </div>
+
+              ${bankTransferHtml}
 
               <div style="margin-bottom: 28px;">
                 <h4 style="margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280;">Services in Plan</h4>
@@ -325,6 +404,8 @@ function buildInvoiceEmailHtml(params: {
                   ${servicesHtml}
                 </ul>
               </div>
+
+              ${calloutHtml}
 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -383,6 +464,10 @@ function buildInvoiceEmailHtml(params: {
               <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 24px; border-left: 4px solid #dc2626;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
+                    <td style="padding: 6px 0; color: #991b1b; font-size: 14px;">Client / Organization:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${clientWithCompany}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 6px 0; color: #991b1b; font-size: 14px;">Subscription:</td>
                     <td style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">${subscriptionLabel}</td>
                   </tr>
@@ -392,7 +477,7 @@ function buildInvoiceEmailHtml(params: {
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #991b1b; font-size: 14px;">Overdue Amount:</td>
-                    <td style="padding: 6px 0; text-align: right; color: #dc2626; font-weight: 700; font-size: 18px;">${formattedAmount}</td>
+                    <td style="padding: 6px 0; text-align: right; color: #dc2626; font-weight: 700; font-size: 18px;">${formattedAmount} USD</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #991b1b; font-size: 14px;">Status:</td>
@@ -401,14 +486,16 @@ function buildInvoiceEmailHtml(params: {
                 </table>
               </div>
 
+              ${bankTransferHtml}
+
               <p style="margin: 0 0 24px 0; font-size: 14px; color: #4b5563;">
-                To ensure uninterrupted service delivery for your active automations, please update your payment method or complete payment as soon as possible.
+                To ensure uninterrupted service delivery for your active automations, please complete payment as soon as possible.
               </p>
 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom: 12px;">
-                    <a href="${portalUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px;">Update Payment Method in Dashboard</a>
+                    <a href="${portalUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px;">View Account in Dashboard</a>
                   </td>
                 </tr>
               </table>
@@ -440,12 +527,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    let body: any = {};
+    if (req.method === "POST") {
+      body = await req.json().catch(() => ({}));
+    }
+
+    const testRecipientEmail: string | null = body?.testRecipientEmail
+      ? String(body.testRecipientEmail).trim().toLowerCase()
+      : null;
+    const testClientIds: string[] | null = Array.isArray(body?.testClientIds)
+      ? body.testClientIds
+      : null;
+    const testReminderTypes: Array<"upcoming_3_days" | "due_today" | "upcoming_7_days"> =
+      Array.isArray(body?.testReminderTypes) && body.testReminderTypes.length > 0
+        ? body.testReminderTypes
+        : ["upcoming_3_days", "due_today"];
+
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    const currentDay = now.getDate();
 
-    console.log(`[Invoice Reminders] Running check on ${formatDate(now)}`);
+    console.log(`[Invoice Reminders] Running check on ${formatDate(now)} (testMode=${Boolean(testRecipientEmail)})`);
 
     // Fetch all client subscriptions along with profile data
     const { data: clientSubs, error: subsError } = await supabase
@@ -462,6 +564,7 @@ serve(async (req) => {
         subscription_status,
         stripe_subscription_id,
         stripe_customer_id,
+        notes,
         client_profile:client_profiles(
           id,
           email,
@@ -490,10 +593,13 @@ serve(async (req) => {
 
     const results: Array<{
       client: string;
+      recipient: string;
+      company?: string | null;
       subscription: string;
       type: string;
       dueDate: string;
       status: string;
+      testMode?: boolean;
       messageId?: string;
     }> = [];
 
@@ -501,10 +607,14 @@ serve(async (req) => {
       const profile = sub.client_profile;
       if (!profile || !profile.email) continue;
 
+      if (testClientIds && !testClientIds.includes(profile.id) && !testClientIds.includes(sub.id)) {
+        continue;
+      }
+
       const monthlyAmount = sub.monthly_amount || 0;
       if (monthlyAmount <= 0) continue;
 
-      // Determine the billing day of month (e.g. 15, 24, 28, 10, etc.)
+      // Determine the billing day of month (e.g. 10, 19, 15, 24, 28, etc.)
       let billingDay = sub.billing_day;
       if (!billingDay && sub.next_billing_date) {
         const d = new Date(sub.next_billing_date);
@@ -512,86 +622,92 @@ serve(async (req) => {
       }
       if (!billingDay) billingDay = 1; // default to 1st if unspecified
 
+      const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
       // 1. Calculate the upcoming due date for this current month or next
       let targetDueDate = new Date(currentYear, currentMonth, billingDay);
-      // If billingDay has already passed this month, the upcoming billing date is next month
-      if (targetDueDate.getTime() < now.setHours(0,0,0,0)) {
+      if (targetDueDate.getTime() < todayDateOnly.getTime()) {
         targetDueDate = new Date(currentYear, currentMonth + 1, billingDay);
       }
 
       // Calculate days until upcoming due date
       const msPerDay = 1000 * 60 * 60 * 24;
-      const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const daysUntilDue = Math.round((targetDueDate.getTime() - todayDateOnly.getTime()) / msPerDay);
 
       // 2. Also calculate the past due date (for checking overdue 15 days)
       const pastDueDate = new Date(currentYear, currentMonth, billingDay);
-      // If billingDay is in the future this month, the previous billing cycle was last month
       if (pastDueDate.getTime() > todayDateOnly.getTime()) {
         pastDueDate.setMonth(pastDueDate.getMonth() - 1);
       }
       const daysPastDue = Math.round((todayDateOnly.getTime() - pastDueDate.getTime()) / msPerDay);
 
       const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
+        profile.contract_details?.clientContactName ||
         profile.contract_details?.clientLegalName ||
         profile.email.split("@")[0];
 
+      const companyName: string | null =
+        profile.contract_details?.clientLegalName ||
+        profile.contract_details?.clientTradeName ||
+        null;
+
       const primaryEmail = profile.email.toLowerCase().trim();
       const additionalEmails = parseAdditionalEmails(profile.notes);
-      const recipients = [...new Set([primaryEmail, ...additionalEmails])];
-      const bankTransferDetails = profile.contract_details?.bankTransferDetails || null;
+      const recipients = testRecipientEmail
+        ? [testRecipientEmail]
+        : [...new Set([primaryEmail, ...additionalEmails])];
 
-      // === REMINDER CHECK 0: 7 Days Prior (1 Week Before Due Date) ===
-      if (daysUntilDue === 7) {
+      const isBankTransfer =
+        !sub.stripe_subscription_id ||
+        profile.contract_details?.paymentMethod === "bank_transfer" ||
+        Boolean(profile.contract_details?.bankTransferDetails) ||
+        Boolean(sub.notes?.toLowerCase().includes("bank transfer")) ||
+        Boolean(profile.notes?.toLowerCase().includes("bank transfer"));
+
+      const bankTransferDetails = profile.contract_details?.bankTransferDetails ||
+        (isBankTransfer ? DEFAULT_BANK_TRANSFER_DETAILS : null);
+
+      const isEligibleForUpcoming =
+        sub.subscription_status === "active" ||
+        (sub.subscription_status === "pending_payment" && isBankTransfer);
+
+      // === SAFE TEST MODE: Send requested reminder types to testRecipientEmail without writing to DB ===
+      if (testRecipientEmail) {
         const dueDateIso = targetDueDate.toISOString().split("T")[0];
-        const dedupeKey = `${profile.id}:upcoming_7_days:${dueDateIso}`;
-
-        const isEligible = sub.subscription_status === "active" || (sub.subscription_status === "pending_payment" && profile.contract_details?.paymentMethod === "bank_transfer");
-
-        if (isEligible && !sentMap.has(dedupeKey)) {
-          console.log(`[Reminder: 7 Days Prior] Triggering for ${profile.email} - ${sub.label}`);
-
+        for (const rType of testReminderTypes) {
           const { subject, html } = buildInvoiceEmailHtml({
-            reminderType: "upcoming_7_days",
+            reminderType: rType,
             displayName,
+            companyName,
             subscriptionLabel: sub.label,
             amount: monthlyAmount,
             dueDateStr: formatDate(targetDueDate),
             services: sub.selected_services || [],
             stripeSubscriptionId: sub.stripe_subscription_id,
+            isBankTransfer,
             bankTransferDetails,
           });
 
           const sendRes = await sendEmail({
             from: "Sienvi Billing <info@sienvi.com>",
-            to: recipients,
-            bcc: ["teamsienvi@gmail.com", "info@sienvi.com"],
-            subject,
+            to: [testRecipientEmail],
+            subject: `[TEST] ${subject}`,
             html,
           });
 
-          if (!sendRes.error) {
-            await supabase.from("invoice_reminders").insert({
-              client_profile_id: profile.id,
-              client_subscription_id: sub.id,
-              stripe_subscription_id: sub.stripe_subscription_id,
-              reminder_type: "upcoming_7_days",
-              due_date: dueDateIso,
-              amount: monthlyAmount,
-              recipient_email: primaryEmail,
-              status: "sent",
-            });
-            sentMap.add(dedupeKey);
-            results.push({
-              client: profile.email,
-              subscription: sub.label,
-              type: "upcoming_7_days",
-              dueDate: dueDateIso,
-              status: "sent",
-              messageId: sendRes.data?.id,
-            });
-          }
+          results.push({
+            client: `${displayName} <${profile.email}>`,
+            recipient: testRecipientEmail,
+            company: companyName,
+            subscription: sub.label,
+            type: rType,
+            dueDate: dueDateIso,
+            status: sendRes.error ? `failed: ${sendRes.error.message}` : "sent",
+            testMode: true,
+            messageId: sendRes.data?.id,
+          });
         }
+        continue;
       }
 
       // === REMINDER CHECK 1: 3 Days Prior ===
@@ -599,18 +715,19 @@ serve(async (req) => {
         const dueDateIso = targetDueDate.toISOString().split("T")[0];
         const dedupeKey = `${profile.id}:upcoming_3_days:${dueDateIso}`;
 
-        // TEST STATUS FIRST: must be active
-        if (sub.subscription_status === "active" && !sentMap.has(dedupeKey)) {
+        if (isEligibleForUpcoming && !sentMap.has(dedupeKey)) {
           console.log(`[Reminder: 3 Days Prior] Triggering for ${profile.email} - ${sub.label}`);
 
           const { subject, html } = buildInvoiceEmailHtml({
             reminderType: "upcoming_3_days",
             displayName,
+            companyName,
             subscriptionLabel: sub.label,
             amount: monthlyAmount,
             dueDateStr: formatDate(targetDueDate),
             services: sub.selected_services || [],
             stripeSubscriptionId: sub.stripe_subscription_id,
+            isBankTransfer,
             bankTransferDetails,
           });
 
@@ -636,6 +753,8 @@ serve(async (req) => {
             sentMap.add(dedupeKey);
             results.push({
               client: profile.email,
+              recipient: recipients.join(", "),
+              company: companyName,
               subscription: sub.label,
               type: "upcoming_3_days",
               dueDate: dueDateIso,
@@ -651,18 +770,19 @@ serve(async (req) => {
         const dueDateIso = targetDueDate.toISOString().split("T")[0];
         const dedupeKey = `${profile.id}:due_today:${dueDateIso}`;
 
-        // TEST STATUS FIRST: must be active
-        if (sub.subscription_status === "active" && !sentMap.has(dedupeKey)) {
+        if (isEligibleForUpcoming && !sentMap.has(dedupeKey)) {
           console.log(`[Reminder: Due Today] Triggering for ${profile.email} - ${sub.label}`);
 
           const { subject, html } = buildInvoiceEmailHtml({
             reminderType: "due_today",
             displayName,
+            companyName,
             subscriptionLabel: sub.label,
             amount: monthlyAmount,
             dueDateStr: formatDate(targetDueDate),
             services: sub.selected_services || [],
             stripeSubscriptionId: sub.stripe_subscription_id,
+            isBankTransfer,
             bankTransferDetails,
           });
 
@@ -688,6 +808,8 @@ serve(async (req) => {
             sentMap.add(dedupeKey);
             results.push({
               client: profile.email,
+              recipient: recipients.join(", "),
+              company: companyName,
               subscription: sub.label,
               type: "due_today",
               dueDate: dueDateIso,
@@ -703,7 +825,6 @@ serve(async (req) => {
         const pastDueDateIso = pastDueDate.toISOString().split("T")[0];
         const dedupeKey = `${profile.id}:overdue_15_days:${pastDueDateIso}`;
 
-        // STRICT STATUS TEST: Must be past_due / unpaid. If active or paid, DO NOT SEND!
         const isPastDue = sub.subscription_status === "past_due" || profile.subscription_status === "past_due";
 
         if (isPastDue && !sentMap.has(dedupeKey)) {
@@ -712,11 +833,13 @@ serve(async (req) => {
           const { subject, html } = buildInvoiceEmailHtml({
             reminderType: "overdue_15_days",
             displayName,
+            companyName,
             subscriptionLabel: sub.label,
             amount: monthlyAmount,
             dueDateStr: formatDate(pastDueDate),
             services: sub.selected_services || [],
             stripeSubscriptionId: sub.stripe_subscription_id,
+            isBankTransfer,
             bankTransferDetails,
           });
 
@@ -742,6 +865,8 @@ serve(async (req) => {
             sentMap.add(dedupeKey);
             results.push({
               client: profile.email,
+              recipient: recipients.join(", "),
+              company: companyName,
               subscription: sub.label,
               type: "overdue_15_days",
               dueDate: pastDueDateIso,
@@ -757,6 +882,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         checkedAt: now.toISOString(),
+        testMode: Boolean(testRecipientEmail),
         dispatchedCount: results.length,
         results,
       }),

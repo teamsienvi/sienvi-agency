@@ -78,6 +78,12 @@ verify_jwt = false
 [functions.send-payment-confirmation]
 verify_jwt = false
 
+[functions.send-invoice-reminders]
+verify_jwt = false
+
+[functions.send-reminders]
+verify_jwt = false
+
 # ============================================
 # ANALYTICS & MISC
 # ============================================
