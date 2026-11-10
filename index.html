@@ -42,6 +42,12 @@
         } else {
           document.documentElement.classList.remove('dark');
         }
+        window.addEventListener('vite:preloadError', function() {
+          if (!sessionStorage.getItem('sienvi_chunk_reload')) {
+            sessionStorage.setItem('sienvi_chunk_reload', '1');
+            window.location.reload();
+          }
+        });
       })();
     </script>
   </head>

@@ -310,25 +310,30 @@ routes.forEach(route => {
   }
 
   // Pre-render static body content inside <div id="root">
+  // Visually hidden (sr-only) so SEO crawlers and non-JS parsers index the semantic
+  // structure while human visitors never see an unstyled HTML flash before React mounts.
+  const srOnlyStyle = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
   const staticRootContent = `
 <div id="root">
-  <header style="padding: 20px; text-align: center; background: #0A0D14; color: #fff;">
-    <a href="/"><img src="/assets/sienvi_logo_square.png" alt="Sienvi Logo" style="height: 60px;" /></a>
-    <nav style="margin-top: 10px;">
-      <a href="/" style="color: #fff; margin: 0 15px;">Home</a>
-      <a href="/referral" style="color: #fff; margin: 0 15px;">Referral Program</a>
-      <a href="/select-services" style="color: #fff; margin: 0 15px;">Services</a>
-      <a href="/login" style="color: #fff; margin: 0 15px;">Client Login</a>
-    </nav>
-  </header>
-  <main style="max-width: 1000px; margin: 0 auto; padding: 40px 20px; font-family: sans-serif; line-height: 1.6; color: #e2e8f0;">
-    <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: #fff;">${route.h1}</h1>
-    ${route.content}
-  </main>
-  <footer style="padding: 30px; text-align: center; background: #07090E; color: #94a3b8; font-size: 0.875rem;">
-    <p>© 2015-2026 Sienvi Agency. All rights reserved. Transforming businesses through expert agency support, coaching, and AI-driven automation solutions.</p>
-    <p><a href="/" style="color: #38bdf8;">Home</a> | <a href="/referral" style="color: #38bdf8;">Referral Program</a> | <a href="/select-services" style="color: #38bdf8;">Select Services</a> | <a href="/login" style="color: #38bdf8;">Client Sign In</a></p>
-  </footer>
+  <div data-seo-prerender="true" style="${srOnlyStyle}">
+    <header>
+      <a href="/"><img src="/assets/sienvi_logo_square.png" alt="Sienvi Logo" width="60" height="60" /></a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/referral">Referral Program</a>
+        <a href="/select-services">Services</a>
+        <a href="/login">Client Login</a>
+      </nav>
+    </header>
+    <main>
+      <h1>${route.h1}</h1>
+      ${route.content}
+    </main>
+    <footer>
+      <p>© 2015-2026 Sienvi Agency. All rights reserved. Transforming businesses through expert agency support, coaching, and AI-driven automation solutions.</p>
+      <p><a href="/">Home</a> | <a href="/referral">Referral Program</a> | <a href="/select-services">Select Services</a> | <a href="/login">Client Sign In</a></p>
+    </footer>
+  </div>
 </div>`;
 
   html = html.replace(/<div id="root"><\/div>/s, staticRootContent);
