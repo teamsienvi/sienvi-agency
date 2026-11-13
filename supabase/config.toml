@@ -24,6 +24,9 @@ verify_jwt = false
 [functions.setup-stripe-prices]
 verify_jwt = false
 
+[functions.stripe-admin-tools]
+verify_jwt = false
+
 # ============================================
 # ADMIN - CLIENT MANAGEMENT
 # ============================================
