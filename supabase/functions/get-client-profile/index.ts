@@ -204,6 +204,27 @@ serve(withAllowedOrigin(async (req) => {
       updatedAt: sub.updated_at,
     }));
 
+    // Fetch one-time payments/invoices for this client
+    const { data: clientOneTimePayments } = await supabaseAdmin
+      .from("client_one_time_payments")
+      .select("*")
+      .eq("client_profile_id", profile.id)
+      .order("created_at", { ascending: false });
+
+    const oneTimePayments = (clientOneTimePayments || []).map((otp: any) => ({
+      id: otp.id,
+      serviceId: otp.service_id,
+      description: otp.description,
+      amount: otp.amount,
+      currency: otp.currency,
+      status: otp.status,
+      stripeInvoiceId: otp.stripe_invoice_id,
+      hostedInvoiceUrl: otp.hosted_invoice_url,
+      dueDate: otp.due_date,
+      paidAt: otp.paid_at,
+      createdAt: otp.created_at,
+    }));
+
     // Co-Signers and Connected Organization Resolution
     const contractDetails = profile.contract_details || {};
     let signers = contractDetails.signers || [];
@@ -304,6 +325,7 @@ serve(withAllowedOrigin(async (req) => {
           updatedAt: profile.updated_at,
           notes: profile.notes,
           subscriptions,
+          oneTimePayments,
           // Connected Co-Owners & Signers Context
           coOwners,
           signers,

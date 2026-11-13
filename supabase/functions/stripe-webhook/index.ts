@@ -820,7 +820,36 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   const customerEmail = invoice.customer_email;
   
   if (!subscriptionId) {
-    console.log("No subscription ID in invoice, skipping");
+    // Check if this is a standalone one-time invoice in client_one_time_payments
+    const nowIso = new Date().toISOString();
+    const { data: updatedOtp, error: otpUpdateErr } = await supabase
+      .from("client_one_time_payments")
+      .update({
+        status: "paid",
+        paid_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq("stripe_invoice_id", invoice.id)
+      .select()
+      .maybeSingle();
+
+    if (otpUpdateErr) {
+      console.error("Error updating client_one_time_payments on invoice payment:", otpUpdateErr);
+    } else if (updatedOtp) {
+      console.log("Marked client_one_time_payments as paid:", updatedOtp.id, invoice.id);
+      if (customerEmail) {
+        await sendAdminNotification(
+          "payment_completed",
+          customerEmail,
+          invoice.customer_name || undefined,
+          updatedOtp.description || "one-time-invoice",
+          invoice.amount_paid || Math.round(Number(updatedOtp.amount || 0) * 100),
+          updatedOtp.service_id ? [updatedOtp.service_id] : []
+        );
+      }
+    } else {
+      console.log("No subscription ID in invoice and no matching client_one_time_payments row, skipping");
+    }
     return;
   }
   

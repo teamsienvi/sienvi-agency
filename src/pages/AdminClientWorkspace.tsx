@@ -1309,8 +1309,19 @@ export default function AdminClientWorkspace() {
                                   {otp.status || "open"}
                                 </Badge>
                               </td>
-                              <td className="py-2 px-3 text-[11px] text-muted-foreground truncate max-w-[140px]">
-                                {otp.stripe_invoice_id || "Manual"}
+                              <td className="py-2 px-3 text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                {otp.hosted_invoice_url ? (
+                                  <a
+                                    href={otp.hosted_invoice_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline font-medium"
+                                  >
+                                    {otp.stripe_invoice_id || "Open Payment Link"} ↗
+                                  </a>
+                                ) : (
+                                  otp.stripe_invoice_id || "Manual"
+                                )}
                               </td>
                             </tr>
                           ))}

@@ -86,6 +86,19 @@ interface ClientProfile {
   updatedAt: string;
   notes: string | null;
   subscriptions?: ClientSubscription[];
+  oneTimePayments?: Array<{
+    id: string;
+    serviceId?: string | null;
+    description: string;
+    amount: number;
+    currency: string;
+    status: string;
+    stripeInvoiceId?: string | null;
+    hostedInvoiceUrl?: string | null;
+    dueDate?: string | null;
+    paidAt?: string | null;
+    createdAt: string;
+  }>;
   coOwners?: Array<{ name: string; email: string; role: string }>;
   signers?: any[];
   requiresDualSignature?: boolean;
@@ -1320,6 +1333,56 @@ const ClientDashboard = () => {
                         );
                       })}
                     </div>
+
+                    {profile.oneTimePayments && profile.oneTimePayments.length > 0 && (
+                      <div className="mt-5 pt-4 border-t border-slate-200 space-y-3">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          One-Time Invoices & Pilot Programs
+                        </p>
+                        <div className="space-y-2.5">
+                          {profile.oneTimePayments.map((otp) => (
+                            <div
+                              key={otp.id}
+                              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70"
+                            >
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-sm text-slate-900">
+                                    {otp.description}
+                                  </span>
+                                  {otp.status === "paid" ? (
+                                    <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 text-[11px] font-medium">
+                                      ✓ Paid
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-50 text-[11px] font-medium">
+                                      Awaiting Payment
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-500">
+                                  One-time fee: <strong className="text-slate-800">${Number(otp.amount || 0).toLocaleString()} USD</strong>
+                                  {otp.dueDate && otp.status !== "paid" && (
+                                    <span> · Due {new Date(otp.dueDate).toLocaleDateString()}</span>
+                                  )}
+                                </p>
+                              </div>
+                              {otp.hostedInvoiceUrl && (
+                                <Button
+                                  size="sm"
+                                  variant={otp.status === "paid" ? "outline" : "default"}
+                                  className={otp.status === "paid" ? "shrink-0 text-xs" : "bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 text-xs font-semibold"}
+                                  onClick={() => window.open(otp.hostedInvoiceUrl!, "_blank")}
+                                >
+                                  <CreditCard className="w-3.5 h-3.5 mr-1.5" />
+                                  {otp.status === "paid" ? "View Receipt" : `Complete Payment ($${Number(otp.amount || 0).toLocaleString()})`}
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {(isAdmin || ["active", "past_due"].includes(profile.subscriptionStatus)) && (profile.stripeCustomerId || profile.subscriptions?.some(s => s.stripeCustomerId)) && (
                       <div className="mt-4">
