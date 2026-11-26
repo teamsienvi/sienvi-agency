@@ -3,6 +3,7 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendEmail } from "../_shared/ses-client.ts";
 import { normalizeStripeWebhookEvent, ingestEventIntoSubledger } from "../_shared/stripe-subledger-ingestion.ts";
+import { getExternalStripeApp } from "../_shared/external-app-events.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
   apiVersion: "2023-10-16",
@@ -1066,6 +1067,23 @@ serve(async (req) => {
       customerEmail = (eventData.customer_details as Record<string, unknown>).email as string;
     }
     
+    // Events from other products on this Stripe account (e.g. The Billionaire
+    // Brother, metadata.app = "bb") must not create Sienvi clients or send
+    // Sienvi emails. Acknowledge them so Stripe doesn't retry.
+    const externalApp = getExternalStripeApp(event.data.object);
+    if (externalApp) {
+      console.log(`Skipping ${event.type} ${event.id}: belongs to app "${externalApp}"`);
+      await logWebhookEvent(event.type, event.id, customerEmail, "success", undefined, {
+        customer_id: eventData.customer,
+        external_object_id: (eventData.id as string) || null,
+        skipped_external_app: externalApp,
+      });
+      return new Response(JSON.stringify({ received: true, skipped: externalApp }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     try {
       // 1. Production Core Handlers (Strictly Preserved)
       switch (event.type) {
